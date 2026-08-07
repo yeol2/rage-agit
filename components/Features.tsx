@@ -4,13 +4,10 @@ const { features } = siteConfig;
 
 export function Features() {
   return (
-    <section className="mx-auto max-w-shell px-8 pb-32">
-      <div className="relative">
-        <span
-          aria-hidden="true"
-          className="absolute -left-4 -top-6 h-6 w-6 border-l border-t border-accent/70"
-        />
-        <p className="hud text-[11px] text-accent">{features.eyebrow}</p>
+    <section className="mx-auto max-w-shell px-5 pb-24 sm:px-8 md:pb-32">
+      <div className="flex items-center gap-4">
+        <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">{features.eyebrow}</p>
+        <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
       </div>
 
       <h2 className="mt-6 text-3xl font-bold tracking-tight md:text-4xl">{features.heading}</h2>
@@ -34,7 +31,7 @@ export function Features() {
             </div>
 
             {!item.ready && (
-              <span className="hud mt-1 shrink-0 border border-accent/40 px-4 py-2 text-[10px] text-accent">
+              <span className="hud mt-1 shrink-0 self-start border border-accent-secondary/50 px-4 py-2 text-[10px] text-accent-secondary">
                 COMING SOON
               </span>
             )}

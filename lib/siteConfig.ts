@@ -3,6 +3,15 @@ export const siteConfig = {
   protocol: 'PROTOCOL: V.0.4.21',
   systemLine: 'SYSTEM ONLINE // SERVER: ASIA-SEOUL',
 
+  // 로고 교체 지점. public/ 아래에 파일을 넣고 src 만 채우면 된다.
+  // src 가 '' 이면 기본 다이아몬드 마크로 폴백한다.
+  logo: {
+    src: '',
+    alt: 'RAGE AGIT 로고',
+    width: 120,
+    height: 28,
+  },
+
   nav: [
     { label: 'DASHBOARD', href: '/dashboard', ready: false },
     { label: 'MEMBERS', href: '/members', ready: false },
@@ -12,6 +21,7 @@ export const siteConfig = {
 
   hero: {
     eyebrow: 'VICTORY ANALYTICS',
+    statusLabel: 'LIVE · CLAN SCRIM',
     headlineMuted: '내 우승확률,',
     headlineWhite: '직접',
     headlineAccent: '확인하자.',

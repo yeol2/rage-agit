@@ -10,6 +10,7 @@ const config: Config = {
         'accent-secondary': '#C49520',
         foreground: '#FFFFFF',
         muted: '#322F36',
+        menu: '#A0A0A2',
         positive: '#4ADE80',
       },
       fontFamily: {

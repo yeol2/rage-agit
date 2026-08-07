@@ -1,3 +1,5 @@
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,7 +16,8 @@ body {
 }
 
 body {
-  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  font-family: 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic',
+    system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

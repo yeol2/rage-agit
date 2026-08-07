@@ -5,22 +5,21 @@ const { hero, members } = siteConfig;
 
 export function Hero() {
   return (
-    <section className="mx-auto max-w-shell px-8 py-24 md:py-32">
-      <div className="relative">
-        <span
-          aria-hidden="true"
-          className="absolute -left-4 -top-6 h-6 w-6 border-l border-t border-accent/70"
-        />
-        <p className="hud text-[11px] text-accent">{hero.eyebrow}</p>
+    <section className="mx-auto max-w-shell px-5 py-20 sm:px-8 md:py-32">
+      <div className="flex items-center gap-4">
+        <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">{hero.eyebrow}</p>
+        <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
+        <p className="hud hidden shrink-0 items-center gap-2 text-[11px] text-menu sm:flex sm:text-xs">
+          <span className="h-1.5 w-1.5 rounded-full bg-positive" />
+          {hero.statusLabel}
+        </p>
       </div>
 
       <h1 className="mt-7 text-5xl font-bold leading-[1.15] tracking-tight md:text-7xl">
         <span className="block text-muted">{hero.headlineMuted}</span>
         <span className="mt-1 block">
           <span className="text-foreground">{hero.headlineWhite}</span>{' '}
-          <span className="text-accent underline decoration-accent decoration-4 underline-offset-[10px]">
-            {hero.headlineAccent}
-          </span>
+          <span className="text-accent">{hero.headlineAccent}</span>
         </span>
       </h1>
 
