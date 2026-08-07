@@ -34,6 +34,20 @@ export const siteConfig = {
     weeklyDelta: 12,
   },
 
+  footer: {
+    // 마지막 문장만 포인트 컬러로 강조한다.
+    description: '매주 일요일 클랜 내전 기록을 자동으로 모아 클랜원별 지표로 보여주는 대시보드.',
+    descriptionAccent: '감이 아니라 기록입니다.',
+    credit: 'Data based on KAKAO PUBG Open API',
+    links: [
+      { label: '대시보드', href: '/dashboard', ready: false },
+      { label: '클랜원', href: '/members', ready: false },
+      { label: '매치 기록', href: '/matches', ready: false },
+      { label: '랭킹', href: '/rankings', ready: false },
+    ],
+    tagline: '배틀그라운드 클랜 RAGE의 내전 기록 보관소.',
+  },
+
   features: {
     eyebrow: 'PLATFORM FEATURES',
     heading: '클랜 운영에 필요한 모든 것',
