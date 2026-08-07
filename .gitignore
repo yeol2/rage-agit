@@ -1,4 +1,7 @@
 .claude/settings.local.json
+.claude/launch.json
+.claude/worktrees/
+.superpowers/
 node_modules/
 .next/
 .env

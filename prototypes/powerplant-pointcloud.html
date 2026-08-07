@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POWER PLANT — POINT CLOUD</title>
+<style>
+  :root{ --bg:#0E0B13; }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:100%; height:100%; overflow:hidden; background:var(--bg); }
+  canvas{ display:block; }
+  .hud{
+    position:fixed; font:11px/1.6 ui-monospace,"SFMono-Regular",Consolas,monospace;
+    letter-spacing:.16em; color:#3f7d5a; text-transform:uppercase;
+    pointer-events:none; user-select:none;
+  }
+  #tl{ top:18px; left:20px; }
+  #tl b{ color:#5ee08a; font-weight:600; letter-spacing:.22em; }
+  #bl{ bottom:16px; left:20px; color:#2f5d43; }
+  #br{ bottom:16px; right:20px; color:#2f5d43; text-align:right; }
+  #err{
+    position:fixed; inset:0; display:none; place-items:center; text-align:center;
+    color:#c9d4cd; font:14px/1.8 ui-monospace,Consolas,monospace; padding:24px;
+  }
+</style>
+</head>
+<body>
+<div class="hud" id="tl"><b>POWER PLANT</b><br>POINT CLOUD RECONSTRUCTION</div>
+<div class="hud" id="bl">DRAG: ORBIT &nbsp;·&nbsp; WHEEL: ZOOM</div>
+<div class="hud" id="br">POINTS <span id="pc">—</span></div>
+<div id="err">three.js를 CDN에서 불러오지 못했습니다.<br>인터넷 연결을 확인하고 새로고침해주세요.</div>
+
+<script src="https://unpkg.com/three@0.140.2/build/three.min.js"></script>
+<script>
+if (typeof THREE === 'undefined') {
+  document.getElementById('err').style.display = 'grid';
+} else {
+(function () {
+'use strict';
+
+/* ---------- deterministic rng ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rnd = mulberry32(20260807);
+const rr = (a,b)=>a+(b-a)*rnd();
+const TAU = Math.PI*2;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const smooth=t=>t*t*(3-2*t);
+
+/* ---------- point buffers ---------- */
+const POS=[], COL=[], SIZ=[];
+const DIM=[0.06,0.36,0.19];       // low brightness green
+const HOT=[0.52,1.00,0.64];       // high brightness green
+function P(x,y,z,b,s){
+  b=clamp(b,0,1);
+  POS.push(x,y,z);
+  COL.push(DIM[0]+(HOT[0]-DIM[0])*b, DIM[1]+(HOT[1]-DIM[1])*b, DIM[2]+(HOT[2]-DIM[2])*b);
+  SIZ.push(s===undefined?1:s);
+}
+
+/* =========================================================
+   TERRAIN  — headland: sea to N/W/E, land continues south
+   read from the top-down shot (plan) + the 4 side shots
+   ========================================================= */
+const SEA = 0;
+function coastR(a){
+  return 96 + 48*Math.sin(a) + 11*Math.sin(3*a+0.7) + 7*Math.cos(5*a+2.1) + 4*Math.sin(8*a-1.1);
+}
+// facility pad: keeps the plant on flat ground
+function band(v,lo,hi,soft){
+  if(v<lo) return Math.max(0,1-(lo-v)/soft);
+  if(v>hi) return Math.max(0,1-(v-hi)/soft);
+  return 1;
+}
+function padMask(x,z){ return band(x,-80,92,26)*band(z,-56,66,26); }
+
+const PLATEAU = 16;
+function terrainH(x,z){
+  const d=Math.hypot(x,z), a=Math.atan2(z,x), R=coastR(a);
+  const t=clamp((R-d)/17,0,1);                 // 0 at shoreline, 1 inland
+  const cliff=Math.pow(t,0.55)*PLATEAU;
+  const damp=1-padMask(x,z)*0.86;
+  const roll=(2.5*Math.sin(x*0.045)*Math.cos(z*0.041)
+             +1.6*Math.sin(x*0.09+1.7)
+             +1.2*Math.cos(z*0.075-0.6))*damp;
+  return cliff + roll*t;
+}
+function isLand(x,z){
+  const d=Math.hypot(x,z);
+  return d < coastR(Math.atan2(z,x));
+}
+
+(function terrain(){
+  const step=1.0;
+  for(let x=-172;x<=172;x+=step){
+    for(let z=-104;z<=182;z+=step){
+      const d=Math.hypot(x,z), a=Math.atan2(z,x), R=coastR(a);
+      if(d>R) continue;
+      const jx=x+rr(-0.34,0.34), jz=z+rr(-0.34,0.34);
+      const y=terrainH(jx,jz);
+      const edge=clamp((R-d)/17,0,1);
+      // shoreline glows, inland fades down
+      let b = 0.10 + (1-edge)*0.55 + (y/PLATEAU)*0.10;
+      if(edge<0.30) b += (0.30-edge)*0.9;     // cliff face pops
+      P(jx,y,jz,b*0.95,0.70);
+    }
+  }
+})();
+
+(function sea(){
+  const step=3.1;
+  for(let x=-215;x<=215;x+=step){
+    for(let z=-150;z<=205;z+=step){
+      const d=Math.hypot(x,z), a=Math.atan2(z,x), R=coastR(a);
+      if(d<R+1.5) continue;
+      if(d>232) continue;
+      const jx=x+rr(-1,1), jz=z+rr(-1,1);
+      const w=Math.sin(jx*0.10+jz*0.06)*0.4+Math.sin(jx*0.19-jz*0.13)*0.25;
+      const near=clamp(1-(d-R)/34,0,1);       // brighter close to shore
+      P(jx,SEA+w,jz,0.05+near*0.30,0.5);
+    }
+  }
+})();
+
+// radar rings out over the water
+(function rings(){
+  [104,142,182].forEach(function(r,i){
+    const n=Math.floor(r*3.1);
+    for(let k=0;k<n;k++){
+      const a=k/n*TAU, x=Math.cos(a)*r, z=Math.sin(a)*r;
+      if(isLand(x,z)) continue;
+      P(x,SEA+0.5,z,0.16+(2-i)*0.04,0.5);
+    }
+  });
+})();
+
+/* =========================================================
+   COOLING TOWERS
+   hyperboloid shell standing on a ring of angled stilts
+   ========================================================= */
+function hypR(y,H,R0){
+  const rt=0.62*R0, yt=0.72*H;
+  const c=yt/Math.sqrt(Math.pow(R0/rt,2)-1);
+  return rt*Math.sqrt(1+Math.pow((y-yt)/c,2));
+}
+function coolingTower(cx,cz,R0,H,broken){
+  const gy=terrainH(cx,cz);
+  const stiltH=0.11*H;
+  // jagged rim profile for the ruined one
+  const rim=[];
+  for(let i=0;i<96;i++) rim.push(0.20+0.13*Math.abs(Math.sin(i*0.7)*Math.cos(i*0.31+1.2)));
+
+  const top = broken ? 0.33*H : H;
+  for(let y=stiltH; y<=top; y+=0.52){
+    const r=hypR(y,H,R0);
+    const n=Math.max(26,Math.floor(r*7.0));
+    for(let k=0;k<n;k++){
+      const a=k/n*TAU;
+      if(broken){
+        const cut=rim[Math.floor(a/TAU*96)%96]*H;
+        if(y>cut) continue;
+      }
+      const x=cx+Math.cos(a)*r, z=cz+Math.sin(a)*r;
+      const seamV = (k%9===0)?0.30:0;                 // vertical panel seams
+      const seamH = (Math.round(y/0.52)%7===0)?0.22:0; // horizontal courses
+      const lip = (!broken && y>top-1.2)?0.35:0;
+      let b=0.46+seamV+seamH+lip;
+      if(broken){
+        const cut=rim[Math.floor(a/TAU*96)%96]*H;
+        if(cut-y<1.6) b+=0.45;                        // bright broken edge
+      }
+      P(x,gy+y,z,b,broken?1.05:0.95);
+    }
+  }
+  // stilts
+  const legs=Math.max(28,Math.floor(R0*2.4));
+  for(let i=0;i<legs;i++){
+    const a=i/legs*TAU;
+    const rTop=hypR(stiltH,H,R0), rBot=R0*1.03;
+    for(const s of [-1,1]){
+      const a2=a+s*0.045;
+      for(let t=0;t<=1;t+=0.055){
+        const r=rBot+(rTop-rBot)*t;
+        const aa=a2+ s*-0.075*t;
+        P(cx+Math.cos(aa)*r, gy+t*stiltH, cz+Math.sin(aa)*r, 0.66,0.95);
+      }
+    }
+  }
+  // debris floor inside the ruined shell
+  if(broken){
+    for(let i=0;i<2600;i++){
+      const a=rnd()*TAU, r=Math.sqrt(rnd())*R0*0.92;
+      const x=cx+Math.cos(a)*r, z=cz+Math.sin(a)*r;
+      P(x, gy+rr(0,1.6)+Math.sin(r*0.8)*0.5, z, rr(0.14,0.40),0.66);
+    }
+    for(let i=0;i<420;i++){                            // rubble outside the rim
+      const a=rnd()*TAU, r=R0*rr(1.0,1.45);
+      const x=cx+Math.cos(a)*r, z=cz+Math.sin(a)*r;
+      P(x, terrainH(x,z)+rr(0,2.2), z, rr(0.3,0.6),0.8);
+    }
+  }
+}
+const T_INTACT=[-62,20], T_RUIN=[-56,-30];
+coolingTower(T_INTACT[0],T_INTACT[1],17,64,false);
+coolingTower(T_RUIN[0],  T_RUIN[1],  16,60,true);
+
+/* =========================================================
+   LATTICE MASTS  (radio mast + power pylons)
+   ========================================================= */
+function lattice(cx,cz,H,w0,w1,bands){
+  const gy=terrainH(cx,cz);
+  const wAt=t=>w0+(w1-w0)*t;
+  const leg=[[1,1],[1,-1],[-1,1],[-1,-1]];
+  // legs
+  for(let t=0;t<=1;t+=0.008){
+    const w=wAt(t)*0.5, y=gy+t*H;
+    const bright = bands ? (Math.floor(t*9)%2?0.85:0.42) : 0.6;   // red/white banding hint
+    leg.forEach(function(L){ P(cx+L[0]*w,y,cz+L[1]*w,bright,0.9); });
+  }
+  // horizontal rings + diagonals
+  const seg=Math.max(6,Math.floor(H/3.1));
+  for(let i=0;i<=seg;i++){
+    const t=i/seg, w=wAt(t)*0.5, y=gy+t*H;
+    for(let k=0;k<4;k++){
+      const A=leg[[0,1,3,2][k]], B=leg[[0,1,3,2][(k+1)%4]];
+      for(let u=0;u<=1;u+=0.09)
+        P(cx+(A[0]+(B[0]-A[0])*u)*w, y, cz+(A[1]+(B[1]-A[1])*u)*w, 0.55,0.78);
+    }
+    if(i<seg){
+      const t2=(i+1)/seg, w2=wAt(t2)*0.5, y2=gy+t2*H;
+      for(let k=0;k<4;k++){
+        const A=leg[[0,1,3,2][k]], B=leg[[0,1,3,2][(k+1)%4]];
+        const dir=(i%2)?1:-1;
+        const p0=dir>0?A:B, p1=dir>0?B:A;
+        for(let u=0;u<=1;u+=0.075){
+          P(cx+(p0[0]+(p1[0]-p0[0])*u)*(w+(w2-w)*u), y+(y2-y)*u,
+            cz+(p0[1]+(p1[1]-p0[1])*u)*(w+(w2-w)*u), 0.44,0.72);
+        }
+      }
+    }
+  }
+}
+lattice(-18,-32,48,6.0,1.7,true);          // the striped radio mast
+lattice(-40,-52,17,4.2,1.4,false);
+
+function pylon(cx,cz){
+  const gy=terrainH(cx,cz);
+  lattice(cx,cz,15,3.6,1.3,false);
+  for(const [h,arm] of [[11,7],[14,5.2]]){   // cross arms
+    for(let u=-1;u<=1;u+=0.035) P(cx+u*arm, gy+h, cz, 0.62,0.8);
+    for(const s of [-1,1]) for(let u=0;u<=1;u+=0.12) P(cx+s*arm, gy+h-u*1.5, cz, 0.5,0.7);
+  }
+}
+[[-4,-44],[20,-48],[48,-50],[76,-46],[84,4],[80,52],[44,64]].forEach(p=>pylon(p[0],p[1]));
+
+/* =========================================================
+   BUILDINGS  (layout traced from the top-down shot)
+   ========================================================= */
+function box(cx,cz,w,d,h,rot,opt){
+  opt=opt||{};
+  const gy=terrainH(cx,cz), c=Math.cos(rot), s=Math.sin(rot);
+  const put=(lx,ly,lz,b,sz)=>P(cx+lx*c-lz*s, gy+ly, cz+lx*s+lz*c, b, sz);
+  const st=0.52;
+  const hw=w/2, hd=d/2;
+  // walls
+  for(let u=-hw;u<=hw;u+=st) for(let y=0;y<=h;y+=st){
+    const edge=(Math.abs(u)>hw-st||y<st||y>h-st)?0.30:0;
+    const win = opt.win && (y%3.2<0.9) && (Math.abs(u)%2.6<1.1) ? 0.26 : 0;
+    for(const zz of [-hd,hd]) put(u,y,zz,0.40+edge+win,0.8);
+  }
+  for(let v=-hd;v<=hd;v+=st) for(let y=0;y<=h;y+=st){
+    const edge=(Math.abs(v)>hd-st||y<st||y>h-st)?0.30:0;
+    for(const xx of [-hw,hw]) put(xx,y,v,0.40+edge,0.8);
+  }
+  // roof
+  for(let u=-hw;u<=hw;u+=0.72) for(let v=-hd;v<=hd;v+=0.72){
+    const edge=(Math.abs(u)>hw-0.8||Math.abs(v)>hd-0.8)?0.34:0;
+    put(u,h+ (opt.ridge? (1-Math.abs(v)/hd)*1.5 : 0), v, 0.48+edge,0.78);
+  }
+}
+const buildings=[
+  [  4,-30,16, 9, 7,0,{ridge:1}],
+  [ 26,-34,22, 8, 6,0,{ridge:1}],
+  [ 54,-32,18, 9, 6.5,0,{ridge:1}],
+  [ 10,-12,26,11,11,0,{win:1}],      // big ruined concrete block
+  [ 42,-14,14, 8, 6,0,{ridge:1}],
+  [ 64,-16,16, 9, 6,0,{ridge:1}],
+  [  2,  6,20, 9, 6,0,{ridge:1}],
+  [ 30,  4,24,10, 7,0,{win:1}],
+  [ 58,  2,12, 8, 5.5,0,{ridge:1}],
+  [  6, 26,22,10, 6.5,0,{ridge:1}],
+  [ 36, 24,18, 9, 6,0,{ridge:1}],
+  [ 62, 22,20,10, 6.5,0,{ridge:1}],
+  [ 18, 44,16, 8, 5.5,0,{ridge:1}],
+  [ 50, 42,22, 9, 6,0,{ridge:1}],
+  [ 72, 40,12, 8, 5,0,{ridge:1}],
+];
+buildings.forEach(b=>box(b[0],b[1],b[2],b[3],b[4],b[5],b[6]));
+
+/* tanks & spheres */
+function tank(cx,cz,r,h){
+  const gy=terrainH(cx,cz);
+  for(let y=0;y<=h;y+=0.5){
+    const n=Math.max(20,Math.floor(r*8));
+    for(let k=0;k<n;k++){
+      const a=k/n*TAU;
+      const rib=(Math.round(y/0.5)%5===0)?0.24:0;
+      P(cx+Math.cos(a)*r, gy+y, cz+Math.sin(a)*r, 0.44+rib,0.85);
+    }
+  }
+  for(let i=0;i<260;i++){ const a=rnd()*TAU,q=Math.sqrt(rnd())*r;
+    P(cx+Math.cos(a)*q, gy+h, cz+Math.sin(a)*q, 0.52,0.8); }
+}
+[[70,-4,4.2,7],[78,8,3.6,6],[22,58,4.6,8],[34,60,4.6,8],[-6,52,4.0,7]].forEach(t=>tank(t[0],t[1],t[2],t[3]));
+
+function sphereTank(cx,cz,r){
+  const gy=terrainH(cx,cz);
+  for(let i=0;i<900;i++){
+    const u=rnd()*TAU, v=Math.acos(2*rnd()-1);
+    P(cx+r*Math.sin(v)*Math.cos(u), gy+r+r*Math.cos(v), cz+r*Math.sin(v)*Math.sin(u), 0.5,0.85);
+  }
+  for(let i=0;i<4;i++){ const a=i/4*TAU;
+    for(let t=0;t<=1;t+=0.1) P(cx+Math.cos(a)*r*0.7, gy+t*r, cz+Math.sin(a)*r*0.7, 0.4,0.7); }
+}
+[[-14,50,3.4],[-4,44,3.4]].forEach(s=>sphereTank(s[0],s[1],s[2]));
+
+/* =========================================================
+   FENCE / ROAD / TREES
+   ========================================================= */
+(function fence(){
+  const pts=[[-12,-46],[86,-46],[86,60],[-12,60]];
+  for(let i=0;i<4;i++){
+    const A=pts[i], B=pts[(i+1)%4];
+    const len=Math.hypot(B[0]-A[0],B[1]-A[1]), n=Math.floor(len/2.4);
+    for(let k=0;k<=n;k++){
+      const t=k/n, x=A[0]+(B[0]-A[0])*t, z=A[1]+(B[1]-A[1])*t, gy=terrainH(x,z);
+      for(let y=0;y<=2.4;y+=0.42) P(x,gy+y,z, y>2.0?0.55:0.30, 0.7);
+    }
+    for(let k=0;k<=n*3;k++){                    // wire lines
+      const t=k/(n*3), x=A[0]+(B[0]-A[0])*t, z=A[1]+(B[1]-A[1])*t;
+      P(x,terrainH(x,z)+2.35,z,0.34,0.55);
+    }
+  }
+})();
+
+(function road(){
+  for(let t=0;t<=1;t+=0.0016){
+    const x=-120+t*40+Math.sin(t*4.2)*16;
+    const z=-70+t*250;
+    if(!isLand(x,z)) continue;
+    for(let w=-4;w<=4;w+=1.15){
+      const xx=x+w, gy=terrainH(xx,z);
+      P(xx,gy+0.12,z, Math.abs(w)>3?0.42:0.22, 0.6);
+    }
+  }
+})();
+
+(function trees(){
+  const near=(x,z)=>buildings.some(b=>Math.abs(x-b[0])<b[2]/2+5&&Math.abs(z-b[1])<b[3]/2+5);
+  const towerNear=(x,z)=>Math.hypot(x-T_INTACT[0],z-T_INTACT[1])<26||Math.hypot(x-T_RUIN[0],z-T_RUIN[1])<26;
+  let placed=0, guard=0;
+  while(placed<240 && guard++<9000){
+    const x=rr(-160,150), z=rr(-95,170);
+    if(!isLand(x,z)) continue;
+    const d=Math.hypot(x,z), R=coastR(Math.atan2(z,x));
+    if(R-d<8) continue;
+    if(near(x,z)||towerNear(x,z)) continue;
+    if(padMask(x,z)>0.55 && rnd()>0.22) continue;     // sparse inside the compound
+    const gy=terrainH(x,z), h=rr(4.5,9), r=rr(2.2,3.8);
+    for(let i=0;i<46;i++){
+      const u=rnd()*TAU, v=rnd();
+      const rad=r*Math.sin(v*Math.PI)*(0.55+rnd()*0.45);
+      P(x+Math.cos(u)*rad, gy+h*0.45+v*h*0.62, z+Math.sin(u)*rad, rr(0.24,0.50),0.72);
+    }
+    for(let y=0;y<h*0.5;y+=0.6) P(x,gy+y,z,0.34,0.7);
+    placed++;
+  }
+})();
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0x0E0B13,1);
+document.body.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,1,900);
+
+const geo=new THREE.BufferGeometry();
+geo.setAttribute('position',new THREE.Float32BufferAttribute(POS,3));
+geo.setAttribute('aColor',  new THREE.Float32BufferAttribute(COL,3));
+geo.setAttribute('aSize',   new THREE.Float32BufferAttribute(SIZ,1));
+
+const mat=new THREE.ShaderMaterial({
+  uniforms:{ uSweep:{value:0}, uPix:{value:Math.min(devicePixelRatio,2)} },
+  transparent:true, depthTest:true, depthWrite:true,
+  vertexShader:`
+    attribute vec3 aColor; attribute float aSize;
+    uniform float uSweep, uPix;
+    varying vec3 vColor; varying float vFade;
+    void main(){
+      vec4 mv = modelViewMatrix * vec4(position,1.0);
+      float ang = atan(position.z, position.x);
+      float d = mod(uSweep - ang, 6.2831853);
+      float hit = exp(-d*4.5);
+      vColor = aColor * (1.0 + hit*2.4);
+      vFade = 1.0 - smoothstep(420.0, 780.0, -mv.z);
+      gl_PointSize = aSize * uPix * (250.0/max(-mv.z,1.0)) * (1.0 + hit*0.7);
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader:`
+    varying vec3 vColor; varying float vFade;
+    void main(){
+      vec2 c = gl_PointCoord - 0.5;
+      float dd = dot(c,c);
+      if(dd > 0.25) discard;
+      float a = smoothstep(0.25, 0.16, dd) * vFade;
+      if(a < 0.02) discard;
+      gl_FragColor = vec4(vColor, a);
+    }`
+});
+scene.add(new THREE.Points(geo,mat));
+document.getElementById('pc').textContent=(POS.length/3).toLocaleString();
+
+/* ---------- orbit ---------- */
+/* frame the plant regardless of viewport aspect */
+const FIT_R=112, FIT={x:2,y:22,z:2};
+function fitDist(){
+  const v=camera.fov*Math.PI/180;
+  const h=2*Math.atan(Math.tan(v/2)*camera.aspect);
+  return FIT_R/Math.tan(Math.min(v,h)/2);
+}
+const cam={az:-0.72, pol:1.04, zoom:1, tx:FIT.x, ty:FIT.y, tz:FIT.z};
+let drag=false,px=0,py=0,idle=0;
+const el=renderer.domElement;
+el.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;el.setPointerCapture(e.pointerId);});
+el.addEventListener('pointerup',  e=>{drag=false;idle=0;});
+el.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  cam.az-=(e.clientX-px)*0.005;
+  cam.pol=clamp(cam.pol-(e.clientY-py)*0.005,0.16,1.48);
+  px=e.clientX;py=e.clientY;
+});
+el.addEventListener('wheel',e=>{
+  e.preventDefault();
+  cam.zoom=clamp(cam.zoom*(1+Math.sign(e.deltaY)*0.09),0.22,2.6);
+},{passive:false});
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+let sweep=0,last=performance.now();
+(function loop(now){
+  const dt=Math.min((now-last)/1000,0.05); last=now;
+  if(!drag){ idle+=dt; if(idle>1.5) cam.az+=dt*0.035; }
+  sweep=(sweep+dt*0.55)%TAU;
+  mat.uniforms.uSweep.value=sweep;
+  const sp=Math.sin(cam.pol), dist=fitDist()*cam.zoom;
+  camera.position.set(
+    cam.tx+dist*sp*Math.cos(cam.az),
+    cam.ty+dist*Math.cos(cam.pol),
+    cam.tz+dist*sp*Math.sin(cam.az));
+  camera.lookAt(cam.tx,cam.ty,cam.tz);
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+})(last);
+
+})();
+}
+</script>
+</body>
+</html>
