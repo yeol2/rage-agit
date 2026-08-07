@@ -8,11 +8,9 @@ export function Nav() {
       <div className="mx-auto grid max-w-shell grid-cols-2 items-center gap-x-6 gap-y-4 px-5 py-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <div className="flex items-center gap-3">
           <Logo />
-          <span className="hud text-base font-medium text-foreground sm:text-lg">
+          <span className="hud whitespace-nowrap text-base font-medium text-foreground sm:text-lg">
             {siteConfig.siteName}
           </span>
-          <span className="hidden h-px w-14 bg-white/15 lg:block" />
-          <span className="hud hidden text-xs text-menu/70 lg:block">{siteConfig.protocol}</span>
         </div>
 
         <nav
