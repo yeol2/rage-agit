@@ -15,7 +15,7 @@ export function Hero() {
         </p>
       </div>
 
-      <h1 className="mt-7 text-5xl font-bold leading-[1.15] tracking-tight md:text-7xl">
+      <h1 className="mt-7 text-5xl font-bold leading-[1.12] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
         <span className="block text-muted">{hero.headlineMuted}</span>
         <span className="mt-1 block">
           <span className="text-foreground">{hero.headlineWhite}</span>{' '}

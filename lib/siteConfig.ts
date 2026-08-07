@@ -1,7 +1,6 @@
 export const siteConfig = {
   siteName: 'RAGE AGIT',
   protocol: 'PROTOCOL: V.0.4.21',
-  systemLine: 'SYSTEM ONLINE // SERVER: ASIA-SEOUL',
 
   // 로고 교체 지점. public/ 아래에 파일을 넣고 src 만 채우면 된다.
   // src 가 '' 이면 기본 다이아몬드 마크로 폴백한다.
