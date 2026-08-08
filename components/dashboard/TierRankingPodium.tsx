@@ -5,9 +5,9 @@ import { MEMBERS, TIER_GROUPS, getTopMembers, type Member, type TierGroup } from
 import { siteConfig } from '@/lib/siteConfig';
 
 const PODIUM_SLOTS: Array<{ rank: 1 | 2 | 3; order: string; height: string }> = [
-  { rank: 2, order: 'order-1', height: 'h-40' },
-  { rank: 1, order: 'order-2', height: 'h-52' },
-  { rank: 3, order: 'order-3', height: 'h-32' },
+  { rank: 2, order: 'order-1', height: 'h-44' },
+  { rank: 1, order: 'order-2', height: 'h-56' },
+  { rank: 3, order: 'order-3', height: 'h-40' },
 ];
 
 export function TierRankingPodium({ members = MEMBERS }: { members?: Member[] } = {}) {
