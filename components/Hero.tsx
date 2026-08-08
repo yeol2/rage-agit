@@ -26,11 +26,13 @@ export function Hero() {
       <p className="mt-10 max-w-xl text-[15px] leading-relaxed text-white/55">{hero.body}</p>
 
       <div className="mt-6 flex items-baseline gap-3">
-        <span className="hud text-[10px] text-white/30">CLAN MEMBERS</span>
-        <span className="text-2xl font-bold tabular-nums text-foreground">
-          {members.total.toLocaleString()}
+        <span className="text-xs font-medium uppercase tracking-widest text-white/35">
+          클랜원
         </span>
-        <span className="hud text-[11px] text-positive">
+        <span className="text-2xl font-bold tabular-nums text-foreground">
+          {members.total.toLocaleString()}명
+        </span>
+        <span className="text-sm font-medium tabular-nums text-positive">
           +{members.weeklyDelta} <span className="text-positive/60">이번 주</span>
         </span>
       </div>
