@@ -46,6 +46,10 @@ console.log(`clans: ${clans.length}개`);
 for (const clan of clans) {
   console.log(`  - ${clan.name} (${clan.id})`);
 }
+if (clans.length === 0) {
+  console.error('\nclans가 비어 있습니다 — RLS select 정책 또는 데이터를 확인하세요.');
+  process.exit(1);
+}
 
 const { data: members, error: membersError } = await supabase
   .from('members')
@@ -60,9 +64,17 @@ for (const member of members) {
   const igns = member.member_pubg_accounts.map((a) => a.pubg_ign).join(', ');
   console.log(`  - ${member.discord_nickname} (티어 ${member.tier}) — IGN: ${igns || '(없음)'}`);
 }
+if (members.length === 0) {
+  console.error('\nmembers가 비어 있습니다 — RLS select 정책 또는 데이터를 확인하세요.');
+  process.exit(1);
+}
 
 const multiIgnMembers = members.filter((m) => m.member_pubg_accounts.length > 1);
 console.log(`\n여러 IGN을 가진 멤버: ${multiIgnMembers.length}명`);
 for (const m of multiIgnMembers) {
   console.log(`  - ${m.discord_nickname}: ${m.member_pubg_accounts.map((a) => a.pubg_ign).join(', ')}`);
+}
+if (multiIgnMembers.length === 0) {
+  console.error('\n멀티 IGN 멤버가 없습니다 — 1:N 구조가 검증되지 않았습니다. Ez_Code/Ez_Codu 같은 테스트 데이터가 등록됐는지 확인하세요.');
+  process.exit(1);
 }

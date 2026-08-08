@@ -1,13 +1,15 @@
 -- 클랜원 등록 스키마 (1단계): clans, members, member_pubg_accounts
 -- 한 사람(디스코드 정체성)이 여러 PUBG IGN을 가질 수 있도록 1:N으로 분리했다.
+-- 이 마이그레이션은 Supabase SQL Editor에 직접 붙여넣어 수동으로 적용되었다 (CLI 마이그레이션 도구 아님) —
+-- 따라서 자동 드리프트 감지가 없으니, 실제 DB 상태와 이 파일이 어긋나지 않도록 주의할 것.
 
-create table clans (
+create table if not exists clans (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   created_at timestamptz not null default now()
 );
 
-create table members (
+create table if not exists members (
   id uuid primary key default gen_random_uuid(),
   clan_id uuid not null references clans(id),
   discord_nickname text not null,
@@ -18,7 +20,7 @@ create table members (
   unique (clan_id, discord_nickname)
 );
 
-create table member_pubg_accounts (
+create table if not exists member_pubg_accounts (
   id uuid primary key default gen_random_uuid(),
   member_id uuid not null references members(id) on delete cascade,
   pubg_ign text not null,
@@ -31,6 +33,11 @@ alter table clans enable row level security;
 alter table members enable row level security;
 alter table member_pubg_accounts enable row level security;
 
+drop policy if exists "clans_select_public" on clans;
 create policy "clans_select_public" on clans for select using (true);
+
+drop policy if exists "members_select_public" on members;
 create policy "members_select_public" on members for select using (true);
+
+drop policy if exists "member_pubg_accounts_select_public" on member_pubg_accounts;
 create policy "member_pubg_accounts_select_public" on member_pubg_accounts for select using (true);
