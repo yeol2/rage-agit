@@ -35,4 +35,18 @@ describe('TierRankingPodium', () => {
       'true'
     );
   });
+
+  it('dims the rank badge for empty podium slots but keeps it full brightness when filled', () => {
+    render(<TierRankingPodium />);
+    fireEvent.click(screen.getByRole('tab', { name: '4~4.5티어' }));
+
+    const slot1 = screen.getByTestId('podium-slot-1');
+    const slot2 = screen.getByTestId('podium-slot-2');
+    const slot3 = screen.getByTestId('podium-slot-3');
+
+    expect(within(slot1).getByText('1')).toHaveClass('text-accent');
+    expect(within(slot1).getByText('1')).not.toHaveClass('text-accent/30');
+    expect(within(slot2).getByText('2')).toHaveClass('text-accent/30');
+    expect(within(slot3).getByText('3')).toHaveClass('text-accent/30');
+  });
 });

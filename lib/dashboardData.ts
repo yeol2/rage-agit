@@ -36,6 +36,12 @@ export function getTopMembers(members: Member[], group: TierGroup, limit = 3): M
   return [...filtered].sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
+export function getRecentScrims(sessions: ScrimSession[], limit = 10): ScrimSession[] {
+  return [...sessions]
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .slice(0, limit);
+}
+
 const KOREAN_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 export function formatScrimDate(dateISO: string): string {

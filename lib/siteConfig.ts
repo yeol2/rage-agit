@@ -48,6 +48,22 @@ export const siteConfig = {
     tagline: '배틀그라운드 클랜 RAGE의 내전 기록 보관소.',
   },
 
+  dashboard: {
+    pageHeading: '대시보드',
+    tierRanking: {
+      eyebrow: 'TIER RANKING',
+      heading: '티어 랭킹',
+    },
+    recentScrims: {
+      eyebrow: 'RECENT SCRIMS',
+      heading: '최근 내전',
+      participantSuffix: '명 참여',
+      matchSuffix: '경기',
+      replayLabel: '다시보기',
+      replayPendingLabel: '다시보기 준비중',
+    },
+  },
+
   features: {
     eyebrow: 'PLATFORM FEATURES',
     heading: '클랜 운영에 필요한 모든 것',

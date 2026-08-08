@@ -4,8 +4,10 @@ import {
   MEMBERS,
   SCRIM_SESSIONS,
   getTopMembers,
+  getRecentScrims,
   formatScrimDate,
   type Member,
+  type ScrimSession,
 } from './dashboardData';
 
 describe('TIER_GROUPS', () => {
@@ -50,6 +52,43 @@ describe('getTopMembers', () => {
     const group = { id: 'empty', label: 'Empty', tiers: [9] };
     const top = getTopMembers(fixture, group);
     expect(top).toHaveLength(0);
+  });
+});
+
+describe('getRecentScrims', () => {
+  const outOfOrder: ScrimSession[] = [
+    { id: 's1', title: 'A', date: '2026-07-01', participantCount: 64, matchCount: 4, replayUrl: null },
+    { id: 's2', title: 'B', date: '2026-08-01', participantCount: 64, matchCount: 4, replayUrl: null },
+    { id: 's3', title: 'C', date: '2026-06-01', participantCount: 64, matchCount: 4, replayUrl: null },
+    { id: 's4', title: 'D', date: '2026-07-15', participantCount: 64, matchCount: 4, replayUrl: null },
+  ];
+
+  it('sorts sessions by date descending, most recent first', () => {
+    const result = getRecentScrims(outOfOrder);
+    expect(result.map((s) => s.id)).toEqual(['s2', 's4', 's1', 's3']);
+  });
+
+  it('respects the limit argument', () => {
+    const result = getRecentScrims(outOfOrder, 2);
+    expect(result.map((s) => s.id)).toEqual(['s2', 's4']);
+  });
+
+  it('defaults to a limit of 10', () => {
+    const many: ScrimSession[] = Array.from({ length: 15 }, (_, i) => ({
+      id: `x${i}`,
+      title: `Scrim ${i}`,
+      date: `2026-01-${String(i + 1).padStart(2, '0')}`,
+      participantCount: 64,
+      matchCount: 4,
+      replayUrl: null,
+    }));
+    expect(getRecentScrims(many)).toHaveLength(10);
+  });
+
+  it('does not mutate the input array', () => {
+    const copy = [...outOfOrder];
+    getRecentScrims(outOfOrder);
+    expect(outOfOrder).toEqual(copy);
   });
 });
 

@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import DashboardPage from './page';
+
+afterEach(cleanup);
 
 describe('DashboardPage', () => {
   it('composes nav, tier ranking, recent scrims, and footer', () => {
