@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { siteConfig } from '@/lib/siteConfig';
 import pkg from '@/package.json';
 
@@ -20,16 +21,26 @@ export function Footer() {
           </div>
 
           <nav aria-label="푸터 메뉴" className="flex flex-col gap-3">
-            {footer.links.map((link) => (
-              <span
-                key={link.label}
-                aria-disabled="true"
-                className="cursor-not-allowed text-sm text-white/35"
-              >
-                {link.label}
-                <span className="sr-only"> (준비 중)</span>
-              </span>
-            ))}
+            {footer.links.map((link) =>
+              link.ready ? (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm text-white/35 transition-colors hover:text-foreground"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <span
+                  key={link.label}
+                  aria-disabled="true"
+                  className="cursor-not-allowed text-sm text-white/35"
+                >
+                  {link.label}
+                  <span className="sr-only"> (준비 중)</span>
+                </span>
+              )
+            )}
           </nav>
         </div>
 

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { siteConfig } from '@/lib/siteConfig';
 import { Logo } from './Logo';
 import { LocalClock } from './LocalClock';
@@ -17,16 +18,26 @@ export function Nav() {
           aria-label="주요 메뉴"
           className="order-last col-span-2 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 lg:order-none lg:col-span-1"
         >
-          {siteConfig.nav.map((item) => (
-            <span
-              key={item.label}
-              aria-disabled="true"
-              className="hud cursor-not-allowed text-[15px] text-menu transition-colors hover:text-foreground"
-            >
-              {item.label}
-              <span className="sr-only"> (준비 중)</span>
-            </span>
-          ))}
+          {siteConfig.nav.map((item) =>
+            item.ready ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="hud text-[15px] text-menu transition-colors hover:text-foreground"
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <span
+                key={item.label}
+                aria-disabled="true"
+                className="hud cursor-not-allowed text-[15px] text-menu transition-colors hover:text-foreground"
+              >
+                {item.label}
+                <span className="sr-only"> (준비 중)</span>
+              </span>
+            )
+          )}
         </nav>
 
         <div className="flex justify-end">

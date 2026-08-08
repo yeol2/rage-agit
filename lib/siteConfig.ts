@@ -11,7 +11,7 @@ export const siteConfig = {
   },
 
   nav: [
-    { label: 'DASHBOARD', href: '/dashboard', ready: false },
+    { label: 'DASHBOARD', href: '/dashboard', ready: true },
     { label: 'MEMBERS', href: '/members', ready: false },
     { label: 'MATCHES', href: '/matches', ready: false },
     { label: 'RANKINGS', href: '/rankings', ready: false },
@@ -40,7 +40,7 @@ export const siteConfig = {
     descriptionAccent: '감이 아니라 기록입니다.',
     credit: 'Data based on KAKAO PUBG Open API',
     links: [
-      { label: '대시보드', href: '/dashboard', ready: false },
+      { label: '대시보드', href: '/dashboard', ready: true },
       { label: '클랜원', href: '/members', ready: false },
       { label: '매치 기록', href: '/matches', ready: false },
       { label: '랭킹', href: '/rankings', ready: false },
