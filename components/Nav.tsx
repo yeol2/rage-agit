@@ -8,7 +8,7 @@ export function Nav() {
       <div className="mx-auto grid max-w-shell grid-cols-2 items-center gap-x-6 gap-y-4 px-5 py-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <div className="flex items-center gap-3">
           <Logo />
-          <span className="hud whitespace-nowrap text-lg font-bold text-foreground sm:text-xl">
+          <span className="whitespace-nowrap text-lg font-bold tracking-tight text-foreground sm:text-xl">
             {siteConfig.siteName}
           </span>
         </div>
