@@ -101,6 +101,32 @@ if (error) {
     check(inconsistent === 0, `${label}: 같은 팀 참가자의 순위가 일치한다`);
   }
 
+  // 내전은 하루 4경기로 고정이다.
+  // 4경기가 안 되면 그날 매치를 놓친 것이다 — 씨앗이 그날 참가자를 못 덮었거나,
+  // 폴링이 늦어 14일 보존 기간을 넘겼거나.
+  // 다만 보존 기간 끝자락(14일 전후)의 날짜는 이미 사라졌을 수 있어 되돌릴 수 없으므로,
+  // 최근 7일 안의 내전에 대해서만 실패로 처리한다.
+  console.log('\n내전 하루 4경기');
+  const MATCHES_PER_SCRIM_DAY = 4;
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+  const countByDay = new Map();
+  for (const m of matches) {
+    const day = m.played_at.slice(0, 10);
+    countByDay.set(day, (countByDay.get(day) ?? 0) + 1);
+  }
+
+  for (const [day, count] of [...countByDay].sort()) {
+    if (day >= sevenDaysAgo) {
+      check(count === MATCHES_PER_SCRIM_DAY, `${day}: ${MATCHES_PER_SCRIM_DAY}경기다 (실제 ${count}경기)`);
+    } else if (count === MATCHES_PER_SCRIM_DAY) {
+      console.log(`  OK  ${day}: ${count}경기다`);
+    } else {
+      // 실패로 세지 않는다 — 이미 API 에서 사라져 복구할 방법이 없다.
+      console.log(`  참고 ${day}: ${count}경기뿐이다 (보존 기간이 지나 나머지는 복구 불가)`);
+    }
+  }
+
   // 사람이 스크린샷으로 확인한 기준점
   console.log('\n08-02 내전 (스크린샷으로 확인된 기준점)');
   const aug02 = matches.filter((m) => m.played_at.startsWith('2026-08-02'));
