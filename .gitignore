@@ -9,3 +9,4 @@ node_modules/
 scripts/match-sample.json
 data/
 tsconfig.tsbuildinfo
+supabase/.env.functions
