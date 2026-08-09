@@ -3,15 +3,22 @@
 //
 // Phase 1 리뷰에서 '검증 스크립트가 정작 검증해야 할 상황에서 실패하지 못했다'는
 // 지적을 받았다. 그래서 이 스크립트는 조건이 깨지면 반드시 exit 1 로 끝난다.
-// 읽기만 하므로 anon 키로 충분하다 — 공개 읽기 정책이 살아있는지도 함께 확인되는 셈이다.
+//
+// 데이터 확인에는 service_role 키를 쓴다 — 0004 이후 discord_username 은
+// anon 으로 읽을 수 없기 때문이다. 대신 anon 으로 무엇이 보이고 무엇이
+// 안 보이는지를 따로 확인한다.
 
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { loadEnvLocal, requireEnv } from './lib/env.mjs';
 
 loadEnvLocal();
-const [url, anonKey] = requireEnv('NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
-const supabase = createClient(url, anonKey);
+const [url, serviceRoleKey, anonKey] = requireEnv(
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+);
+const supabase = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
 
 const problems = [];
 const check = (condition, message) => {
@@ -89,6 +96,24 @@ const ezCode = members.find((m) => m.member_pubg_accounts.some((a) => a.pubg_ign
 check(
   ezCode !== undefined && ezCode.member_pubg_accounts.some((a) => a.pubg_ign === 'Ez_Codu'),
   'Ez_Code 가 여전히 부계정 Ez_Codu 를 갖고 있다 (기존 데이터 보존)',
+);
+
+// 공개(anon) 키로 무엇이 보이는지 — 대시보드가 쓸 건 읽히고,
+// 디스코드 사용자명은 안 읽혀야 한다.
+const publicClient = createClient(url, anonKey);
+
+const usernameAttempt = await publicClient.from('members').select('discord_username').limit(1);
+check(
+  usernameAttempt.error !== null,
+  `공개 키로는 discord_username 을 못 읽는다${
+    usernameAttempt.error ? '' : ' (읽혔다 — 0004 가 적용되지 않았다)'
+  }`,
+);
+
+const dashboardAttempt = await publicClient.from('members').select('discord_nickname, tier').limit(1);
+check(
+  dashboardAttempt.error === null && (dashboardAttempt.data?.length ?? 0) > 0,
+  '공개 키로 discord_nickname 과 tier 는 읽힌다 (대시보드가 필요로 한다)',
 );
 
 console.log('');
