@@ -87,10 +87,27 @@ describe('generateVariants', () => {
     expect(new Set(variants).size).toBe(variants.length);
   });
 
-  it('혼동 문자가 너무 많으면 조합 폭발을 막고 명시된 대안만 준다', () => {
-    // 0/O/1/l/I 후보 자리가 5곳 이상이면 2^5=32개를 넘어간다
+  it('대소문자만 바꾼 형태를 후보에 넣는다', () => {
+    // 실제 사례: 별명은 Ez_NARA 였지만 진짜 IGN 은 Ez_Nara 였다
+    const variants = generateVariants('Ez_NARA', []);
+    expect(variants).toContain('Ez_Nara');
+    expect(variants).toContain('Ez_nara');
+    expect(variants).toContain('ez_nara');
+    expect(variants).toContain('EZ_NARA');
+  });
+
+  it('밑줄이 없는 이름에도 대소문자 후보를 만든다', () => {
+    const variants = generateVariants('Hoddu', []);
+    expect(variants).toContain('hoddu');
+    expect(variants).toContain('HODDU');
+  });
+
+  it('혼동 문자가 너무 많으면 조합 폭발을 피한다', () => {
+    // 0/O/1/l/I 후보 자리가 5곳 이상이면 2^5=32개를 넘어간다.
+    // 혼동 문자 조합만 건너뛰고, 개수가 고정된 대소문자 후보는 그대로 만든다.
     const variants = generateVariants('Ez_0l1I0l1', ['Ez_안전한대안']);
-    expect(variants).toEqual(['Ez_안전한대안']);
+    expect(variants).toContain('Ez_안전한대안');
+    expect(variants).not.toContain('Ez_Ol1I0l1');
   });
 });
 

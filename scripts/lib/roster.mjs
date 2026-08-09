@@ -79,15 +79,38 @@ function repeatVariants(ign) {
   return results;
 }
 
+function caseVariants(ign) {
+  // PUBG 닉네임은 대소문자를 구분하는데, 디스코드 별명에는 대충 적는 사람이 많다.
+  // (실제로 별명 Ez_NARA 의 진짜 IGN 은 Ez_Nara 였다)
+  //
+  // 글자마다 대소문자를 다 시도하면 2^n 으로 터지므로, 사람이 실제로 쓰는
+  // 몇 가지 형태만 만든다: 전부 소문자, 전부 대문자, 그리고 'Ez_' 같은
+  // 클랜 태그 접두사는 그대로 두고 뒷부분만 바꾼 것들.
+  const results = [ign.toLowerCase(), ign.toUpperCase()];
+
+  const underscore = ign.indexOf('_');
+  if (underscore > 0 && underscore < ign.length - 1) {
+    const prefix = ign.slice(0, underscore + 1);
+    const rest = ign.slice(underscore + 1);
+    results.push(prefix + rest.toLowerCase());
+    results.push(prefix + rest.toUpperCase());
+    results.push(prefix + rest[0].toUpperCase() + rest.slice(1).toLowerCase());
+  }
+
+  return results;
+}
+
 export function generateVariants(ign, explicit = []) {
   const confusable = confusableVariants(ign);
 
-  // 혼동 문자 자리가 너무 많으면 자동 추측을 포기하고 명시된 대안만 쓴다.
-  if (confusable === null) {
-    return [...new Set(explicit)].filter((v) => v !== ign);
-  }
-
-  const all = [...explicit, ...confusable, ...repeatVariants(ign)];
+  // 혼동 문자 자리가 너무 많으면 조합 폭발을 피해 그 부분만 건너뛴다.
+  // 대소문자 변형은 개수가 고정이라 그대로 시도한다.
+  const all = [
+    ...explicit,
+    ...(confusable ?? []),
+    ...repeatVariants(ign),
+    ...caseVariants(ign),
+  ];
   return [...new Set(all)].filter((v) => v !== ign);
 }
 

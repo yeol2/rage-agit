@@ -3,10 +3,14 @@
 //
 // 2단계로 진행한다:
 //   1차 — 옮겨 적은 이름 그대로 조회. 대부분 여기서 끝난다.
-//   2차 — 1차에서 실패한 것만, 혼동 문자를 바꾼 후보들로 다시 조회.
+//   2차 — 1차에서 실패한 것만, 혼동 문자와 대소문자를 바꾼 후보들로 다시 조회.
 // 이렇게 하면 잘 읽은 이름까지 변형을 만들어 조회하는 낭비가 없다.
+//
+// 이미 확인된 사람은 건너뛴다 — 실패분을 고쳐 다시 돌리는 일이 반복되는데
+// 매번 219명을 처음부터 조회하면 한 번에 2분 반씩 버린다.
+// 원본 TSV 의 IGN 을 고쳐서 처음부터 다시 조회하려면 --fresh 를 붙인다.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { loadEnvLocal, requireEnv } from './lib/env.mjs';
 import { chunk, extractAlternates, generateVariants, parseRosterTsv } from './lib/roster.mjs';
 
@@ -79,29 +83,56 @@ if (rows.length === 0) {
   process.exit(1);
 }
 
-// --- 1차: 적어놓은 이름 그대로 ---
-console.log('1차 조회 (옮겨 적은 이름 그대로)');
-const firstPass = await lookupAll(rows.map((r) => r.ignGuess), '  배치');
+// --- 지난 실행에서 이미 확인된 사람 불러오기 ---
+// 사람 기준은 discord_username 이다. IGN 은 검증 과정에서 바뀔 수 있어도
+// 어느 사람의 것인지는 안 바뀐다.
+const cached = new Map(); // discordUsername -> { pubgIgn, accountId }
+const useCache = !process.argv.includes('--fresh');
 
-const verified = [];   // { row, pubgIgn, accountId }
-const unresolved = [];  // 1차에서 못 찾은 행
-
-for (const row of rows) {
-  const accountId = firstPass.get(row.ignGuess);
-  if (accountId) {
-    verified.push({ row, pubgIgn: row.ignGuess, accountId });
-  } else {
-    unresolved.push(row);
+if (useCache && existsSync(VERIFIED_PATH)) {
+  for (const line of readFileSync(VERIFIED_PATH, 'utf-8').split('\n')) {
+    if (!line.trim()) continue;
+    const [, discordUsername, , pubgIgn, accountId] = line.split('\t');
+    cached.set(discordUsername, { pubgIgn, accountId });
+  }
+  if (cached.size > 0) {
+    console.log(`지난 실행에서 확인된 ${cached.size}명은 건너뛴다 (--fresh 로 무시 가능)\n`);
   }
 }
 
-console.log(`\n1차 결과: 확인 ${verified.length}명, 미확인 ${unresolved.length}명\n`);
+const verified = [];   // { row, pubgIgn, accountId }
+const toQuery = [];    // 이번에 조회할 행
+
+for (const row of rows) {
+  const hit = cached.get(row.discordUsername);
+  if (hit) verified.push({ row, pubgIgn: hit.pubgIgn, accountId: hit.accountId });
+  else toQuery.push(row);
+}
+
+// --- 1차: 적어놓은 이름 그대로 ---
+const unresolved = []; // 1차에서 못 찾은 행
+
+if (toQuery.length > 0) {
+  console.log(`1차 조회 (옮겨 적은 이름 그대로) — ${toQuery.length}명`);
+  const firstPass = await lookupAll(toQuery.map((r) => r.ignGuess), '  배치');
+
+  for (const row of toQuery) {
+    const accountId = firstPass.get(row.ignGuess);
+    if (accountId) {
+      verified.push({ row, pubgIgn: row.ignGuess, accountId });
+    } else {
+      unresolved.push(row);
+    }
+  }
+}
+
+console.log(`\n1차까지 결과: 확인 ${verified.length}명, 미확인 ${unresolved.length}명\n`);
 
 // --- 2차: 미확인 건만 후보를 만들어 재조회 ---
 const failed = []; // { row, tried, reason }
 
 if (unresolved.length > 0) {
-  console.log('2차 조회 (혼동 문자 변형 후보)');
+  console.log('2차 조회 (혼동 문자·대소문자 변형 후보)');
 
   const candidatesByRow = new Map();
   const allCandidates = new Set();
