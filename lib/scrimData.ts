@@ -66,6 +66,23 @@ export async function fetchSessionMatches(sessionId: string): Promise<ScrimMatch
   }));
 }
 
+// 조인한 members 는 Supabase 타입 추론이 확정하지 못해 그대로 두면 빌드가 막힌다.
+// 우리가 무엇을 고르는지 알고 있으므로 모양을 명시한다.
+interface ParticipantRow {
+  pubg_ign: string;
+  team_id: number;
+  team_rank: number;
+  kills: number;
+  assists: number;
+  damage_dealt: number;
+  dbnos: number;
+  headshot_kills: number;
+  time_survived: number | null;
+  walk_distance: number | null;
+  ride_distance: number | null;
+  members: { discord_nickname: string } | { discord_nickname: string }[] | null;
+}
+
 export async function fetchMatchParticipants(pubgMatchId: string): Promise<ScrimParticipant[]> {
   const { data, error } = await getSupabase()
     .from('match_participants')
@@ -73,7 +90,8 @@ export async function fetchMatchParticipants(pubgMatchId: string): Promise<Scrim
       'pubg_ign, team_id, team_rank, kills, assists, damage_dealt, dbnos, headshot_kills, ' +
         'time_survived, walk_distance, ride_distance, members(discord_nickname)',
     )
-    .eq('pubg_match_id', pubgMatchId);
+    .eq('pubg_match_id', pubgMatchId)
+    .returns<ParticipantRow[]>();
   if (error) throw new Error(`참가자를 불러오지 못했습니다: ${error.message}`);
 
   return (data ?? []).map((row) => {

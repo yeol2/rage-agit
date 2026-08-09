@@ -1,9 +1,9 @@
-import { SCRIM_SESSIONS, formatScrimDate, getRecentScrims, type ScrimSession } from '@/lib/dashboardData';
+import { ScrimSessionRow } from './ScrimSessionRow';
+import { type ScrimSessionSummary } from '@/lib/scrimData';
 import { siteConfig } from '@/lib/siteConfig';
 
-export function RecentScrimsList({ sessions = SCRIM_SESSIONS }: { sessions?: ScrimSession[] } = {}) {
+export function RecentScrimsList({ sessions }: { sessions: ScrimSessionSummary[] }) {
   const recentScrimsCopy = siteConfig.dashboard.recentScrims;
-  const recent = getRecentScrims(sessions);
 
   return (
     <section className="mx-auto max-w-shell px-5 pb-24 sm:px-8 md:pb-32">
@@ -15,40 +15,17 @@ export function RecentScrimsList({ sessions = SCRIM_SESSIONS }: { sessions?: Scr
         {recentScrimsCopy.heading}
       </h2>
 
-      <ul className="mt-10 divide-y divide-white/[0.07] border-y border-white/[0.07]">
-        {recent.map((session) => (
-          <li
-            key={session.id}
-            className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
-          >
-            <div>
-              <p className="font-bold text-foreground">{session.title}</p>
-              <p className="mt-1 text-sm text-menu">
-                {formatScrimDate(session.date)} · {session.participantCount}
-                {recentScrimsCopy.participantSuffix} · {session.matchCount}
-                {recentScrimsCopy.matchSuffix}
-              </p>
-            </div>
-            {session.replayUrl ? (
-              <a
-                href={session.replayUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="shrink-0 rounded-md border border-accent/50 px-4 py-2 text-center text-sm font-bold text-accent transition-colors hover:bg-accent hover:text-background"
-              >
-                {recentScrimsCopy.replayLabel}
-              </a>
-            ) : (
-              <span
-                aria-disabled="true"
-                className="shrink-0 rounded-md border border-white/10 px-4 py-2 text-center text-sm text-white/25"
-              >
-                {recentScrimsCopy.replayPendingLabel}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
+      {sessions.length === 0 ? (
+        <p className="mt-10 text-menu">아직 수집된 내전이 없습니다.</p>
+      ) : (
+        // 조회 함수는 넘기지 않는다 — 서버에서 클라이언트로 함수는 건너가지 못한다.
+        // ScrimSessionRow 가 기본값으로 브라우저에서 직접 가져온다.
+        <ul className="mt-10 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+          {sessions.map((session) => (
+            <ScrimSessionRow key={session.id} session={session} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

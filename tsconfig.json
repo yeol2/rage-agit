@@ -19,5 +19,6 @@
     "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "prototypes"]
+  "//": "supabase/functions 는 Deno 런타임에서 돌고 jsr: 같은 Deno 전용 import 를 쓴다. Next 빌드가 타입 검사하면 모듈을 못 찾아 실패한다.",
+  "exclude": ["node_modules", "prototypes", "supabase/functions"]
 }
