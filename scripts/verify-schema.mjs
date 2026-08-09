@@ -88,6 +88,34 @@ check(
   'members 의 updated_at 갱신 트리거가 있다',
 );
 
+console.log('\n0005 — 매치 폴링 테이블');
+
+for (const table of ['matches', 'match_participants', 'polled_matches']) {
+  check(
+    (await one(`select count(*) from information_schema.tables
+      where table_name = '${table}'`)) === 1,
+    `${table} 테이블이 있다`,
+  );
+}
+
+const matchGrants = await client.query(`
+  select grantee, column_name
+  from information_schema.column_privileges
+  where table_name in ('matches', 'match_participants', 'polled_matches')
+    and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated')
+`);
+
+for (const role of ['anon', 'authenticated']) {
+  const columns = matchGrants.rows.filter((r) => r.grantee === role).map((r) => r.column_name);
+  check(!columns.includes('raw_attributes'), `${role} 이 matches.raw_attributes 를 못 읽는다`);
+  check(!columns.includes('raw_stats'), `${role} 이 match_participants.raw_stats 를 못 읽는다`);
+  check(!columns.includes('pubg_account_id'), `${role} 이 pubg_account_id 를 못 읽는다`);
+  check(
+    columns.includes('team_rank') && columns.includes('kills'),
+    `${role} 이 team_rank 와 kills 는 읽을 수 있다 (대시보드가 필요로 한다)`,
+  );
+}
+
 await client.end();
 
 console.log('');
