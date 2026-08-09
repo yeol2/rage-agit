@@ -10,3 +10,4 @@ scripts/match-sample.json
 data/
 tsconfig.tsbuildinfo
 supabase/.env.functions
+supabase/.temp/
