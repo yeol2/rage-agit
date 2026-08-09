@@ -116,6 +116,29 @@ for (const role of ['anon', 'authenticated']) {
   );
 }
 
+console.log('\n0006 — 폴링 자동화');
+
+check(
+  (await one(`select count(*) from information_schema.tables
+    where table_name = 'polling_runs'`)) === 1,
+  'polling_runs 테이블이 있다',
+);
+
+for (const ext of ['pg_cron', 'pg_net']) {
+  check(
+    (await one(`select count(*) from pg_extension where extname = '${ext}'`)) === 1,
+    `${ext} 확장이 설치돼 있다`,
+  );
+}
+
+const runGrants = await client.query(`
+  select grantee, column_name
+  from information_schema.column_privileges
+  where table_name = 'polling_runs' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated')
+`);
+check(runGrants.rows.length === 0, 'polling_runs 는 공개로 읽히지 않는다');
+
 await client.end();
 
 console.log('');
