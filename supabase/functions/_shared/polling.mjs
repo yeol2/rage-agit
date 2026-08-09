@@ -3,6 +3,7 @@
 // 필요한 것은 전부 인자로 받는다.
 
 import { classifyMatch, extractMatchSummary, extractParticipants } from './matches.mjs';
+import { scrimSessionTitle, toKstDate } from './sessions.mjs';
 
 const SEED_CANDIDATES = 30; // 참가 기록으로 좁히는 후보 수
 const SEED_LIMIT = 8; // 그중 실제로 매치를 열 인원
@@ -61,6 +62,30 @@ async function selectAll(supabase, table, columns, applyFilter = (q) => q) {
   }
 }
 
+// 매치가 속할 내전 세션을 찾고, 없으면 만든다.
+// 하루 4경기가 한 번에 다 들어오지 않을 수 있으므로(08-09 에 실제로 3경기만
+// 먼저 들어왔다) 매치마다 이 함수를 부르고, 같은 날이면 같은 세션에 붙는다.
+export async function attachToSession(supabase, { clanId, playedAt }) {
+  const scrimDate = toKstDate(playedAt);
+
+  const { data: existing, error: findError } = await supabase
+    .from('scrim_sessions')
+    .select('id')
+    .eq('clan_id', clanId)
+    .eq('scrim_date', scrimDate)
+    .maybeSingle();
+  if (findError) throw new Error(`scrim_sessions 조회 실패: ${findError.message}`);
+  if (existing) return existing.id;
+
+  const { data: created, error: insertError } = await supabase
+    .from('scrim_sessions')
+    .insert({ clan_id: clanId, scrim_date: scrimDate, title: scrimSessionTitle(scrimDate) })
+    .select('id')
+    .single();
+  if (insertError) throw new Error(`scrim_sessions 생성 실패: ${insertError.message}`);
+  return created.id;
+}
+
 // 429 재시도 횟수를 인자로 받는다. 함수는 실행 시간 제한이 있어 한 번만,
 // 로컬 스크립트는 여유가 있어 여러 번 시도한다.
 async function fetchPlayers(apiKey, accountIds, retriesLeft, log) {
@@ -98,6 +123,11 @@ export async function runPolling({
   );
   if (memberIdByAccountId.size === 0) throw new Error('등록된 클랜원 계정이 없다');
   log(`등록된 클랜원 계정: ${memberIdByAccountId.size}개`);
+
+  // 세션은 클랜에 속한다. 클랜이 정확히 하나여야 어느 세션에 붙일지 알 수 있다.
+  const clans = await selectAll(supabase, 'clans', 'id');
+  if (clans.length !== 1) throw new Error(`clans 가 ${clans.length}개다 — 정확히 1개여야 한다`);
+  const clanId = clans[0].id;
 
   // --- 씨앗 후보: 최근 내전 참가 상위 30명 ---
   const windowStart = new Date(Date.now() - SEED_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
@@ -206,6 +236,11 @@ export async function runPolling({
 
       log(`  내전 발견: ${summary.playedAt}  ${verdict.reason}`);
 
+      const sessionId = await attachToSession(supabase, {
+        clanId,
+        playedAt: summary.playedAt,
+      });
+
       const { error: matchError } = await supabase.from('matches').upsert(
         {
           pubg_match_id: summary.pubgMatchId,
@@ -217,6 +252,7 @@ export async function runPolling({
           participant_count: summary.participantCount,
           clan_member_count: clanMemberCount,
           raw_attributes: summary.rawAttributes,
+          scrim_session_id: sessionId,
         },
         { onConflict: 'pubg_match_id' },
       );
@@ -241,6 +277,8 @@ export async function runPolling({
           boosts: p.boosts,
           longest_kill: p.longestKill,
           revives: p.revives,
+          walk_distance: p.rawStats.walkDistance ?? null,
+          ride_distance: p.rawStats.rideDistance ?? null,
           raw_stats: p.rawStats,
         })),
         { onConflict: 'pubg_match_id,pubg_account_id' },
