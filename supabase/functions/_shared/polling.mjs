@@ -38,6 +38,16 @@ export function pickLightSeeds(players, limit) {
     .map((p) => p.accountId);
 }
 
+// 이미 살펴본 매치는 빼되 목록 순서(최신순)는 그대로 둔다.
+//
+// 처음에는 "이미 본 매치를 만나면 그 아래는 다 봤을 테니 멈춘다"로 짰는데 틀렸다.
+// 조회 실패나 상한 초과로 중간을 건너뛰면 그 자리보다 최신인 매치는 저장돼 있으므로,
+// 다음 실행이 첫 항목에서 바로 멈춰 빠뜨린 자리에 영영 도달하지 못한다.
+// 건너뛰는 데는 네트워크 호출이 들지 않으므로 끝까지 훑어도 비용이 거의 없다.
+export function pendingMatchIds(matchRefs, alreadySeen) {
+  return (matchRefs ?? []).map((ref) => ref.id).filter((id) => !alreadySeen.has(id));
+}
+
 async function selectAll(supabase, table, columns, applyFilter = (q) => q) {
   const rows = [];
   for (let from = 0; ; from += PAGE_SIZE) {
@@ -136,8 +146,9 @@ export async function runPolling({
   const alreadySeen = new Set(polled.map((r) => r.pubg_match_id));
 
   // --- 각 씨앗의 목록을 최신순으로 훑는다 ---
-  // 목록이 최신순이라(실측 확인), 이미 살펴본 매치나 기준 시각보다 오래된 매치를
-  // 만나면 그 아래는 전부 더 오래된 것이므로 그 사람은 거기서 멈춘다.
+  // 이미 살펴본 매치는 건너뛰고(pendingMatchIds), 기준 시각보다 오래된 매치를
+  // 만나면 그 아래는 전부 더 오래된 것이므로(목록이 최신순이다 — 실측 확인)
+  // 그 사람은 거기서 멈춘다.
   const result = {
     seedsUsed: seeds.length,
     matchesExamined: 0,
@@ -151,27 +162,26 @@ export async function runPolling({
   const examined = new Set();
 
   for (const player of seeds) {
-    for (const ref of player.relationships?.matches?.data ?? []) {
-      if (alreadySeen.has(ref.id)) break; // 여기부터 아래는 지난 실행에서 다 봤다
-      if (examined.has(ref.id)) continue; // 다른 씨앗과 같이 뛴 경기
+    for (const matchId of pendingMatchIds(player.relationships?.matches?.data, alreadySeen)) {
+      if (examined.has(matchId)) continue; // 다른 씨앗과 같이 뛴 경기
       if (result.matchesExamined >= maxMatches) {
         result.truncated = true;
         break;
       }
 
-      const res = await fetch(`https://api.pubg.com/shards/kakao/matches/${ref.id}`, {
+      const res = await fetch(`https://api.pubg.com/shards/kakao/matches/${matchId}`, {
         headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/vnd.api+json' },
       });
       if (!res.ok) {
         // 매치 하나가 실패해도 나머지는 계속한다.
-        log(`  ${ref.id}: 조회 실패 ${res.status} — 건너뛴다`);
+        log(`  ${matchId}: 조회 실패 ${res.status} — 건너뛴다`);
         result.failedFetches++;
         continue;
       }
 
       const body = await res.json();
       const summary = extractMatchSummary(body);
-      examined.add(ref.id);
+      examined.add(matchId);
       result.matchesExamined++;
 
       if (new Date(summary.playedAt) < cutoff) break; // 기준보다 오래됐다 — 이 사람은 여기까지
@@ -187,7 +197,7 @@ export async function runPolling({
       const { error: polledError } = await supabase
         .from('polled_matches')
         .upsert(
-          { pubg_match_id: ref.id, is_scrim: verdict.isScrim, reason: verdict.reason },
+          { pubg_match_id: matchId, is_scrim: verdict.isScrim, reason: verdict.reason },
           { onConflict: 'pubg_match_id' },
         );
       if (polledError) throw new Error(`polled_matches 기록 실패: ${polledError.message}`);
