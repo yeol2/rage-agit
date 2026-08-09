@@ -1,6 +1,9 @@
 // 클랜원 명단 TSV를 다루는 순수 함수들.
 // 외부 의존(파일 시스템, 네트워크)이 없어야 테스트가 쉽고 빠르다.
 
+// chunk 는 Edge Function 도 쓰므로 공유 모듈이 원본이다.
+export { chunk } from '../../supabase/functions/_shared/polling.mjs';
+
 const CONFUSABLE_GROUPS = [
   ['0', 'O'],
   ['1', 'l', 'I'],
@@ -114,10 +117,3 @@ export function generateVariants(ign, explicit = []) {
   return [...new Set(all)].filter((v) => v !== ign);
 }
 
-export function chunk(items, size) {
-  const result = [];
-  for (let i = 0; i < items.length; i += size) {
-    result.push(items.slice(i, i + size));
-  }
-  return result;
-}
