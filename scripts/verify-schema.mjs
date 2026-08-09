@@ -139,6 +139,44 @@ const runGrants = await client.query(`
 `);
 check(runGrants.rows.length === 0, 'polling_runs 는 공개로 읽히지 않는다');
 
+console.log('\n0007 — 내전 세션');
+
+check(
+  (await one(`select count(*) from information_schema.tables
+    where table_name = 'scrim_sessions'`)) === 1,
+  'scrim_sessions 테이블이 있다',
+);
+check(
+  (await one(`select count(*) from information_schema.views
+    where table_name = 'scrim_session_summary'`)) === 1,
+  'scrim_session_summary 뷰가 있다',
+);
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'matches' and column_name = 'scrim_session_id'`)) === 1,
+  'matches.scrim_session_id 컬럼이 있다',
+);
+for (const col of ['walk_distance', 'ride_distance']) {
+  check(
+    (await one(`select count(*) from information_schema.columns
+      where table_name = 'match_participants' and column_name = '${col}'`)) === 1,
+    `match_participants.${col} 컬럼이 있다`,
+  );
+}
+
+const sessionGrants = await client.query(`
+  select grantee, column_name
+  from information_schema.column_privileges
+  where table_name in ('scrim_sessions', 'matches', 'match_participants')
+    and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  const columns = sessionGrants.rows.filter((r) => r.grantee === role).map((r) => r.column_name);
+  check(columns.includes('scrim_date'), `${role} 이 scrim_date 를 읽을 수 있다`);
+  check(columns.includes('walk_distance'), `${role} 이 walk_distance 를 읽을 수 있다`);
+  check(!columns.includes('raw_stats'), `${role} 이 raw_stats 는 여전히 못 읽는다`);
+}
+
 await client.end();
 
 console.log('');
