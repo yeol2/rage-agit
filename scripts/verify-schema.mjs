@@ -249,6 +249,34 @@ for (const role of ['anon', 'authenticated']) {
   check(granted.includes('total_distance'), `${role} 이 total_distance 를 읽을 수 있다`);
 }
 
+console.log('\n0010 — 사람별 최근 10경기 집계 뷰');
+
+check(
+  (await one(`select count(*) from information_schema.views
+    where table_name = 'member_recent_stats'`)) === 1,
+  'member_recent_stats 뷰가 있다',
+);
+
+const statsGrants = await client.query(`
+  select grantee from information_schema.table_privileges
+  where table_name = 'member_recent_stats' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated')
+`);
+const statsGrantees = statsGrants.rows.map((r) => r.grantee);
+check(statsGrantees.includes('anon'), 'anon 이 member_recent_stats 를 읽을 수 있다');
+check(
+  statsGrantees.includes('authenticated'),
+  'authenticated 이 member_recent_stats 를 읽을 수 있다',
+);
+
+// 뷰가 최근 10경기로 제한하는지는 정의문에서 확인한다 — rn <= 10 이 없으면
+// 전체 경기가 다 들어가 평균이 조용히 틀어진다.
+check(
+  (await client.query(`select pg_get_viewdef('member_recent_stats'::regclass) as def`)).rows[0].def
+    .includes('<= 10'),
+  '뷰가 최근 10경기로 제한한다',
+);
+
 await client.end();
 
 console.log('');
