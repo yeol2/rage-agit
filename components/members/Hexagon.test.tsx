@@ -6,12 +6,12 @@ import type { HexagonAxis } from '@/lib/memberStats';
 afterEach(cleanup);
 
 const axes: HexagonAxis[] = [
-  { key: 'damage', label: '화력', percentile: 80 },
-  { key: 'kills', label: '결정력', percentile: 60 },
-  { key: 'headshot', label: '정확도', percentile: 40 },
-  { key: 'survival', label: '생존력', percentile: 90 },
-  { key: 'assists', label: '팀 기여', percentile: 20 },
-  { key: 'rank', label: '성적', percentile: 70 },
+  { key: 'damage', label: '딜량', percentile: 80 },
+  { key: 'kills', label: '킬', percentile: 60 },
+  { key: 'headshot', label: '헤드샷', percentile: 40 },
+  { key: 'survival', label: '생존', percentile: 90 },
+  { key: 'assists', label: '어시', percentile: 20 },
+  { key: 'rank', label: '순위', percentile: 70 },
 ];
 
 describe('pointFor', () => {

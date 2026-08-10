@@ -87,7 +87,7 @@ describe('buildHexagonAxes', () => {
   it('6축을 정해진 순서와 라벨로 낸다', () => {
     const axes = buildHexagonAxes(target, cohort);
     expect(axes.map((a) => a.key)).toEqual(['damage', 'kills', 'headshot', 'survival', 'assists', 'rank']);
-    expect(axes.map((a) => a.label)).toEqual(['화력', '결정력', '정확도', '생존력', '팀 기여', '성적']);
+    expect(axes.map((a) => a.label)).toEqual(['딜량', '킬', '헤드샷', '생존', '어시', '순위']);
   });
 
   it('본인이 코호트 중 전부 앞서면 모든 축이 100', () => {

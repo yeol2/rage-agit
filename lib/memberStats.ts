@@ -101,13 +101,15 @@ export function percentile(value: number, cohortValues: number[], higherIsBetter
 
 export type HexagonAxisKey = 'damage' | 'kills' | 'headshot' | 'survival' | 'assists' | 'rank';
 
+// 대시보드 경기 표(ScrimSessionRow)가 이미 쓰는 용어와 맞춘다 —
+// '화력'·'결정력' 같은 추상적인 말보다 딜량·킬 그대로가 더 직관적이다.
 export const HEXAGON_AXIS_LABELS: Record<HexagonAxisKey, string> = {
-  damage: '화력',
-  kills: '결정력',
-  headshot: '정확도',
-  survival: '생존력',
-  assists: '팀 기여',
-  rank: '성적',
+  damage: '딜량',
+  kills: '킬',
+  headshot: '헤드샷',
+  survival: '생존',
+  assists: '어시',
+  rank: '순위',
 };
 
 export interface HexagonAxis {
