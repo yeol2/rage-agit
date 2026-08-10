@@ -1,6 +1,8 @@
 // 클랜원 6각형 지표 — 순수 계산 함수. 네트워크는 이 파일 뒷부분(조회 함수)에만 있고,
 // 여기 있는 함수들은 Supabase 없이 테스트한다.
 
+import { getSupabase } from './supabaseBrowser';
+
 export interface MemberRecentStatsRow {
   memberId: string;
   tier: number;
@@ -115,4 +117,87 @@ export function buildHexagonAxes(
       percentile: percentile(target.avgRank, cohort.map((c) => c.avgRank), false),
     },
   ];
+}
+
+export interface MemberSummary {
+  id: string;
+  discordNickname: string;
+  tier: number;
+}
+
+export async function fetchAllMembers(): Promise<MemberSummary[]> {
+  const { data, error } = await getSupabase()
+    .from('members')
+    .select('id, discord_nickname, tier')
+    .eq('is_active', true)
+    .order('discord_nickname');
+  if (error) throw new Error(`클랜원 명단을 불러오지 못했습니다: ${error.message}`);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    discordNickname: row.discord_nickname,
+    tier: row.tier,
+  }));
+}
+
+export async function fetchMember(memberId: string): Promise<MemberSummary | null> {
+  const { data, error } = await getSupabase()
+    .from('members')
+    .select('id, discord_nickname, tier')
+    .eq('id', memberId)
+    .maybeSingle();
+  if (error) throw new Error(`클랜원 정보를 불러오지 못했습니다: ${error.message}`);
+  if (!data) return null;
+
+  return { id: data.id, discordNickname: data.discord_nickname, tier: data.tier };
+}
+
+function toStatsRow(row: {
+  member_id: string;
+  tier: number;
+  game_count: number;
+  avg_damage: number;
+  avg_kills: number;
+  headshot_ratio: number | null;
+  avg_survival: number;
+  avg_assists: number;
+  avg_rank: number;
+}): MemberRecentStatsRow {
+  return {
+    memberId: row.member_id,
+    tier: row.tier,
+    gameCount: row.game_count,
+    avgDamage: Number(row.avg_damage),
+    avgKills: Number(row.avg_kills),
+    headshotRatio: row.headshot_ratio === null ? null : Number(row.headshot_ratio),
+    avgSurvival: Number(row.avg_survival),
+    avgAssists: Number(row.avg_assists),
+    avgRank: Number(row.avg_rank),
+  };
+}
+
+export async function fetchMemberRecentStats(memberId: string): Promise<MemberRecentStatsRow | null> {
+  const { data, error } = await getSupabase()
+    .from('member_recent_stats')
+    .select('member_id, tier, game_count, avg_damage, avg_kills, headshot_ratio, avg_survival, avg_assists, avg_rank')
+    .eq('member_id', memberId)
+    .maybeSingle();
+  if (error) throw new Error(`최근 전적을 불러오지 못했습니다: ${error.message}`);
+  if (!data) return null;
+
+  return toStatsRow(data);
+}
+
+// 같은 티어 그룹 전체의 표본을 한 번에 가져온다 — 백분위 비교 대상이다.
+// MIN_GAMES_FOR_HEXAGON 미만인 사람은 비교 대상에서 뺀다(본인이 그 미만이면
+// 애초에 6각형을 안 그리므로 이 함수까지 안 온다).
+export async function fetchTierCohortStats(tiers: number[]): Promise<MemberRecentStatsRow[]> {
+  const { data, error } = await getSupabase()
+    .from('member_recent_stats')
+    .select('member_id, tier, game_count, avg_damage, avg_kills, headshot_ratio, avg_survival, avg_assists, avg_rank')
+    .in('tier', tiers)
+    .gte('game_count', MIN_GAMES_FOR_HEXAGON);
+  if (error) throw new Error(`티어 그룹 전적을 불러오지 못했습니다: ${error.message}`);
+
+  return (data ?? []).map(toStatsRow);
 }
