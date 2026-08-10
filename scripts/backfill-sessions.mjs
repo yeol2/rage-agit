@@ -45,24 +45,32 @@ for (const match of unlinked) {
 
 // --- 이동거리 채우기 ---
 // raw_stats 에 이미 들어 있으므로 다시 가져올 필요가 없다.
+//
+// 조건을 walk_distance 가 아니라 total_distance 로 잡는다. dak.gg 출처 행은
+// 적재할 때 total_distance 를 채우므로 여기 걸리지 않는다 — 걸렸다면
+// raw_stats 에 walkDistance 가 없어서 0 을 써넣게 되고, 그건 지어낸 값이다.
+// (게다가 값이 안 바뀌니 같은 행을 계속 다시 집어 루프가 끝나지 않는다.)
 const PAGE = 1000;
 let filled = 0;
 for (;;) {
   const { data: rows, error } = await supabase
     .from('match_participants')
     .select('id, raw_stats')
-    .is('walk_distance', null)
+    .is('total_distance', null)
     .limit(PAGE);
   if (error) fail('match_participants 조회 실패:', error);
   if (rows.length === 0) break;
 
   for (const row of rows) {
+    // 조용히 0 으로 넘어가면 영영 모른다. 시끄럽게 멈춘다.
+    if (row.raw_stats?.walkDistance === undefined) {
+      fail(`참가자 ${row.id} 의 raw_stats 에 walkDistance 가 없다 — 손으로 확인할 것`);
+    }
+    const walk = Number(row.raw_stats.walkDistance);
+    const ride = Number(row.raw_stats.rideDistance ?? 0);
     const { error: updateError } = await supabase
       .from('match_participants')
-      .update({
-        walk_distance: row.raw_stats?.walkDistance ?? 0,
-        ride_distance: row.raw_stats?.rideDistance ?? 0,
-      })
+      .update({ walk_distance: walk, ride_distance: ride, total_distance: walk + ride })
       .eq('id', row.id);
     if (updateError) fail(`참가자 ${row.id} 이동거리 채우기 실패:`, updateError);
     filled++;
