@@ -15,6 +15,8 @@ export interface ScrimMatch {
   playedAt: string;
   mapName: string | null;
   participantCount: number;
+  // 'pubg_api' | 'dakgg'. dak.gg 출처는 시각이 자리표시자라 화면에서 감춘다.
+  source: string;
 }
 
 export interface ScrimParticipant {
@@ -53,7 +55,7 @@ export async function fetchScrimSessions(limit = 10): Promise<ScrimSessionSummar
 export async function fetchSessionMatches(sessionId: string): Promise<ScrimMatch[]> {
   const { data, error } = await getSupabase()
     .from('matches')
-    .select('pubg_match_id, played_at, map_name, participant_count')
+    .select('pubg_match_id, played_at, map_name, participant_count, source')
     .eq('scrim_session_id', sessionId)
     .order('played_at');
   if (error) throw new Error(`경기 목록을 불러오지 못했습니다: ${error.message}`);
@@ -63,6 +65,7 @@ export async function fetchSessionMatches(sessionId: string): Promise<ScrimMatch
     playedAt: row.played_at,
     mapName: row.map_name,
     participantCount: row.participant_count,
+    source: row.source,
   }));
 }
 
@@ -78,8 +81,7 @@ interface ParticipantRow {
   dbnos: number;
   headshot_kills: number;
   time_survived: number | null;
-  walk_distance: number | null;
-  ride_distance: number | null;
+  total_distance: number | null;
   members: { discord_nickname: string } | { discord_nickname: string }[] | null;
 }
 
@@ -88,7 +90,7 @@ export async function fetchMatchParticipants(pubgMatchId: string): Promise<Scrim
     .from('match_participants')
     .select(
       'pubg_ign, team_id, team_rank, kills, assists, damage_dealt, dbnos, headshot_kills, ' +
-        'time_survived, walk_distance, ride_distance, members(discord_nickname)',
+        'time_survived, total_distance, members(discord_nickname)',
     )
     .eq('pubg_match_id', pubgMatchId)
     .returns<ParticipantRow[]>();
@@ -97,8 +99,6 @@ export async function fetchMatchParticipants(pubgMatchId: string): Promise<Scrim
   return (data ?? []).map((row) => {
     // members 는 조인 결과라 객체이거나 배열일 수 있다.
     const member = Array.isArray(row.members) ? row.members[0] : row.members;
-    const walk = row.walk_distance;
-    const ride = row.ride_distance;
     return {
       pubgIgn: row.pubg_ign,
       discordNickname: member?.discord_nickname ?? null,
@@ -110,7 +110,9 @@ export async function fetchMatchParticipants(pubgMatchId: string): Promise<Scrim
       dbnos: row.dbnos,
       headshotKills: row.headshot_kills,
       timeSurvived: row.time_survived,
-      distance: walk === null && ride === null ? null : Number(walk ?? 0) + Number(ride ?? 0),
+      // 도보/탑승 합산은 백필과 적재에서 이미 끝났다.
+      // dak.gg 는 합계만 주므로 화면이 쪼개진 값을 볼 이유가 없다.
+      distance: row.total_distance === null ? null : Number(row.total_distance),
     };
   });
 }

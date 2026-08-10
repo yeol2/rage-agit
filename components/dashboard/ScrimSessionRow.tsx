@@ -125,7 +125,11 @@ export function ScrimSessionRow({
                   {openMatchId === match.pubgMatchId ? '▾' : '▸'}
                 </span>
                 <span className="font-bold">{index + 1}경기</span>
-                <span className="text-menu">{toKstTime(match.playedAt)}</span>
+                {/* dak.gg 출처는 날짜까지만 안다. 자리표시자 시각을 보여주면
+                    사실인 것처럼 읽힌다. */}
+                {match.source !== 'dakgg' && (
+                  <span className="text-menu">{toKstTime(match.playedAt)}</span>
+                )}
                 <span className="text-menu">{match.mapName ?? '-'}</span>
                 <span className="text-menu">{match.participantCount}명</span>
               </button>

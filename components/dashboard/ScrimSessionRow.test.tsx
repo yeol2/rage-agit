@@ -22,12 +22,14 @@ const matches: ScrimMatch[] = [
     playedAt: '2026-08-02T11:01:10Z',
     mapName: 'Baltic_Main',
     participantCount: 64,
+    source: 'pubg_api',
   },
   {
     pubgMatchId: 'm2',
     playedAt: '2026-08-02T12:39:58Z',
     mapName: 'Desert_Main',
     participantCount: 64,
+    source: 'pubg_api',
   },
 ];
 
@@ -133,5 +135,44 @@ describe('ScrimSessionRow', () => {
     await waitFor(() => expect(screen.getByText('네트워크 오류')).toBeInTheDocument());
     // 세션 제목은 그대로 보인다 — 목록 전체가 깨지지 않는다
     expect(screen.getByText('2026-08-02 (일) 내전')).toBeInTheDocument();
+  });
+
+  it('dak.gg 에서 읽은 경기는 시각을 보여주지 않는다', async () => {
+    // dak.gg 에는 날짜까지만 있다. played_at 은 경기 순서를 유지하려고
+    // 만든 자리표시자라, 보여주면 20:01 이 사실인 것처럼 읽힌다.
+    const dakgg: ScrimMatch[] = [
+      {
+        pubgMatchId: 'dakgg:abc123',
+        playedAt: '2026-07-19T20:01:00+09:00',
+        mapName: 'Desert_Main',
+        participantCount: 64,
+        source: 'dakgg',
+      },
+    ];
+    render(
+      <ScrimSessionRow
+        session={session}
+        loadMatches={vi.fn().mockResolvedValue(dakgg)}
+        loadParticipants={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /2026-08-02 \(일\) 내전/ }));
+    await waitFor(() => expect(screen.getByText(/1경기/)).toBeInTheDocument());
+    expect(screen.queryByText('20:01')).not.toBeInTheDocument();
+  });
+
+  it('API 에서 받은 경기는 시각을 보여준다', async () => {
+    render(
+      <ScrimSessionRow
+        session={session}
+        loadMatches={vi.fn().mockResolvedValue(matches)}
+        loadParticipants={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /2026-08-02 \(일\) 내전/ }));
+    // 픽스처의 11:01:10Z 는 한국시간 20:01 이다.
+    await waitFor(() => expect(screen.getByText('20:01')).toBeInTheDocument());
   });
 });
