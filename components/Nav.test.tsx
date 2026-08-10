@@ -11,9 +11,15 @@ describe('Nav', () => {
     expect(link).toHaveAttribute('href', '/dashboard');
   });
 
+  it('renders MEMBERS as a real link now that the page exists', () => {
+    render(<Nav />);
+    const link = screen.getByRole('link', { name: 'MEMBERS' });
+    expect(link).toHaveAttribute('href', '/members');
+  });
+
   it('keeps not-yet-built pages disabled', () => {
     render(<Nav />);
-    expect(screen.queryByRole('link', { name: 'MEMBERS' })).not.toBeInTheDocument();
-    expect(screen.getByText('MEMBERS')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByRole('link', { name: 'MATCHES' })).not.toBeInTheDocument();
+    expect(screen.getByText('MATCHES')).toHaveAttribute('aria-disabled', 'true');
   });
 });

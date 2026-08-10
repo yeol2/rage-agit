@@ -12,7 +12,7 @@ export const siteConfig = {
 
   nav: [
     { label: 'DASHBOARD', href: '/dashboard', ready: true },
-    { label: 'MEMBERS', href: '/members', ready: false },
+    { label: 'MEMBERS', href: '/members', ready: true },
     { label: 'MATCHES', href: '/matches', ready: false },
     { label: 'RANKINGS', href: '/rankings', ready: false },
   ],
@@ -41,7 +41,7 @@ export const siteConfig = {
     credit: 'Data based on KAKAO PUBG Open API',
     links: [
       { label: '대시보드', href: '/dashboard', ready: true },
-      { label: '클랜원', href: '/members', ready: false },
+      { label: '클랜원', href: '/members', ready: true },
       { label: '매치 기록', href: '/matches', ready: false },
       { label: '랭킹', href: '/rankings', ready: false },
     ],
@@ -62,6 +62,14 @@ export const siteConfig = {
       replayLabel: '다시보기',
       replayPendingLabel: '다시보기 준비중',
     },
+  },
+
+  memberDirectory: {
+    pageHeading: '클랜원',
+    eyebrow: 'CLAN ROSTER',
+    heading: '클랜원 목록',
+    searchPlaceholder: '닉네임 검색',
+    insufficientDataMessage: '아직 내전 기록이 없습니다.',
   },
 
   features: {
