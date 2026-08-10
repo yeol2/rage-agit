@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildMatch,
   contentKey,
   matchFingerprint,
   placeholderPlayedAt,
@@ -118,5 +119,91 @@ describe('validateFile', () => {
     const broken = { ...p('Ez_A', 2), damageDealt: undefined };
     const file = { ...good, matches: [{ order: 1, map: '미라마', participants: [broken] }] };
     expect(() => validateFile(file)).toThrow(/Ez_A.*damageDealt/);
+  });
+});
+
+describe('buildMatch', () => {
+  const file = { scrimDate: '2026-07-19', readFrom: 'Ez_A', readAt: '2026-08-10T12:00:00+09:00' };
+  const match = {
+    order: 1,
+    map: '미라마',
+    participants: [p('Ez_A', 2, { teamRank: 1 }), p('Ez_B', 0, { teamRank: 2 })],
+  };
+  // Ez_A 는 등록 클랜원, Ez_B 는 못 알아본 사람(탈퇴했거나 게스트)
+  const resolve = (ign) => (ign === 'Ez_A' ? { memberId: 'm-1', accountId: 'account.aaa' } : null);
+
+  it('매치 행에 dak.gg 출처를 남긴다', () => {
+    const { match: row } = buildMatch(file, match, resolve);
+    expect(row.source).toBe('dakgg');
+    expect(row.map_name).toBe('Desert_Main');
+    expect(row.match_type).toBe('custom');
+    expect(row.game_mode).toBe('squad');
+    expect(row.played_at).toBe('2026-07-19T20:01:00+09:00');
+  });
+
+  it('모르는 값은 지어내지 않는다', () => {
+    const { match: row } = buildMatch(file, match, resolve);
+    expect(row.duration_seconds).toBeNull();
+  });
+
+  it('판별 근거가 되는 수를 센다', () => {
+    const { match: row } = buildMatch(file, match, resolve);
+    expect(row.participant_count).toBe(2);
+    expect(row.clan_member_count).toBe(1);
+  });
+
+  it('알아본 사람에게는 계정 ID 를 붙인다', () => {
+    // 계정 ID 가 붙어야 0005 의 중복 제약이 작동하고,
+    // 개인 지표를 낼 때 API 경기와 같은 사람으로 합쳐진다.
+    const { participants } = buildMatch(file, match, resolve);
+    const a = participants.find((x) => x.pubg_ign === 'Ez_A');
+    expect(a.pubg_account_id).toBe('account.aaa');
+    expect(a.member_id).toBe('m-1');
+  });
+
+  it('못 알아본 사람은 비워둔다', () => {
+    const { participants } = buildMatch(file, match, resolve);
+    const b = participants.find((x) => x.pubg_ign === 'Ez_B');
+    expect(b.pubg_account_id).toBeNull();
+    expect(b.member_id).toBeNull();
+  });
+
+  it('dak.gg 에 없는 지표는 0 이 아니라 NULL 이다', () => {
+    // 0 으로 채우면 SQL 이 관측값으로 취급해서 평균을 절반으로 떨어뜨린다.
+    const { participants } = buildMatch(file, match, resolve);
+    for (const row of participants) {
+      expect(row.heals).toBeNull();
+      expect(row.boosts).toBeNull();
+      expect(row.revives).toBeNull();
+      expect(row.walk_distance).toBeNull();
+      expect(row.ride_distance).toBeNull();
+    }
+  });
+
+  it('이동거리 합계는 total_distance 에 넣는다', () => {
+    const { participants } = buildMatch(file, match, resolve);
+    expect(participants[0].total_distance).toBe(1000);
+  });
+
+  it('팀 번호가 없으니 순위를 그 자리에 쓴다', () => {
+    // 한 경기 안에서 순위는 팀마다 유일하므로 식별자로 유효하다.
+    const { participants } = buildMatch(file, match, resolve);
+    const b = participants.find((x) => x.pubg_ign === 'Ez_B');
+    expect(b.team_id).toBe(2);
+    expect(b.team_rank).toBe(2);
+    expect(b.win_place).toBe(2);
+  });
+
+  it('참가자가 자기 매치를 가리킨다', () => {
+    const { match: row, participants } = buildMatch(file, match, resolve);
+    for (const par of participants) {
+      expect(par.pubg_match_id).toBe(row.pubg_match_id);
+    }
+  });
+
+  it('같은 입력이면 같은 매치 ID 가 나온다', () => {
+    const a = buildMatch(file, match, resolve).match.pubg_match_id;
+    const b = buildMatch(file, match, resolve).match.pubg_match_id;
+    expect(a).toBe(b);
   });
 });

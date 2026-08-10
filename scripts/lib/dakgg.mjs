@@ -94,3 +94,68 @@ export function validateFile(file) {
     }
   }
 }
+
+// JSON 한 경기를 matches 행 하나와 match_participants 행 여럿으로 옮긴다.
+// resolve 는 닉네임으로 클랜원을 찾는 함수다 — DB 조회를 밖으로 빼서
+// 이 함수가 순수하게 남는다.
+export function buildMatch(file, match, resolve) {
+  const mapName = toMapName(match.map);
+  const pubgMatchId = matchFingerprint({
+    scrimDate: file.scrimDate,
+    mapName,
+    participants: match.participants,
+  });
+
+  const resolved = match.participants.map((p) => ({ p, found: resolve(p.ign) }));
+  const clanMemberCount = resolved.filter((r) => r.found?.memberId).length;
+
+  return {
+    match: {
+      pubg_match_id: pubgMatchId,
+      played_at: placeholderPlayedAt(file.scrimDate, match.order),
+      match_type: 'custom', // 내전은 항상 사설방이다
+      game_mode: 'squad', // 내전은 항상 스쿼드다
+      map_name: mapName,
+      duration_seconds: null, // dak.gg 에 없다
+      participant_count: match.participants.length,
+      clan_member_count: clanMemberCount,
+      source: 'dakgg',
+      // API 응답의 attributes 자리에 우리가 아는 출처 정보를 남긴다.
+      raw_attributes: {
+        source: 'dakgg',
+        scrimDate: file.scrimDate,
+        order: match.order,
+        dakggMap: match.map,
+        readFrom: file.readFrom ?? null,
+        readAt: file.readAt ?? null,
+      },
+    },
+    participants: resolved.map(({ p, found }) => ({
+      pubg_match_id: pubgMatchId,
+      member_id: found?.memberId ?? null,
+      pubg_account_id: found?.accountId ?? null,
+      pubg_ign: p.ign,
+      // 팀 번호가 없다. 한 경기 안에서 순위는 팀마다 유일하므로
+      // 지어낸 값이 아니라 그 경기 안에서만 유효한 팀 식별자다.
+      team_id: p.teamRank,
+      team_rank: p.teamRank,
+      win_place: p.teamRank,
+      kills: p.kills,
+      assists: p.assists,
+      damage_dealt: p.damageDealt,
+      dbnos: p.dbnos,
+      headshot_kills: p.headshotKills,
+      time_survived: p.timeSurvived,
+      longest_kill: p.longestKill,
+      // dak.gg 표에 칸이 없다. 0 이 아니라 모른다는 뜻이다.
+      heals: null,
+      boosts: null,
+      revives: null,
+      // 합계만 알고 있어서 쪼갤 수 없다.
+      walk_distance: null,
+      ride_distance: null,
+      total_distance: p.totalDistance,
+      raw_stats: p,
+    })),
+  };
+}
