@@ -11,6 +11,7 @@ import { loadEnvLocal, requireEnv } from './lib/env.mjs';
 import { buildMatch, contentKey, validateFile } from './lib/dakgg.mjs';
 import { classifyMatch } from '../supabase/functions/_shared/matches.mjs';
 import { attachToSession } from '../supabase/functions/_shared/polling.mjs';
+import { scrimSessionTitle } from '../supabase/functions/_shared/sessions.mjs';
 
 const DIR = 'data/dakgg-scrims';
 
@@ -166,6 +167,18 @@ for (const path of paths) {
     }
 
     const sessionId = await attachToSession(supabase, { clanId, playedAt: match.played_at });
+
+    // 파일에 note 가 있으면(예: '저티어') 세션 제목에 반영한다.
+    // attachToSession 은 기본 제목으로만 만들기 때문에, 특이사항은 여기서 덧붙인다.
+    // 매번 다시 써도 안전하다 — replay_url 등 다른 컬럼은 건드리지 않는다.
+    if (file.note) {
+      const title = scrimSessionTitle(file.scrimDate).replace(' 내전', ` ${file.note} 내전`);
+      const { error: titleError } = await supabase
+        .from('scrim_sessions')
+        .update({ title })
+        .eq('id', sessionId);
+      if (titleError) fail(`${raw.order}경기 세션 제목 갱신 실패:`, titleError);
+    }
 
     const { error: matchError } = await supabase
       .from('matches')

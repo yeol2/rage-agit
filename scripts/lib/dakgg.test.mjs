@@ -120,6 +120,15 @@ describe('validateFile', () => {
     const file = { ...good, matches: [{ order: 1, map: '미라마', participants: [broken] }] };
     expect(() => validateFile(file)).toThrow(/Ez_A.*damageDealt/);
   });
+
+  it('note 가 문자열이면 통과시킨다', () => {
+    expect(() => validateFile({ ...good, note: '저티어' })).not.toThrow();
+  });
+
+  it('note 가 문자열이 아니면 멈춘다', () => {
+    // 오타로 배열·객체가 들어가면 세션 제목에 '[object Object]' 가 그대로 박힌다.
+    expect(() => validateFile({ ...good, note: ['저티어'] })).toThrow(/note/);
+  });
 });
 
 describe('buildMatch', () => {

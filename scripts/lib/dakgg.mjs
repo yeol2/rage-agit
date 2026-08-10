@@ -74,6 +74,9 @@ export function validateFile(file) {
   if (!Array.isArray(file.matches) || file.matches.length === 0) {
     throw new Error('경기가 하나도 없다');
   }
+  if (file.note !== undefined && typeof file.note !== 'string') {
+    throw new Error(`note 는 문자열이어야 한다: ${JSON.stringify(file.note)}`);
+  }
 
   for (const match of file.matches) {
     if (typeof match.order !== 'number') {
