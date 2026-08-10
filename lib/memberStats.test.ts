@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ALL_TIERS,
   MEMBER_STAT_TIER_GROUPS,
   MIN_GAMES_FOR_HEXAGON,
   buildHexagonAxes,
+  cleanDisplayName,
   percentile,
+  tierColorRamp,
   tierGroupFor,
   type MemberRecentStatsRow,
 } from './memberStats';
@@ -109,5 +112,64 @@ describe('buildHexagonAxes', () => {
 describe('MIN_GAMES_FOR_HEXAGON', () => {
   it('4경기다', () => {
     expect(MIN_GAMES_FOR_HEXAGON).toBe(4);
+  });
+});
+
+describe('ALL_TIERS', () => {
+  it('0티어부터 5티어까지 10개 값을 오름차순으로 낸다', () => {
+    expect(ALL_TIERS).toEqual([0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]);
+  });
+});
+
+describe('cleanDisplayName', () => {
+  it('괄호로 묶인 태그를 뗀다', () => {
+    expect(cleanDisplayName('Ez_A(98)')).toBe('Ez_A');
+  });
+
+  it('이모지를 뗀다', () => {
+    expect(cleanDisplayName('Ez_B👀')).toBe('Ez_B');
+  });
+
+  it('괄호와 이모지가 같이 있어도 다 뗀다', () => {
+    expect(cleanDisplayName('Ez_C(89)👀')).toBe('Ez_C');
+  });
+
+  it('괄호 앞뒤 공백은 정리하되 괄호 뒤에 남은 글자는 그대로 둔다', () => {
+    // '()나 이모티콘'만 떼라는 요청이라, 슬래시 부계정 표기나 뒤에 붙은
+    // 한글 별칭처럼 괄호·이모지가 아닌 장식은 건드리지 않는다.
+    expect(cleanDisplayName('Ez_D (98)은킹')).toBe('Ez_D 은킹');
+  });
+
+  it('꾸밈이 없으면 그대로 둔다', () => {
+    expect(cleanDisplayName('Ez_E-')).toBe('Ez_E-');
+  });
+
+  it('괄호가 없으면 손대지 않는다(슬래시 부계정 표기 포함)', () => {
+    expect(cleanDisplayName('Ez_F/Ez_G')).toBe('Ez_F/Ez_G');
+  });
+});
+
+describe('tierColorRamp', () => {
+  it('0티어는 단독 배색을 쓴다', () => {
+    expect(tierColorRamp(0)).toEqual({ from: '#9e6bff', to: '#9fc1ff' });
+  });
+
+  it('1티어와 1.5티어는 같은 배색을 공유한다', () => {
+    expect(tierColorRamp(1)).toEqual(tierColorRamp(1.5));
+    expect(tierColorRamp(1)).toEqual({ from: '#4cadd0', to: '#b2f9ff' });
+  });
+
+  it('2~2.5, 3~3.5, 4~4.5 도 각각 짝을 이룬다', () => {
+    expect(tierColorRamp(2)).toEqual(tierColorRamp(2.5));
+    expect(tierColorRamp(3)).toEqual(tierColorRamp(3.5));
+    expect(tierColorRamp(4)).toEqual(tierColorRamp(4.5));
+  });
+
+  it('5티어는 단독 배색을 쓴다', () => {
+    expect(tierColorRamp(5)).toEqual({ from: '#f5dc1f', to: '#f0e9ca' });
+  });
+
+  it('배색표에 없는 티어면 에러를 던진다', () => {
+    expect(() => tierColorRamp(9)).toThrow();
   });
 });

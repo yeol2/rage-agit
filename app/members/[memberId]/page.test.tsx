@@ -50,6 +50,16 @@ describe('MemberDetailPage', () => {
     expect(screen.getByRole('img', { name: '6각형 지표' })).toBeInTheDocument();
   });
 
+  it('제목도 명단 화면과 같은 방식으로 괄호 태그를 뗀다', async () => {
+    vi.mocked(fetchMember).mockResolvedValue({ ...member, discordNickname: 'Ez_Alpha(98)' });
+    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchTierCohortStats).mockResolvedValue([stats]);
+
+    render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
+
+    expect(screen.getByRole('heading', { name: 'Ez_Alpha' })).toBeInTheDocument();
+  });
+
   it('표본이 4경기 미만이면 6각형 대신 안내 문구를 보인다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberRecentStats).mockResolvedValue({ ...stats, gameCount: 2 });

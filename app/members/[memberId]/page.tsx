@@ -6,6 +6,7 @@ import { Hexagon } from '@/components/members/Hexagon';
 import {
   MIN_GAMES_FOR_HEXAGON,
   buildHexagonAxes,
+  cleanDisplayName,
   fetchMember,
   fetchMemberRecentStats,
   fetchTierCohortStats,
@@ -34,7 +35,7 @@ export default async function MemberDetailPage({
       <AccessGate>
         <section className="mx-auto max-w-shell px-5 py-16 text-center sm:px-8">
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            {member.discordNickname}
+            {cleanDisplayName(member.discordNickname)}
           </h1>
           <p className="mt-2 text-sm text-menu">{member.tier}티어</p>
 

@@ -44,6 +44,47 @@ export function tierGroupFor(tier: number): TierCohortGroup | null {
   return MEMBER_STAT_TIER_GROUPS.find((group) => group.tiers.includes(tier)) ?? null;
 }
 
+// 명단 화면은 MEMBER_STAT_TIER_GROUPS(백분위 비교용 4개 묶음)와 달리
+// 0~5티어를 전부 따로 보여준다 — 사람을 찾는 화면이라 세분화가 낫고,
+// 표본 크기를 걱정할 이유가 없다(집계가 아니라 목록일 뿐이다).
+export const ALL_TIERS = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+
+// discord_nickname 원본은 그대로 두고 화면에서만 다듬는다 — 괄호 태그와
+// 이모지만 뗀다. 슬래시 부계정 표기나 괄호 뒤에 남는 한글 별칭처럼
+// '()나 이모티콘'이 아닌 장식은 그대로 둔다(요청 범위 밖이다).
+const EMOJI_PATTERN = /\p{Extended_Pictographic}/gu;
+
+export function cleanDisplayName(discordNickname: string): string {
+  return discordNickname
+    .replace(/\([^)]*\)/g, '')
+    .replace(EMOJI_PATTERN, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export interface TierColorRamp {
+  from: string;
+  to: string;
+}
+
+// 참고 이미지의 배색. 0티어와 5티어는 단독, 나머지는 정수·반티어를 묶어
+// 같은 색을 쓴다 — MEMBER_STAT_TIER_GROUPS 와 묶는 경계가 비슷하지만
+// 여긴 색상표라 5티어를 4~4.5 에 합치지 않고 따로 둔다(그림에 그렇게 있다).
+const TIER_COLOR_RAMPS: Array<{ tiers: number[]; ramp: TierColorRamp }> = [
+  { tiers: [0], ramp: { from: '#9e6bff', to: '#9fc1ff' } },
+  { tiers: [1, 1.5], ramp: { from: '#4cadd0', to: '#b2f9ff' } },
+  { tiers: [2, 2.5], ramp: { from: '#db8a42', to: '#ffde90' } },
+  { tiers: [3, 3.5], ramp: { from: '#369876', to: '#71ff9e' } },
+  { tiers: [4, 4.5], ramp: { from: '#ff5dd6', to: '#ff9cbf' } },
+  { tiers: [5], ramp: { from: '#f5dc1f', to: '#f0e9ca' } },
+];
+
+export function tierColorRamp(tier: number): TierColorRamp {
+  const found = TIER_COLOR_RAMPS.find((entry) => entry.tiers.includes(tier));
+  if (!found) throw new Error(`배색표에 없는 티어: ${tier}`);
+  return found.ramp;
+}
+
 // value 가 cohortValues 안에서 몇 번째 백분위인지. 자기 자신도 비교 대상에 포함된다
 // (표본이 자기 혼자면 100이 나오는데, 이건 의도된 동작이다).
 //
