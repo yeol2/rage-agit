@@ -88,6 +88,30 @@ if (accountError) fail('member_pubg_accounts 조회 실패:', accountError);
 const byIgn = new Map(
   accounts.map((a) => [a.pubg_ign, { memberId: a.member_id, accountId: a.pubg_account_id }]),
 );
+
+// 이미 저장된 매치에서도 닉네임↔계정 ID 를 배운다.
+// 미등록 참가자(게스트, 탈퇴자)는 member_pubg_accounts 에 없지만
+// API 로 들어온 매치에는 계정 ID 가 있다. 그걸 안 쓰면 같은 사람이
+// 계정 ID 있는 행과 없는 행으로 갈라져서, 세션 참가자 수가 부풀어 오른다.
+const { data: seen, error: seenError } = await supabase
+  .from('match_participants')
+  .select('pubg_ign, pubg_account_id')
+  .not('pubg_account_id', 'is', null);
+if (seenError) fail('기존 참가자 계정 조회 실패:', seenError);
+
+let learned = 0;
+for (const row of seen) {
+  const known = byIgn.get(row.pubg_ign);
+  if (!known) {
+    byIgn.set(row.pubg_ign, { memberId: null, accountId: row.pubg_account_id });
+    learned++;
+  } else if (!known.accountId) {
+    known.accountId = row.pubg_account_id;
+    learned++;
+  }
+}
+console.log(`닉네임 대응 ${byIgn.size}개 (기존 매치에서 배운 것 ${learned}개)`);
+
 const resolve = (ign) => byIgn.get(ign) ?? null;
 
 let inserted = 0;
@@ -148,23 +172,15 @@ for (const path of paths) {
       .upsert({ ...match, scrim_session_id: sessionId }, { onConflict: 'pubg_match_id' });
     if (matchError) fail(`${raw.order}경기 저장 실패:`, matchError);
 
-    // 계정 ID 가 있는 행과 없는 행은 서로 다른 제약이 막는다
-    // (0005 의 unique, 0008 의 부분 인덱스). 나눠서 upsert 한다.
-    const withAccount = participants.filter((p) => p.pubg_account_id !== null);
-    const withoutAccount = participants.filter((p) => p.pubg_account_id === null);
+    // 닉네임으로 충돌을 잡는다(0009 의 유니크 인덱스). 계정 ID 로 잡으면
+    // 계정을 못 알아본 행은 NULL 이라 서로 같지 않아 중복이 그냥 들어간다.
+    const { error: participantError } = await supabase
+      .from('match_participants')
+      .upsert(participants, { onConflict: 'pubg_match_id,pubg_ign' });
+    if (participantError) fail(`${raw.order}경기 참가자 저장 실패:`, participantError);
 
-    if (withAccount.length > 0) {
-      const { error } = await supabase
-        .from('match_participants')
-        .upsert(withAccount, { onConflict: 'pubg_match_id,pubg_account_id' });
-      if (error) fail(`${raw.order}경기 참가자 저장 실패:`, error);
-    }
-    if (withoutAccount.length > 0) {
-      const { error } = await supabase
-        .from('match_participants')
-        .upsert(withoutAccount, { onConflict: 'pubg_match_id,pubg_ign' });
-      if (error) fail(`${raw.order}경기 미확인 참가자 저장 실패:`, error);
-      for (const p of withoutAccount) unknownIgns.add(p.pubg_ign);
+    for (const p of participants) {
+      if (p.pubg_account_id === null) unknownIgns.add(p.pubg_ign);
     }
 
     existingKeys.add(key);

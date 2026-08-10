@@ -92,6 +92,21 @@ if (dakggIds.length > 0) {
   check(noDistance === 0, 'dak.gg 참가자의 이동거리가 전부 채워져 있다');
 }
 
+// 같은 닉네임이 계정 ID 있는 행과 없는 행 양쪽에 있으면, 뷰가 그 사람을
+// 두 번 센다(coalesce 가 한쪽은 계정 ID, 한쪽은 닉네임으로 세기 때문이다).
+// 실제로 07-26 을 처음 넣었을 때 참가자가 68명이 아니라 74명으로 나왔다.
+const { data: allRows } = await supabase
+  .from('match_participants')
+  .select('pubg_ign, pubg_account_id');
+const withId = new Set();
+const withoutId = new Set();
+for (const r of allRows ?? []) {
+  (r.pubg_account_id === null ? withoutId : withId).add(r.pubg_ign);
+}
+const split = [...withoutId].filter((ign) => withId.has(ign));
+check(split.length === 0, '계정 ID 가 있다 없다 하는 닉네임이 없다');
+for (const ign of split) console.log(`    갈라짐: ${ign}`);
+
 // 못 알아본 닉네임 — 개명한 클랜원이 섞여 있을 수 있다.
 const { data: unlinked } = await supabase
   .from('match_participants')

@@ -215,7 +215,16 @@ check(
 check(
   (await one(`select count(*) from pg_indexes
     where tablename = 'match_participants' and indexname = 'match_participants_ign_uniq'`)) === 1,
-  '계정 ID 가 없는 행을 닉네임으로 막는 부분 유니크 인덱스가 있다',
+  '같은 경기에 같은 닉네임을 막는 유니크 인덱스가 있다',
+);
+
+// 0009 — 부분 인덱스는 ON CONFLICT 대상이 못 되어 적재가 막힌다.
+check(
+  !(
+    await client.query(`select indexdef from pg_indexes
+      where indexname = 'match_participants_ign_uniq'`)
+  ).rows[0]?.indexdef.includes('WHERE'),
+  '그 인덱스가 부분 인덱스가 아니다 (upsert 대상이 되어야 한다)',
 );
 
 // 뷰가 NULL 계정 ID 를 빼먹지 않는지는 정의문에서 확인한다.
