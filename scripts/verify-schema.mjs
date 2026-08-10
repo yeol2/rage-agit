@@ -177,6 +177,69 @@ for (const role of ['anon', 'authenticated']) {
   check(!columns.includes('raw_stats'), `${role} 이 raw_stats 는 여전히 못 읽는다`);
 }
 
+console.log('\n0008 — dak.gg 출처를 받기 위한 스키마 변경');
+
+const nullable = async (table, column) =>
+  (
+    await client.query(
+      `select is_nullable from information_schema.columns
+        where table_name = $1 and column_name = $2`,
+      [table, column],
+    )
+  ).rows[0]?.is_nullable;
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'matches' and column_name = 'source'`)) === 1,
+  'matches.source 컬럼이 있다',
+);
+
+check(
+  (await one(`select count(*) from matches where source is null`)) === 0,
+  '기존 매치의 source 가 전부 채워져 있다',
+);
+
+for (const column of ['heals', 'boosts', 'revives', 'pubg_account_id']) {
+  check(
+    (await nullable('match_participants', column)) === 'YES',
+    `match_participants.${column} 이 nullable 이다`,
+  );
+}
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'match_participants' and column_name = 'total_distance'`)) === 1,
+  'match_participants.total_distance 컬럼이 있다',
+);
+
+check(
+  (await one(`select count(*) from pg_indexes
+    where tablename = 'match_participants' and indexname = 'match_participants_ign_uniq'`)) === 1,
+  '계정 ID 가 없는 행을 닉네임으로 막는 부분 유니크 인덱스가 있다',
+);
+
+// 뷰가 NULL 계정 ID 를 빼먹지 않는지는 정의문에서 확인한다.
+check(
+  (await client.query(`select pg_get_viewdef('scrim_session_summary'::regclass) as def`)).rows[0].def
+    .toUpperCase()
+    .includes('COALESCE'),
+  'scrim_session_summary 가 참가자를 셀 때 닉네임으로 대체한다',
+);
+
+// 새 컬럼이 열려 있지 않으면 프론트에서 조용히 안 읽힌다.
+const newColumnGrants = await client.query(`
+  select grantee, table_name, column_name
+  from information_schema.column_privileges
+  where privilege_type = 'SELECT' and grantee in ('anon', 'authenticated')
+    and ((table_name = 'matches' and column_name = 'source')
+      or (table_name = 'match_participants' and column_name = 'total_distance'))
+`);
+for (const role of ['anon', 'authenticated']) {
+  const granted = newColumnGrants.rows.filter((r) => r.grantee === role).map((r) => r.column_name);
+  check(granted.includes('source'), `${role} 이 matches.source 를 읽을 수 있다`);
+  check(granted.includes('total_distance'), `${role} 이 total_distance 를 읽을 수 있다`);
+}
+
 await client.end();
 
 console.log('');
