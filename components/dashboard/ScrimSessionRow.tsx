@@ -11,6 +11,7 @@ import {
   type ScrimParticipant,
   type ScrimSessionSummary,
 } from '@/lib/scrimData';
+import { mapLabel } from '@/lib/mapNames';
 
 // 조회 함수는 기본값으로 두고 테스트에서만 바꿔 끼운다.
 //
@@ -130,7 +131,7 @@ export function ScrimSessionRow({
                 {match.source !== 'dakgg' && (
                   <span className="text-menu">{toKstTime(match.playedAt)}</span>
                 )}
-                <span className="text-menu">{match.mapName ?? '-'}</span>
+                <span className="text-menu">{mapLabel(match.mapName)}</span>
                 <span className="text-menu">{match.participantCount}명</span>
               </button>
 
