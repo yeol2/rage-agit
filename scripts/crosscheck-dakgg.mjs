@@ -38,12 +38,16 @@ if (error) {
   process.exit(1);
 }
 
+// 여기서 process.exit(0) 을 부르면 Supabase 클라이언트의 열린 핸들 때문에
+// Windows 에서 libuv 가 죽으면서 종료 코드 127 이 나온다 — 성공한 스크립트가
+// 실패로 보인다. 자연스럽게 끝나게 두고 흐름만 건너뛴다.
 if (dbMatches.length === 0) {
   console.log(`${file.scrimDate} 에 DB 매치가 없다 — 대조할 것이 없다.`);
-  process.exit(0);
 }
 
-console.log(`${file.scrimDate}: DB ${dbMatches.length}경기 / JSON ${file.matches.length}경기\n`);
+if (dbMatches.length > 0) {
+  console.log(`${file.scrimDate}: DB ${dbMatches.length}경기 / JSON ${file.matches.length}경기\n`);
+}
 
 const problems = [];
 
@@ -107,4 +111,8 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log('두 출처가 일치한다. 적재해도 된다.');
+if (dbMatches.length === 0) {
+  console.log('대조는 못 했다. 적재해도 되지만 이 날은 검증되지 않았다.');
+} else {
+  console.log('두 출처가 일치한다. 적재해도 된다.');
+}
