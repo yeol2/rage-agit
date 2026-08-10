@@ -116,6 +116,26 @@ export interface HexagonAxis {
   key: HexagonAxisKey;
   label: string;
   percentile: number;
+  // 코호트 평균이 같은 코호트 안에서 몇 번째 백분위인지. 본인 도형(실선)
+  // 옆에 점선으로 겹쳐 그려서 "나는 평균보다 위인가 아래인가"를 보여준다.
+  averagePercentile: number;
+}
+
+function average(values: number[]): number {
+  const pool = values.filter((v) => Number.isFinite(v));
+  if (pool.length === 0) return 0;
+  return pool.reduce((sum, v) => sum + v, 0) / pool.length;
+}
+
+function axisPercentiles(
+  targetValue: number,
+  cohortValues: number[],
+  higherIsBetter: boolean,
+): { percentile: number; averagePercentile: number } {
+  return {
+    percentile: percentile(targetValue, cohortValues, higherIsBetter),
+    averagePercentile: percentile(average(cohortValues), cohortValues, higherIsBetter),
+  };
 }
 
 export function buildHexagonAxes(
@@ -132,32 +152,33 @@ export function buildHexagonAxes(
     {
       key: 'damage',
       label: HEXAGON_AXIS_LABELS.damage,
-      percentile: percentile(target.avgDamage, cohort.map((c) => c.avgDamage), true),
+      ...axisPercentiles(target.avgDamage, cohort.map((c) => c.avgDamage), true),
     },
     {
       key: 'kills',
       label: HEXAGON_AXIS_LABELS.kills,
-      percentile: percentile(target.avgKills, cohort.map((c) => c.avgKills), true),
+      ...axisPercentiles(target.avgKills, cohort.map((c) => c.avgKills), true),
     },
     {
       key: 'headshot',
       label: HEXAGON_AXIS_LABELS.headshot,
       percentile: target.headshotRatio === null ? 0 : percentile(target.headshotRatio, headshotPool, true),
+      averagePercentile: percentile(average(headshotPool), headshotPool, true),
     },
     {
       key: 'survival',
       label: HEXAGON_AXIS_LABELS.survival,
-      percentile: percentile(target.avgSurvival, cohort.map((c) => c.avgSurvival), true),
+      ...axisPercentiles(target.avgSurvival, cohort.map((c) => c.avgSurvival), true),
     },
     {
       key: 'assists',
       label: HEXAGON_AXIS_LABELS.assists,
-      percentile: percentile(target.avgAssists, cohort.map((c) => c.avgAssists), true),
+      ...axisPercentiles(target.avgAssists, cohort.map((c) => c.avgAssists), true),
     },
     {
       key: 'rank',
       label: HEXAGON_AXIS_LABELS.rank,
-      percentile: percentile(target.avgRank, cohort.map((c) => c.avgRank), false),
+      ...axisPercentiles(target.avgRank, cohort.map((c) => c.avgRank), false),
     },
   ];
 }

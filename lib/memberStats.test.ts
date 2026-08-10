@@ -107,6 +107,21 @@ describe('buildHexagonAxes', () => {
     const axes = buildHexagonAxes(nullTarget, [nullTarget, ...cohort]);
     expect(axes.find((a) => a.key === 'headshot')!.percentile).toBe(0);
   });
+
+  it('코호트 평균도 같은 코호트 안에서 백분위로 낸다', () => {
+    // damage=[200,100] 평균 150 → 150 이하인 값은 100 하나뿐이니 2명 중 1명 = 50%.
+    // rank 는 낮을수록 좋으므로 방향이 뒤집힌다: [5,10] 평균 7.5 → 7.5 이상인
+    // 값은 10 하나뿐 = 50%. 우연히 다 50%가 나오는 대칭 표본으로 골랐다.
+    const axes = buildHexagonAxes(target, cohort);
+    expect(axes.every((a) => a.averagePercentile === 50)).toBe(true);
+  });
+
+  it('null 인 headshotRatio 는 평균 계산에서도 빠진다', () => {
+    const withNull = [...cohort, row({ memberId: 'm-3', headshotRatio: null })];
+    const axes = buildHexagonAxes(target, withNull);
+    // withNull 이 추가돼도 헤드샷 평균은 [0.3, 0.1] 기준 그대로라 50%.
+    expect(axes.find((a) => a.key === 'headshot')!.averagePercentile).toBe(50);
+  });
 });
 
 describe('MIN_GAMES_FOR_HEXAGON', () => {
