@@ -277,6 +277,38 @@ check(
   '뷰가 최근 10경기로 제한한다',
 );
 
+console.log('\n0011 — 등수+킬 랭킹용 통산 집계와 배치 점수');
+
+check(
+  (await client.query(`select pg_get_viewdef('member_recent_stats'::regclass) as def`)).rows[0].def
+    .includes('avg_placement_points'),
+  'member_recent_stats 가 avg_placement_points 를 낸다',
+);
+
+check(
+  (await one(`select count(*) from information_schema.views
+    where table_name = 'member_alltime_stats'`)) === 1,
+  'member_alltime_stats 뷰가 있다',
+);
+
+const alltimeGrants = await client.query(`
+  select grantee from information_schema.table_privileges
+  where table_name = 'member_alltime_stats' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated')
+`);
+const alltimeGrantees = alltimeGrants.rows.map((r) => r.grantee);
+check(alltimeGrantees.includes('anon'), 'anon 이 member_alltime_stats 를 읽을 수 있다');
+check(
+  alltimeGrantees.includes('authenticated'),
+  'authenticated 이 member_alltime_stats 를 읽을 수 있다',
+);
+
+check(
+  !(await client.query(`select pg_get_viewdef('member_alltime_stats'::regclass) as def`)).rows[0].def
+    .includes('<= 10'),
+  'member_alltime_stats 는 최근10 제한 없이 전체 경기를 본다',
+);
+
 await client.end();
 
 console.log('');
