@@ -115,8 +115,9 @@ const { data: unlinked } = await supabase
 const igns = [...new Set((unlinked ?? []).map((r) => r.pubg_ign))];
 console.log(`\n클랜원으로 연결 안 된 닉네임 ${igns.length}개`);
 if (igns.length > 0) console.log(`  ${igns.slice(0, 30).join(', ')}${igns.length > 30 ? ' …' : ''}`);
-console.log('  탈퇴자·게스트면 정상이다. 개명한 클랜원이 보이면');
-console.log('  scripts/link-alt-account.mjs → scripts/relink-participants.mjs 로 이어붙인다.');
+console.log('  탈퇴자로 확인됐으면 data/departed-members.tsv 에 추가하고');
+console.log('  scripts/apply-departed-members.mjs 를 돌린다 — 다음부터 자동으로 지워진다.');
+console.log('  개명한 클랜원이면 scripts/link-alt-account.mjs → scripts/relink-participants.mjs.');
 
 console.log('');
 if (problems.length > 0) {

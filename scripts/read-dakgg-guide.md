@@ -64,10 +64,7 @@ matchId 를 알 방법이 없어서 dak.gg 화면에서 읽는다.
 
 ## 적재 뒤 미확인 닉네임 처리
 
-`node scripts/verify-dakgg-import.mjs` 가 "클랜원으로 연결 안 된 닉네임"을 보여준다. 순서대로:
-
-1. **`node scripts/apply-departed-members.mjs` 를 먼저 돌린다.** `data/departed-members.tsv` 에 이미 확인된 탈퇴자 목록이 있다 — 같은 닉네임이 새 내전에 또 나오면 관리자에게 다시 묻지 않고 자동으로 지운다.
-2. 그래도 남는 닉네임만 관리자에게 묻는다. 부계정/개명이면 `scripts/link-alt-account.mjs` → `scripts/relink-participants.mjs`, 탈퇴자면 `data/departed-members.tsv` 에 한 줄 추가하고 `apply-departed-members.mjs` 를 다시 돌린다(그러면 이번 것도 지워지고, 다음에도 자동으로 걸린다).
+`node scripts/verify-dakgg-import.mjs` 가 "클랜원으로 연결 안 된 닉네임"을 보여준다 — dak.gg 든 API 폴링이든 출처 상관없이 전체를 본다. 처리 절차는 dak.gg 전용이 아니라 그 스크립트 자체에 적어뒀다 — `scripts/apply-departed-members.mjs` 를 먼저 돌리고, 남는 것만 관리자에게 물어라.
 
 ## 없는 것
 
