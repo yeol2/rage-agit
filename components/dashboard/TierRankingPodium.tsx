@@ -1,7 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { MEMBERS, TIER_GROUPS, getTopMembers, type Member, type TierGroup } from '@/lib/dashboardData';
+import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
+import {
+  WIN_PROBABILITY_TEMPERATURE,
+  eligibleForRanking,
+  topByAvgKills,
+  topByWinProbability,
+  type RankingStatsRow,
+} from '@/lib/rankingStats';
 import { siteConfig } from '@/lib/siteConfig';
 
 const PODIUM_SLOTS: Array<{ rank: 1 | 2 | 3; order: string; height: string }> = [
@@ -10,10 +17,52 @@ const PODIUM_SLOTS: Array<{ rank: 1 | 2 | 3; order: string; height: string }> = 
   { rank: 3, order: 'order-3', height: 'h-40' },
 ];
 
-export function TierRankingPodium({ members = MEMBERS }: { members?: Member[] } = {}) {
+type Metric = 'winProbability' | 'avgKills';
+type Window = 'recent10' | 'alltime';
+
+const METRIC_OPTIONS: Array<{ id: Metric; label: string }> = [
+  { id: 'winProbability', label: '우승확률' },
+  { id: 'avgKills', label: '평균킬' },
+];
+
+const WINDOW_OPTIONS: Array<{ id: Window; label: string }> = [
+  { id: 'recent10', label: '최근 10경기' },
+  { id: 'alltime', label: '역대 전체' },
+];
+
+export interface TierRankingPodiumProps {
+  recent10: RankingStatsRow[];
+  alltime: RankingStatsRow[];
+}
+
+function formatMetricValue(metric: Metric, row: { avgKills: number; probability?: number }): string {
+  if (metric === 'avgKills') return `${row.avgKills.toFixed(1)}킬`;
+  return `${((row.probability ?? 0) * 100).toFixed(1)}%`;
+}
+
+function toggleButtonClass(selected: boolean): string {
+  return selected
+    ? 'rounded-full bg-accent px-4 py-2 text-sm font-bold text-background'
+    : 'rounded-full border border-white/15 px-4 py-2 text-sm text-menu transition-colors hover:text-foreground';
+}
+
+export function TierRankingPodium({ recent10, alltime }: TierRankingPodiumProps) {
+  const [activeMetric, setActiveMetric] = useState<Metric>('winProbability');
+  const [activeWindow, setActiveWindow] = useState<Window>('recent10');
   const [activeGroupId, setActiveGroupId] = useState<TierGroup['id']>(TIER_GROUPS[0].id);
+
   const activeGroup = TIER_GROUPS.find((group) => group.id === activeGroupId) ?? TIER_GROUPS[0];
-  const top = getTopMembers(members, activeGroup);
+  const rows = activeWindow === 'recent10' ? recent10 : alltime;
+  const eligible = eligibleForRanking(rows);
+  const groupRows =
+    activeGroup.tiers === null
+      ? eligible
+      : eligible.filter((row) => activeGroup.tiers!.includes(row.tier));
+
+  const top =
+    activeMetric === 'winProbability'
+      ? topByWinProbability(groupRows, WIN_PROBABILITY_TEMPERATURE, 3)
+      : topByAvgKills(groupRows, 3);
 
   return (
     <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
@@ -27,26 +76,47 @@ export function TierRankingPodium({ members = MEMBERS }: { members?: Member[] } 
         {siteConfig.dashboard.tierRanking.heading}
       </h2>
 
-      <div role="tablist" aria-label="티어 그룹" className="mt-8 flex flex-wrap gap-2">
-        {TIER_GROUPS.map((group) => {
-          const selected = group.id === activeGroupId;
-          return (
-            <button
-              key={group.id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => setActiveGroupId(group.id)}
-              className={
-                selected
-                  ? 'rounded-full bg-accent px-4 py-2 text-sm font-bold text-background'
-                  : 'rounded-full border border-white/15 px-4 py-2 text-sm text-menu transition-colors hover:text-foreground'
-              }
-            >
-              {group.label}
-            </button>
-          );
-        })}
+      <div className="mt-8 flex flex-wrap gap-2">
+        {METRIC_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={option.id === activeMetric}
+            onClick={() => setActiveMetric(option.id)}
+            className={toggleButtonClass(option.id === activeMetric)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {WINDOW_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={option.id === activeWindow}
+            onClick={() => setActiveWindow(option.id)}
+            className={toggleButtonClass(option.id === activeWindow)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      <div role="tablist" aria-label="티어 그룹" className="mt-6 flex flex-wrap gap-2">
+        {TIER_GROUPS.map((group) => (
+          <button
+            key={group.id}
+            type="button"
+            role="tab"
+            aria-selected={group.id === activeGroupId}
+            onClick={() => setActiveGroupId(group.id)}
+            className={toggleButtonClass(group.id === activeGroupId)}
+          >
+            {group.label}
+          </button>
+        ))}
       </div>
 
       <div className="mt-10 flex items-end justify-center gap-4">
@@ -64,13 +134,13 @@ export function TierRankingPodium({ members = MEMBERS }: { members?: Member[] } 
               {member ? (
                 <>
                   <p className="mt-2 max-w-full truncate text-base font-bold text-foreground">
-                    {member.ign}
+                    {member.discordNickname}
                   </p>
                   {activeGroup.tiers === null && (
                     <p className="mt-1 text-xs text-menu">{member.tier}티어</p>
                   )}
                   <p className="mt-2 text-lg font-bold tabular-nums text-foreground">
-                    {member.score.toFixed(1)}
+                    {formatMetricValue(activeMetric, member)}
                   </p>
                 </>
               ) : (

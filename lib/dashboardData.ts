@@ -1,10 +1,3 @@
-export interface Member {
-  id: string;
-  ign: string;
-  tier: number;
-  score: number;
-}
-
 export interface ScrimSession {
   id: string;
   title: string;
@@ -28,14 +21,6 @@ export const TIER_GROUPS: TierGroup[] = [
   { id: '4-4.5', label: '4~4.5티어', tiers: [4, 4.5] },
 ];
 
-export function getTopMembers(members: Member[], group: TierGroup, limit = 3): Member[] {
-  const filtered =
-    group.tiers === null
-      ? members
-      : members.filter((member) => group.tiers!.includes(member.tier));
-  return [...filtered].sort((a, b) => b.score - a.score).slice(0, limit);
-}
-
 export function getRecentScrims(sessions: ScrimSession[], limit = 10): ScrimSession[] {
   return [...sessions]
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
@@ -49,26 +34,6 @@ export function formatScrimDate(dateISO: string): string {
   const utcDate = new Date(Date.UTC(year, month - 1, day));
   return `${dateISO} (${KOREAN_WEEKDAYS[utcDate.getUTCDay()]})`;
 }
-
-export const MEMBERS: Member[] = [
-  { id: 'm01', ign: '아지트지킴이', tier: 0, score: 62.4 },
-  { id: 'm02', ign: '초보헌터', tier: 1, score: 58.1 },
-  { id: 'm03', ign: '느긋한스나', tier: 1.5, score: 71.3 },
-  { id: 'm04', ign: '풀숲매복', tier: 0, score: 49.7 },
-  { id: 'm05', ign: '연습생라이언', tier: 1, score: 65.0 },
-  { id: 'm06', ign: '침착한저격수', tier: 2, score: 88.2 },
-  { id: 'm07', ign: '질주하는탱커', tier: 2.5, score: 92.6 },
-  { id: 'm08', ign: '한타장인', tier: 2, score: 79.4 },
-  { id: 'm09', ign: '벽뚫는딜러', tier: 2.5, score: 85.1 },
-  { id: 'm10', ign: '고요한추격자', tier: 2, score: 74.8 },
-  { id: 'm11', ign: '번개같은컨트롤', tier: 2.5, score: 90.0 },
-  { id: 'm12', ign: '냉철한지휘관', tier: 3, score: 101.5 },
-  { id: 'm13', ign: '섬광탄장인', tier: 3.5, score: 108.2 },
-  { id: 'm14', ign: '전선붕괴자', tier: 3, score: 96.7 },
-  { id: 'm15', ign: '유령저격', tier: 3.5, score: 103.9 },
-  { id: 'm16', ign: '완벽한로테이션', tier: 3, score: 99.1 },
-  { id: 'm17', ign: '레이지에이스', tier: 4.5, score: 128.4 },
-];
 
 export const SCRIM_SESSIONS: ScrimSession[] = [
   {

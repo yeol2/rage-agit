@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   TIER_GROUPS,
-  MEMBERS,
   SCRIM_SESSIONS,
-  getTopMembers,
   getRecentScrims,
   formatScrimDate,
-  type Member,
   type ScrimSession,
 } from './dashboardData';
 
@@ -25,33 +22,6 @@ describe('TIER_GROUPS', () => {
     expect(TIER_GROUPS[2].tiers).toEqual([2, 2.5]);
     expect(TIER_GROUPS[3].tiers).toEqual([3, 3.5]);
     expect(TIER_GROUPS[4].tiers).toEqual([4, 4.5]);
-  });
-});
-
-describe('getTopMembers', () => {
-  const fixture: Member[] = [
-    { id: 'a', ign: 'Alpha', tier: 2, score: 50 },
-    { id: 'b', ign: 'Bravo', tier: 2.5, score: 80 },
-    { id: 'c', ign: 'Charlie', tier: 1, score: 90 },
-    { id: 'd', ign: 'Delta', tier: 2, score: 70 },
-  ];
-
-  it('filters by the group tiers and sorts by score descending', () => {
-    const group = { id: 'test', label: 'Test', tiers: [2, 2.5] };
-    const top = getTopMembers(fixture, group);
-    expect(top.map((m) => m.ign)).toEqual(['Bravo', 'Delta', 'Alpha']);
-  });
-
-  it('ignores the tier filter when tiers is null (전체)', () => {
-    const group = { id: 'all', label: '전체', tiers: null };
-    const top = getTopMembers(fixture, group);
-    expect(top.map((m) => m.ign)).toEqual(['Charlie', 'Bravo', 'Delta']);
-  });
-
-  it('returns fewer than the limit when the group has too few members', () => {
-    const group = { id: 'empty', label: 'Empty', tiers: [9] };
-    const top = getTopMembers(fixture, group);
-    expect(top).toHaveLength(0);
   });
 });
 
@@ -107,13 +77,6 @@ describe('formatScrimDate', () => {
 });
 
 describe('mock data', () => {
-  it('leaves the 4~4.5 tier group with only one member, to exercise the empty-podium-slot case', () => {
-    const group = TIER_GROUPS.find((g) => g.id === '4-4.5')!;
-    const top = getTopMembers(MEMBERS, group);
-    expect(top).toHaveLength(1);
-    expect(top[0].ign).toBe('레이지에이스');
-  });
-
   it('ships ten scrim sessions, most recent first', () => {
     expect(SCRIM_SESSIONS).toHaveLength(10);
     expect(SCRIM_SESSIONS[0].date).toBe('2026-08-02');
