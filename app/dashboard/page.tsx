@@ -4,6 +4,7 @@ import { Footer } from '@/components/Footer';
 import { TierRankingPodium } from '@/components/dashboard/TierRankingPodium';
 import { RecentScrimsList } from '@/components/dashboard/RecentScrimsList';
 import { fetchScrimSessions } from '@/lib/scrimData';
+import { fetchRankingStats } from '@/lib/rankingStats';
 import { siteConfig } from '@/lib/siteConfig';
 
 export const metadata: Metadata = {
@@ -14,13 +15,17 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function DashboardPage() {
-  const sessions = await fetchScrimSessions();
+  const [sessions, recent10, alltime] = await Promise.all([
+    fetchScrimSessions(),
+    fetchRankingStats('recent10'),
+    fetchRankingStats('alltime'),
+  ]);
 
   return (
     <main className="min-h-screen bg-background">
       <Nav />
       <h1 className="sr-only">{siteConfig.dashboard.pageHeading}</h1>
-      <TierRankingPodium />
+      <TierRankingPodium recent10={recent10} alltime={alltime} />
       <RecentScrimsList sessions={sessions} />
       <Footer />
     </main>
