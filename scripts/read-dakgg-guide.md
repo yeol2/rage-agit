@@ -62,6 +62,13 @@ matchId 를 알 방법이 없어서 dak.gg 화면에서 읽는다.
 
 그날 내전이 평소와 다른 형식이었으면(예: 저티어끼리만 모은 내전) `note` 필드에 적는다. 세션 제목이 `2026-06-14 (일) 내전` 대신 `2026-06-14 (일) 저티어 내전`으로 들어간다. 평소와 같으면 필드를 아예 뺀다.
 
+## 적재 뒤 미확인 닉네임 처리
+
+`node scripts/verify-dakgg-import.mjs` 가 "클랜원으로 연결 안 된 닉네임"을 보여준다. 순서대로:
+
+1. **`node scripts/apply-departed-members.mjs` 를 먼저 돌린다.** `data/departed-members.tsv` 에 이미 확인된 탈퇴자 목록이 있다 — 같은 닉네임이 새 내전에 또 나오면 관리자에게 다시 묻지 않고 자동으로 지운다.
+2. 그래도 남는 닉네임만 관리자에게 묻는다. 부계정/개명이면 `scripts/link-alt-account.mjs` → `scripts/relink-participants.mjs`, 탈퇴자면 `data/departed-members.tsv` 에 한 줄 추가하고 `apply-departed-members.mjs` 를 다시 돌린다(그러면 이번 것도 지워지고, 다음에도 자동으로 걸린다).
+
 ## 없는 것
 
 `heals`(회복) `boosts`(부스터) `revives`(소생) 는 dak.gg 표에 칸이 없다.
