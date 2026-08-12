@@ -37,7 +37,9 @@ const teams = spec
     const [teamNo, place, roster] = chunk.split(':');
     const players = roster.split(',').map((entry) => {
       const [rawIgn, rawKills] = entry.split('=');
-      const ign = rawIgn.startsWith('Ez_') ? rawIgn : `Ez_${rawIgn}`;
+      // Ezb_gjsl 처럼 Ez 뒤가 밑줄이 아닌 닉네임도 있다. 그대로 두어야 한다 —
+      // Ez_ 만 보고 붙이면 Ez_Ezb_gjsl 같은 없는 이름이 만들어진다.
+      const ign = /^Ez/i.test(rawIgn) ? rawIgn : `Ez_${rawIgn}`;
       return { ign, kills: rawKills === '?' ? null : Number(rawKills) };
     });
 
