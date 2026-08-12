@@ -262,6 +262,18 @@ export function buildIgnResolver(accounts) {
   return resolve;
 }
 
+// 스크린샷 폴더에는 여러 클랜이 함께 뛴 '클랜 대항전' 도 섞여 있다. 그건 내전이
+// 아니라서 넣으면 안 된다. RAGE 인원은 닉네임이 Ez 로 시작하므로, 그 비율이
+// 절반에 못 미치면 대항전으로 본다.
+export function clanShare(file) {
+  const igns = new Set(
+    file.matches.flatMap((m) => m.teams.flatMap((t) => t.players.map((p) => p.ign))),
+  );
+  if (igns.size === 0) return 1;
+  const ours = [...igns].filter((ign) => /^Ez/i.test(ign)).length;
+  return ours / igns.size;
+}
+
 // resolve 는 닉네임으로 member_id 를 찾는 함수다 — DB 조회를 밖으로 빼서
 // 이 함수가 순수하게 남는다 (dakgg.mjs 의 buildMatch 와 같은 방식).
 export function buildRows(file, resolve) {

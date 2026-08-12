@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildIgnResolver, buildRows, crossCheck, validateFile } from './screenshot-scrims.mjs';
+import { buildIgnResolver, buildRows, clanShare, crossCheck, validateFile } from './screenshot-scrims.mjs';
 
 // 2팀·2라운드짜리 최소 표본. 실제 파일은 16팀 × 3~4라운드다.
 function file(overrides = {}) {
@@ -284,5 +284,25 @@ describe('buildIgnResolver', () => {
       { pubgIgn: 'Ez_S_U_N', memberId: 'm-2' },
     ]);
     expect(resolve('Ez_Sun')).toBe('m-1');
+  });
+});
+
+describe('clanShare', () => {
+  it('전원이 Ez 로 시작하면 1', () => {
+    expect(clanShare(file())).toBe(1);
+  });
+
+  it('클랜 대항전처럼 남의 클랜이 섞이면 절반 아래로 떨어진다', () => {
+    const f = file();
+    // 8명 중 6명을 다른 클랜 닉네임으로 바꾼다. 두 라운드에 같은 사람이
+    // 나오므로 이름을 대응표로 바꿔야 한 사람이 둘로 세어지지 않는다.
+    const renamed = { Ez_A: 'Xx_A', Ez_B: 'Xx_B', Ez_C: 'Xx_C', Ez_D: 'Xx_D', Ez_E: 'Xx_E', Ez_F: 'Xx_F' };
+    for (const m of f.matches) {
+      for (const t of m.teams) {
+        for (const p of t.players) p.ign = renamed[p.ign] ?? p.ign;
+      }
+    }
+    expect(clanShare(f)).toBeCloseTo(0.25);
+    expect(clanShare(f)).toBeLessThan(0.5);
   });
 });

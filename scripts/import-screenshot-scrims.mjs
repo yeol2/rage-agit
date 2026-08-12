@@ -8,7 +8,13 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { loadEnvLocal, requireEnv } from './lib/env.mjs';
-import { buildIgnResolver, buildRows, crossCheck, validateFile } from './lib/screenshot-scrims.mjs';
+import {
+  buildIgnResolver,
+  buildRows,
+  clanShare,
+  crossCheck,
+  validateFile,
+} from './lib/screenshot-scrims.mjs';
 
 const DIR = 'data/screenshot-scrims';
 
@@ -52,6 +58,16 @@ function readAndCheck(path) {
     console.error(`${path} — 시트와 인게임이 어긋난다 (${problems.length}건)`);
     for (const p of problems) console.error(`  ${p}`);
     console.error('\n어느 쪽을 잘못 읽었는지 이미지를 다시 볼 것. 대조가 맞아야 넣는다.');
+    process.exit(1);
+  }
+
+  // 여러 클랜이 함께 뛴 대항전은 내전이 아니다 — 넣으면 랭킹이 남의 경기까지 센다.
+  const share = clanShare(file);
+  if (share < 0.5) {
+    console.error(
+      `${path} — RAGE 인원이 ${(share * 100).toFixed(0)}% 뿐이다. 클랜 대항전으로 보인다.`,
+    );
+    console.error('  내전이 아니면 이 파일은 지우고 넘어갈 것.');
     process.exit(1);
   }
   return file;
