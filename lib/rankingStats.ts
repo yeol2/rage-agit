@@ -98,8 +98,10 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
 
   let windowData: RankingViewRow[] = alltimeData;
   if (window === 'recent10') {
+    // 6각형이 쓰는 member_recent_stats 가 아니라 랭킹 전용 뷰다 —
+    // 이쪽만 스크린샷 백필까지 합쳐서 최근 10경기를 센다 (0012).
     const { data, error } = await getSupabase()
-      .from('member_recent_stats')
+      .from('member_recent_ranking_stats')
       .select('member_id, tier, avg_kills, avg_placement_points');
     if (error) throw new Error(`최근 전적을 불러오지 못했습니다: ${error.message}`);
     windowData = data ?? [];

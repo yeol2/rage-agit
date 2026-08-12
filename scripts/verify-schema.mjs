@@ -279,11 +279,10 @@ check(
 
 console.log('\n0011 — 등수+킬 랭킹용 통산 집계와 배치 점수');
 
-check(
-  (await client.query(`select pg_get_viewdef('member_recent_stats'::regclass) as def`)).rows[0].def
-    .includes('avg_placement_points'),
-  'member_recent_stats 가 avg_placement_points 를 낸다',
-);
+// 0011 은 member_recent_stats 에도 avg_placement_points 를 넣었지만, 0012 가
+// 그 칸을 member_recent_ranking_stats 로 옮기고 여기서는 뺐다 — 한 출처만 세는
+// 배치 점수가 남아 있으면 랭킹이 쓰는 값과 조용히 어긋난다.
+// 그래서 '빠져 있는지'는 아래 0012 절에서 확인한다.
 
 check(
   (await one(`select count(*) from information_schema.views
@@ -307,6 +306,73 @@ check(
   !(await client.query(`select pg_get_viewdef('member_alltime_stats'::regclass) as def`)).rows[0].def
     .includes('<= 10'),
   'member_alltime_stats 는 최근10 제한 없이 전체 경기를 본다',
+);
+
+console.log('\n0012 — 스크린샷 출처 내전 결과와 두 출처를 합친 랭킹 뷰');
+
+check(
+  (await one(`select count(*) from information_schema.tables
+    where table_name = 'scrim_screenshot_results'`)) === 1,
+  'scrim_screenshot_results 테이블이 있다',
+);
+
+check(
+  (await one(`select count(*) from pg_proc where proname = 'placement_points'`)) === 1,
+  '배치 점수표가 placement_points 함수 하나로 모여 있다',
+);
+
+// 점수표가 실제로 의도한 값을 내는지 — 뷰 정의문만 보면 오타를 못 잡는다.
+const points = (
+  await client.query(`
+    select array_agg(placement_points(r) order by r) as pts
+    from generate_series(1, 9) as r
+  `)
+).rows[0].pts.map(Number);
+check(
+  JSON.stringify(points) === JSON.stringify([10, 6, 5, 4, 3, 2, 1, 1, 0]),
+  `placement_points 가 10/6/5/4/3/2/1/1/0 을 낸다 (실제: ${points.join('/')})`,
+);
+
+for (const view of ['member_ranking_games', 'member_recent_ranking_stats']) {
+  check(
+    (await one(`select count(*) from information_schema.views
+      where table_name = '${view}'`)) === 1,
+    `${view} 뷰가 있다`,
+  );
+}
+
+// 두 출처를 실제로 잇는지는 정의문에서 확인한다 — union 이 빠지면 스크린샷
+// 백필이 통째로 랭킹에서 빠지는데, 화면은 조용히 잘 도는 것처럼 보인다.
+check(
+  (await client.query(`select pg_get_viewdef('member_ranking_games'::regclass) as def`)).rows[0].def
+    .includes('scrim_screenshot_results'),
+  'member_ranking_games 가 스크린샷 출처를 함께 센다',
+);
+
+for (const view of ['member_alltime_stats', 'member_recent_ranking_stats']) {
+  const grants = await client.query(`
+    select grantee from information_schema.table_privileges
+    where table_name = '${view}' and privilege_type = 'SELECT'
+      and grantee in ('anon', 'authenticated')
+  `);
+  const grantees = grants.rows.map((r) => r.grantee);
+  for (const role of ['anon', 'authenticated']) {
+    check(grantees.includes(role), `${role} 이 ${view} 를 읽을 수 있다`);
+  }
+}
+
+// 6각형 뷰는 한 출처만 봐야 한다 — 데미지가 없는 스크린샷 경기가 최근 10경기에
+// 끼면 지표가 조용히 흐려진다.
+const recentDef = (
+  await client.query(`select pg_get_viewdef('member_recent_stats'::regclass) as def`)
+).rows[0].def;
+check(
+  !recentDef.includes('scrim_screenshot_results'),
+  '6각형용 member_recent_stats 는 스크린샷 출처를 섞지 않는다',
+);
+check(
+  !recentDef.includes('placement_points'),
+  'member_recent_stats 에 랭킹과 어긋나는 배치 점수 칸이 남아 있지 않다',
 );
 
 await client.end();
