@@ -9,7 +9,7 @@ import { cleanDisplayName, fetchAllMembers } from './memberStats';
 export const MIN_GAMES_FOR_RANKING = 12;
 
 // z-score를 softmax로 확률화할 때 쓰는 온도. 값이 클수록 1위와 나머지의 격차가 커진다.
-// 실제 데이터로 "1등도 25% 안팎"이 되도록 dev 서버에서 눈으로 보고 조정한 값이다.
+// 아직 임시값이다 — 과거 내전 백필이 끝나 표본이 다 모인 뒤에 실제 분포를 보고 정한다.
 export const WIN_PROBABILITY_TEMPERATURE = 1.5;
 
 export interface RankingStatsRow {
