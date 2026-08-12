@@ -225,6 +225,43 @@ export function crossCheck(file) {
   return problems;
 }
 
+// 스크린샷에 찍힌 닉네임은 등록된 것과 대소문자나 꼬리 기호가 다를 때가 있다
+// (Ez_xijingping ↔ Ez_XiJingPing, Ez_Xapaz ↔ Ez_Xapaz-). 그대로 두면 진짜
+// 클랜원의 경기가 조용히 랭킹에서 빠져 평균이 틀어진다.
+function normalizeIgn(ign) {
+  return ign.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// accounts 는 [{ pubgIgn, memberId }] 다. 정확히 같은 닉네임을 먼저 보고,
+// 없으면 정규화해서 찾는다. 정규화 결과가 서로 다른 사람 여럿을 가리키면
+// 찍지 않고 비워둔다 — 엉뚱한 사람 지표에 얹는 것보다 빠지는 편이 낫다.
+export function buildIgnResolver(accounts) {
+  const exact = new Map();
+  const byNormalized = new Map();
+  for (const { pubgIgn, memberId } of accounts) {
+    exact.set(pubgIgn, memberId);
+    const key = normalizeIgn(pubgIgn);
+    if (!byNormalized.has(key)) byNormalized.set(key, new Set());
+    byNormalized.get(key).add(memberId);
+  }
+
+  const ambiguous = new Set();
+
+  function resolve(ign) {
+    if (exact.has(ign)) return exact.get(ign);
+    const candidates = byNormalized.get(normalizeIgn(ign));
+    if (!candidates) return null;
+    if (candidates.size > 1) {
+      ambiguous.add(ign);
+      return null;
+    }
+    return [...candidates][0];
+  }
+
+  resolve.ambiguous = ambiguous;
+  return resolve;
+}
+
 // resolve 는 닉네임으로 member_id 를 찾는 함수다 — DB 조회를 밖으로 빼서
 // 이 함수가 순수하게 남는다 (dakgg.mjs 의 buildMatch 와 같은 방식).
 export function buildRows(file, resolve) {

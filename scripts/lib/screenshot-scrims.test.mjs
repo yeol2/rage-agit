@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRows, crossCheck, validateFile } from './screenshot-scrims.mjs';
+import { buildIgnResolver, buildRows, crossCheck, validateFile } from './screenshot-scrims.mjs';
 
 // 2팀·2라운드짜리 최소 표본. 실제 파일은 16팀 × 3~4라운드다.
 function file(overrides = {}) {
@@ -236,5 +236,53 @@ describe('buildRows', () => {
     const rows = buildRows(file(), resolve);
     expect(rows[0].scrim_date).toBe('2026-05-10');
     expect(rows[0].source_file).toBe('133_ingame.jpg');
+  });
+});
+
+describe('buildIgnResolver', () => {
+  const accounts = [
+    { pubgIgn: 'Ez_XiJingPing', memberId: 'm-xi' },
+    { pubgIgn: 'Ez_Xapaz-', memberId: 'm-xavi' },
+    { pubgIgn: 'Ez_Daks', memberId: 'm-daks' },
+    { pubgIgn: 'Ez_ekrtm', memberId: 'm-daks' }, // 같은 사람의 부계정
+  ];
+
+  it('정확히 같은 닉네임을 찾는다', () => {
+    expect(buildIgnResolver(accounts)('Ez_XiJingPing')).toBe('m-xi');
+  });
+
+  it('부계정도 본계정과 같은 사람으로 묶는다', () => {
+    const resolve = buildIgnResolver(accounts);
+    expect(resolve('Ez_ekrtm')).toBe('m-daks');
+    expect(resolve('Ez_Daks')).toBe('m-daks');
+  });
+
+  it('대소문자만 다르면 찾아준다', () => {
+    expect(buildIgnResolver(accounts)('Ez_xijingping')).toBe('m-xi');
+  });
+
+  it('꼬리 기호만 다르면 찾아준다', () => {
+    expect(buildIgnResolver(accounts)('Ez_Xapaz')).toBe('m-xavi');
+  });
+
+  it('아예 없는 닉네임은 null', () => {
+    expect(buildIgnResolver(accounts)('Ez_Nobody')).toBeNull();
+  });
+
+  it('정규화 결과가 서로 다른 사람을 가리키면 찍지 않고 기록해둔다', () => {
+    const resolve = buildIgnResolver([
+      { pubgIgn: 'Ez_Sun', memberId: 'm-1' },
+      { pubgIgn: 'Ez_S_U_N', memberId: 'm-2' },
+    ]);
+    expect(resolve('Ez_sun')).toBeNull();
+    expect(resolve.ambiguous.has('Ez_sun')).toBe(true);
+  });
+
+  it('정확히 같은 닉네임이 있으면 모호해도 그걸 쓴다', () => {
+    const resolve = buildIgnResolver([
+      { pubgIgn: 'Ez_Sun', memberId: 'm-1' },
+      { pubgIgn: 'Ez_S_U_N', memberId: 'm-2' },
+    ]);
+    expect(resolve('Ez_Sun')).toBe('m-1');
   });
 });

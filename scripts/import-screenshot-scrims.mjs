@@ -8,7 +8,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { loadEnvLocal, requireEnv } from './lib/env.mjs';
-import { buildRows, crossCheck, validateFile } from './lib/screenshot-scrims.mjs';
+import { buildIgnResolver, buildRows, crossCheck, validateFile } from './lib/screenshot-scrims.mjs';
 
 const DIR = 'data/screenshot-scrims';
 
@@ -85,9 +85,12 @@ const { data: accounts, error: accountError } = await supabase
   .select('pubg_ign, member_id');
 if (accountError) fail('member_pubg_accounts 조회 실패:', accountError);
 
-const byIgn = new Map(accounts.map((a) => [a.pubg_ign, a.member_id]));
-console.log(`닉네임 대응 ${byIgn.size}개`);
-const resolve = (ign) => byIgn.get(ign) ?? null;
+// 부계정은 member_pubg_accounts 가 1:N 이라 여기서 자동으로 같은 사람이 된다
+// (Ez_ekrtm 과 Ez_Daks 는 같은 member_id 다). 따로 합칠 것이 없다.
+const resolve = buildIgnResolver(
+  accounts.map((a) => ({ pubgIgn: a.pubg_ign, memberId: a.member_id })),
+);
+console.log(`닉네임 대응 ${accounts.length}개`);
 
 let inserted = 0;
 const unknownIgns = new Set();
@@ -129,8 +132,15 @@ for (const path of paths) {
 
 console.log(`\n총 ${inserted}행 적재`);
 
+if (resolve.ambiguous.size > 0) {
+  console.log(`\n대소문자만 지우면 여러 사람에 걸리는 닉네임 ${resolve.ambiguous.size}개 — 비워뒀다:`);
+  for (const ign of [...resolve.ambiguous].sort()) console.log(`  ${ign}`);
+  console.log('  scripts/link-alt-account.mjs 로 어느 사람인지 정해줄 것.');
+}
+
 if (unknownIgns.size > 0) {
-  console.log(`\n클랜원과 안 엮인 닉네임 ${unknownIgns.size}개:`);
+  console.log(`\n클랜원과 안 엮인 닉네임 ${unknownIgns.size}개 (랭킹에서는 그냥 빠진다):`);
   for (const ign of [...unknownIgns].sort()) console.log(`  ${ign}`);
-  console.log('\n탈퇴자/부계정/개명 처리는 scripts/verify-dakgg-import.mjs 안내를 따를 것.');
+  console.log('\n탈퇴자면 data/departed-members.tsv 에, 부계정/개명이면 link-alt-account.mjs 로.');
+  console.log('절차는 scripts/verify-dakgg-import.mjs 실행 결과에 적혀 있다.');
 }
