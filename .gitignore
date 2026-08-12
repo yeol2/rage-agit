@@ -11,3 +11,6 @@ data/
 tsconfig.tsbuildinfo
 supabase/.env.functions
 supabase/.temp/
+
+# 이미지 판독용 임시 폴더 (스크린샷 백필 작업)
+public/_crop/
