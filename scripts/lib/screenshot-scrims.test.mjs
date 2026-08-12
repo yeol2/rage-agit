@@ -11,7 +11,7 @@ function file(overrides = {}) {
         teamNo: 3,
         rounds: [
           { round: 1, place: 1, kills: 8 },
-          { round: 2, place: 5, kills: 2 },
+          { round: 2, place: 2, kills: 2 },
         ],
       },
       {
@@ -55,7 +55,7 @@ function file(overrides = {}) {
         teams: [
           {
             teamNo: 3,
-            place: 5,
+            place: 2,
             players: [
               { ign: 'Ez_A', kills: 2 },
               { ign: 'Ez_B', kills: 0 },
@@ -135,7 +135,7 @@ describe('crossCheck', () => {
 
   it('팀 등수가 시트와 다르면 잡아낸다', () => {
     const f = file();
-    f.matches[1].teams[0].place = 4; // 시트는 5
+    f.matches[1].teams[0].place = 4; // 시트는 2
     const problems = crossCheck(f);
     expect(problems).toHaveLength(1);
     expect(problems[0]).toMatch(/등수/);
@@ -153,6 +153,61 @@ describe('crossCheck', () => {
     f.matches.push({ round: 3, sourceFile: 'x.jpg', teams: [] });
     const problems = crossCheck(f);
     expect(problems.some((p) => /3경기/.test(p))).toBe(true);
+  });
+});
+
+describe('crossCheck — 시트 자체의 검산', () => {
+  it('순위와 점수가 안 맞으면 잡아낸다', () => {
+    const f = file();
+    f.sheet[0].rounds[0].points = 6; // 1위면 10점이어야 한다
+    expect(crossCheck(f).some((p) => /1위면 10점/.test(p))).toBe(true);
+  });
+
+  it('점수 + 킬 이 합계와 안 맞으면 잡아낸다', () => {
+    const f = file();
+    f.sheet[0].rounds[0].total = 17; // 10 + 8 = 18
+    expect(crossCheck(f).some((p) => /합계가 17/.test(p))).toBe(true);
+  });
+
+  it('라운드 점수 합이 PLACE 칸과 안 맞으면 잡아낸다', () => {
+    const f = file();
+    f.sheet[0].placePoints = 15; // 1위(10) + 2위(6) = 16
+    expect(crossCheck(f).some((p) => /PLACE 칸은 15/.test(p))).toBe(true);
+  });
+
+  it('라운드 킬 합이 KILL 칸과 안 맞으면 잡아낸다', () => {
+    const f = file();
+    f.sheet[0].totalKills = 9; // 8 + 2 = 10
+    expect(crossCheck(f).some((p) => /KILL 칸은 9/.test(p))).toBe(true);
+  });
+
+  it('TOTAL 칸이 안 맞으면 잡아낸다', () => {
+    const f = file();
+    f.sheet[0].total = 25; // 16 + 10 = 26
+    expect(crossCheck(f).some((p) => /TOTAL 칸은 25/.test(p))).toBe(true);
+  });
+
+  it('한 라운드에 같은 등수가 두 번 나오면 잡아낸다', () => {
+    const f = file();
+    f.sheet[1].rounds[0].place = 1; // 이미 3팀이 1위
+    f.matches[0].teams[1].place = 1;
+    expect(crossCheck(f).some((p) => /겹친 등수: 1/.test(p))).toBe(true);
+  });
+
+  it('검산 칸을 안 적어도 통과한다 (선택 항목이다)', () => {
+    expect(crossCheck(file())).toEqual([]);
+  });
+
+  it('검산 칸을 다 적고 맞으면 통과한다', () => {
+    const f = file();
+    f.sheet[0].placePoints = 16; // 1위(10) + 2위(6)
+    f.sheet[0].totalKills = 10; // 8 + 2
+    f.sheet[0].total = 26;
+    f.sheet[0].rounds[0].points = 10;
+    f.sheet[0].rounds[0].total = 18; // 10 + 8
+    f.sheet[0].rounds[1].points = 6;
+    f.sheet[0].rounds[1].total = 8; // 6 + 2
+    expect(crossCheck(f)).toEqual([]);
   });
 });
 

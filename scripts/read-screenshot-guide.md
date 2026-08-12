@@ -57,9 +57,12 @@ JSON 에는 **`Ez_` 가 붙은 형태**로 적는다.
   "sheet": [
     {
       "teamNo": 12,
+      "placePoints": 24,
+      "totalKills": 24,
+      "total": 48,
       "rounds": [
-        { "round": 1, "place": 13, "kills": 4 },
-        { "round": 2, "place": 1, "kills": 7 }
+        { "round": 1, "place": 13, "points": 0, "kills": 4, "total": 4 },
+        { "round": 2, "place": 1, "points": 10, "kills": 7, "total": 17 }
       ]
     }
   ],
@@ -86,6 +89,20 @@ JSON 에는 **`Ez_` 가 붙은 형태**로 적는다.
 
 `sheet` 의 `place`/`kills` 는 시트에서, `matches` 의 선수별 킬은 인게임에서 읽는다.
 **둘 다 적어야 한다** — 임포터가 대조해서 안 맞으면 넣기를 거부한다.
+
+`points`/`total`/`placePoints`/`totalKills` 는 생략해도 되지만, **적으면 적을수록
+잘못 옮긴 칸이 자동으로 걸린다.** 시트는 같은 숫자를 여러 방향으로 다시 적어두기
+때문이다:
+
+- `points` = 순위에서 나오는 점수 (1등 10 / 2등 6 / …)
+- `total` = `points + kills`
+- `placePoints` = 라운드 점수의 합 (PLACE 칸)
+- `totalKills` = 라운드 킬의 합 (KILL 칸)
+- `total`(팀) = `placePoints + totalKills` (TOTAL 칸)
+- 한 라운드의 등수는 16팀에 1~16 이 한 번씩
+
+시트는 팀당 숫자 몇 개만 더 적으면 되는데, 그게 64명분 킬을 지켜준다.
+**전부 적을 것을 권한다.**
 
 ## 절차
 

@@ -14,6 +14,80 @@ function fail(message) {
   throw new Error(message);
 }
 
+// 0012 의 placement_points 와 같은 표. 시트에 적힌 점수와 대조하는 데 쓴다.
+export function placementPoints(place) {
+  if (place === 1) return 10;
+  if (place === 2) return 6;
+  if (place === 3) return 5;
+  if (place === 4) return 4;
+  if (place === 5) return 3;
+  if (place === 6) return 2;
+  if (place === 7 || place === 8) return 1;
+  return 0;
+}
+
+// 시트는 같은 숫자를 여러 방향으로 다시 적어둔다 — 라운드 점수는 순위에서
+// 나오고, 라운드 합계는 점수+킬이며, PLACE/KILL/TOTAL 은 라운드들의 합이다.
+// 그 관계를 전부 확인하면 옮겨 적다 틀린 칸이 거의 다 걸린다.
+// 확인은 적어준 칸에 대해서만 한다 (선택 항목).
+function checkSheetArithmetic(file, problems) {
+  const placesByRound = new Map();
+
+  for (const team of file.sheet) {
+    let pointsSum = 0;
+    let killsSum = 0;
+
+    for (const r of team.rounds) {
+      const expected = placementPoints(r.place);
+      if (r.points !== undefined && r.points !== expected) {
+        problems.push(
+          `시트 ${r.round}경기 ${team.teamNo}팀: ${r.place}위면 ${expected}점인데 ${r.points}점으로 적혀 있다`,
+        );
+      }
+      if (r.total !== undefined && r.total !== expected + r.kills) {
+        problems.push(
+          `시트 ${r.round}경기 ${team.teamNo}팀: ${expected}점 + ${r.kills}킬 = ${expected + r.kills} 인데 합계가 ${r.total} 이다`,
+        );
+      }
+      pointsSum += expected;
+      killsSum += r.kills;
+
+      if (!placesByRound.has(r.round)) placesByRound.set(r.round, []);
+      placesByRound.get(r.round).push({ teamNo: team.teamNo, place: r.place });
+    }
+
+    if (team.placePoints !== undefined && team.placePoints !== pointsSum) {
+      problems.push(
+        `시트 ${team.teamNo}팀: 라운드 점수 합이 ${pointsSum} 인데 PLACE 칸은 ${team.placePoints} 이다`,
+      );
+    }
+    if (team.totalKills !== undefined && team.totalKills !== killsSum) {
+      problems.push(
+        `시트 ${team.teamNo}팀: 라운드 킬 합이 ${killsSum} 인데 KILL 칸은 ${team.totalKills} 이다`,
+      );
+    }
+    if (team.total !== undefined && team.total !== pointsSum + killsSum) {
+      problems.push(
+        `시트 ${team.teamNo}팀: ${pointsSum} + ${killsSum} = ${pointsSum + killsSum} 인데 TOTAL 칸은 ${team.total} 이다`,
+      );
+    }
+  }
+
+  // 한 라운드 안에서 등수는 1..N 이 한 번씩 나와야 한다.
+  // 같은 등수를 두 팀에 적었거나 한 팀을 건너뛴 게 여기서 걸린다.
+  for (const [round, entries] of placesByRound) {
+    const places = entries.map((e) => e.place).sort((a, b) => a - b);
+    const expected = entries.map((_, i) => i + 1);
+    if (JSON.stringify(places) !== JSON.stringify(expected)) {
+      const dupes = places.filter((p, i) => places[i - 1] === p);
+      problems.push(
+        `시트 ${round}경기: 등수가 1~${entries.length} 한 번씩이 아니다` +
+          (dupes.length > 0 ? ` (겹친 등수: ${[...new Set(dupes)].join(', ')})` : ''),
+      );
+    }
+  }
+}
+
 export function validateFile(file) {
   if (!file || typeof file !== 'object') fail('JSON 이 객체가 아니다');
   if (typeof file.scrimDate !== 'string' || !DATE_PATTERN.test(file.scrimDate)) {
@@ -102,6 +176,8 @@ export function validateFile(file) {
 // 던지지 않고 모아서 돌려주는 이유: 한 번에 다 보여줘야 고치기 쉽다.
 export function crossCheck(file) {
   const problems = [];
+
+  checkSheetArithmetic(file, problems);
 
   // 시트를 (라운드, 팀) 으로 뒤집어 찾기 쉽게 만든다.
   const sheetBy = new Map();
