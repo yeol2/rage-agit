@@ -6,7 +6,7 @@ export function RecentScrimsList({ sessions }: { sessions: ScrimSessionSummary[]
   const recentScrimsCopy = siteConfig.dashboard.recentScrims;
 
   return (
-    <section className="mx-auto max-w-shell px-5 pb-24 sm:px-8 md:pb-32">
+    <section className="mx-auto max-w-shell px-5 py-16 sm:px-8 md:pb-32">
       <div className="flex items-center gap-4">
         <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">{recentScrimsCopy.eyebrow}</p>
         <span aria-hidden="true" className="h-px flex-1 bg-white/10" />

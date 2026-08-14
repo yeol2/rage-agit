@@ -18,7 +18,7 @@ export const TIER_GROUPS: TierGroup[] = [
   { id: '0-1.5', label: '0~1.5티어', tiers: [0, 1, 1.5] },
   { id: '2-2.5', label: '2~2.5티어', tiers: [2, 2.5] },
   { id: '3-3.5', label: '3~3.5티어', tiers: [3, 3.5] },
-  { id: '4-4.5', label: '4~4.5티어', tiers: [4, 4.5] },
+  { id: '4-5', label: '4~5티어', tiers: [4, 4.5, 5] },
 ];
 
 export function getRecentScrims(sessions: ScrimSession[], limit = 10): ScrimSession[] {

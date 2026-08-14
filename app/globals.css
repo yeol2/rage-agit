@@ -22,7 +22,6 @@ body {
 }
 
 .hud {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }

@@ -1,29 +1,28 @@
 import Link from 'next/link';
 import { siteConfig } from '@/lib/siteConfig';
 import { Logo } from './Logo';
-import { LocalClock } from './LocalClock';
 
 export function Nav() {
   return (
     <header className="w-full border-b border-white/5">
-      <div className="mx-auto grid max-w-shell grid-cols-2 items-center gap-x-6 gap-y-4 px-5 py-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8 sm:py-5">
+        <Link href="/" className="flex items-center gap-3">
           <Logo />
           <span className="whitespace-nowrap text-lg font-bold tracking-tight text-foreground sm:text-xl">
             {siteConfig.siteName}
           </span>
-        </div>
+        </Link>
 
         <nav
           aria-label="주요 메뉴"
-          className="order-last col-span-2 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 lg:order-none lg:col-span-1"
+          className="flex flex-wrap items-center justify-end gap-x-7 gap-y-2"
         >
           {siteConfig.nav.map((item) =>
             item.ready ? (
               <Link
                 key={item.label}
                 href={item.href}
-                className="hud text-[15px] text-menu transition-colors hover:text-foreground"
+                className="text-[15px] font-bold tracking-tight text-menu transition-colors hover:text-foreground"
               >
                 {item.label}
               </Link>
@@ -39,15 +38,6 @@ export function Nav() {
             )
           )}
         </nav>
-
-        <div className="flex justify-end">
-          <div className="clip-corner border border-white/10 bg-white/[0.03] px-5 py-2.5 pt-2">
-            <div className="hud text-[11px] text-menu/70">LOCAL TIME</div>
-            <div className="hud mt-0.5 text-[15px]">
-              <LocalClock />
-            </div>
-          </div>
-        </div>
       </div>
     </header>
   );

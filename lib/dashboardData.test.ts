@@ -9,19 +9,19 @@ import {
 
 describe('TIER_GROUPS', () => {
   it('defines the five tier group tabs in order', () => {
-    expect(TIER_GROUPS.map((g) => g.id)).toEqual(['all', '0-1.5', '2-2.5', '3-3.5', '4-4.5']);
+    expect(TIER_GROUPS.map((g) => g.id)).toEqual(['all', '0-1.5', '2-2.5', '3-3.5', '4-5']);
     expect(TIER_GROUPS.map((g) => g.label)).toEqual([
       '전체',
       '0~1.5티어',
       '2~2.5티어',
       '3~3.5티어',
-      '4~4.5티어',
+      '4~5티어',
     ]);
     expect(TIER_GROUPS[0].tiers).toBeNull();
     expect(TIER_GROUPS[1].tiers).toEqual([0, 1, 1.5]);
     expect(TIER_GROUPS[2].tiers).toEqual([2, 2.5]);
     expect(TIER_GROUPS[3].tiers).toEqual([3, 3.5]);
-    expect(TIER_GROUPS[4].tiers).toEqual([4, 4.5]);
+    expect(TIER_GROUPS[4].tiers).toEqual([4, 4.5, 5]);
   });
 });
 

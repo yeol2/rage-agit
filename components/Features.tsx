@@ -20,7 +20,7 @@ export function Features() {
           >
             <span
               aria-hidden="true"
-              className="w-14 shrink-0 text-3xl font-bold tabular-nums text-muted"
+              className="w-14 shrink-0 text-3xl font-bold tabular-nums text-subtext"
             >
               {String(i + 1).padStart(2, '0')}
             </span>

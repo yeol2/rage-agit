@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACTIVE_WITHIN_MONTHS,
   MIN_GAMES_FOR_RANKING,
-  WIN_PROBABILITY_TEMPERATURE,
+  RAGE_SCORE_STEEPNESS,
   eligibleForRanking,
+  rageScores,
   topByAvgKills,
-  topByWinProbability,
-  winProbabilities,
+  topByAvgRank,
+  topByRageScore,
   type RankingStatsRow,
 } from './rankingStats';
+
+// 테스트용 고정 티어 밴드. 기본 row()의 tier(2)가 이 밴드 안에 들어간다.
+const BANDS = [[2, 2.5]];
 
 function row(overrides: Partial<RankingStatsRow> = {}): RankingStatsRow {
   return {
@@ -15,8 +20,11 @@ function row(overrides: Partial<RankingStatsRow> = {}): RankingStatsRow {
     discordNickname: 'Member1',
     tier: 2,
     totalGameCount: 20,
+    windowGameCount: 20,
     avgKills: 2,
     avgPlacementPoints: 4,
+    avgRank: 5,
+    lastPlayedAt: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -35,6 +43,20 @@ describe('eligibleForRanking', () => {
       row({ memberId: 'c', totalGameCount: 100 }),
     ];
     expect(eligibleForRanking(rows).map((r) => r.memberId)).toEqual(['a', 'c']);
+  });
+
+  it(`최근 ${ACTIVE_WITHIN_MONTHS}개월 이내 참가 기록이 없으면 통산 경기수를 채워도 뺀다`, () => {
+    const now = new Date('2026-08-14T00:00:00Z');
+    const withinWindow = new Date(now);
+    withinWindow.setMonth(withinWindow.getMonth() - ACTIVE_WITHIN_MONTHS + 1);
+    const beforeWindow = new Date(now);
+    beforeWindow.setMonth(beforeWindow.getMonth() - ACTIVE_WITHIN_MONTHS - 1);
+
+    const rows = [
+      row({ memberId: 'active', lastPlayedAt: withinWindow.toISOString() }),
+      row({ memberId: 'inactive', lastPlayedAt: beforeWindow.toISOString() }),
+    ];
+    expect(eligibleForRanking(rows, now).map((r) => r.memberId)).toEqual(['active']);
   });
 });
 
@@ -57,69 +79,122 @@ describe('topByAvgKills', () => {
   });
 });
 
-describe('winProbabilities', () => {
-  it('점수가 높을수록 확률도 높다', () => {
+describe('topByAvgRank', () => {
+  it('평균등수 오름차순(1등에 가까울수록 상위)으로 정렬해 limit만큼 자른다', () => {
+    const rows = [
+      row({ memberId: 'a', avgRank: 5 }),
+      row({ memberId: 'b', avgRank: 2 }),
+      row({ memberId: 'c', avgRank: 8 }),
+      row({ memberId: 'd', avgRank: 1 }),
+    ];
+    expect(topByAvgRank(rows, 3).map((r) => r.memberId)).toEqual(['d', 'b', 'a']);
+  });
+});
+
+describe('rageScores', () => {
+  it('종합점수가 높을수록 점수도 높다', () => {
     const rows = [
       row({ memberId: 'a', avgPlacementPoints: 6 }),
       row({ memberId: 'b', avgPlacementPoints: 3 }),
       row({ memberId: 'c', avgPlacementPoints: 3 }),
     ];
-    const result = winProbabilities(rows, 1.5);
-    const byId = Object.fromEntries(result.map((r) => [r.memberId, r.probability]));
+    const result = rageScores(rows, BANDS, 1.5);
+    const byId = Object.fromEntries(result.map((r) => [r.memberId, r.score]));
     expect(byId.a).toBeGreaterThan(byId.b);
     expect(byId.b).toBeCloseTo(byId.c);
   });
 
-  it('확률의 합은 1이다', () => {
+  it('밴드 평균인 사람은 항상 50점이다', () => {
     const rows = [
       row({ memberId: 'a', avgPlacementPoints: 6 }),
-      row({ memberId: 'b', avgPlacementPoints: 3 }),
-      row({ memberId: 'c', avgPlacementPoints: 1 }),
+      row({ memberId: 'b', avgPlacementPoints: 2 }),
     ];
-    const total = winProbabilities(rows, 1.5).reduce((sum, r) => sum + r.probability, 0);
-    expect(total).toBeCloseTo(1);
+    const result = rageScores(rows, BANDS, 1.5);
+    const byId = Object.fromEntries(result.map((r) => [r.memberId, r.score]));
+    expect(byId.a + byId.b).toBeCloseTo(100); // 대칭 분포라 평균에서 서로 대칭
   });
 
-  it('전원 동점(표준편차 0)이면 균등하게 나눈다', () => {
+  it('점수는 0~100 사이에 있다(절대 0이나 100은 안 된다)', () => {
+    const rows = [
+      row({ memberId: 'a', avgPlacementPoints: 100 }),
+      row({ memberId: 'b', avgPlacementPoints: 0 }),
+      row({ memberId: 'c', avgPlacementPoints: 3 }),
+    ];
+    const result = rageScores(rows, BANDS, 1.5);
+    for (const r of result) {
+      expect(r.score).toBeGreaterThan(0);
+      expect(r.score).toBeLessThan(100);
+    }
+  });
+
+  it('밴드 전원 동점(표준편차 0)이면 전원 50점이다', () => {
     const rows = [
       row({ memberId: 'a', avgPlacementPoints: 4 }),
       row({ memberId: 'b', avgPlacementPoints: 4 }),
     ];
-    const result = winProbabilities(rows, 1.5);
-    expect(result.every((r) => r.probability === 0.5)).toBe(true);
+    const result = rageScores(rows, BANDS, 1.5);
+    expect(result.every((r) => r.score === 50)).toBe(true);
   });
 
   it('빈 배열이면 빈 배열을 낸다', () => {
-    expect(winProbabilities([], 1.5)).toEqual([]);
+    expect(rageScores([], BANDS, 1.5)).toEqual([]);
   });
 
-  it('온도가 높을수록 1위와 나머지의 격차가 커진다', () => {
+  it('배치점수가 같아도 평균킬이 높으면 점수가 더 높다(등수점수+킬 합산)', () => {
+    const rows = [
+      row({ memberId: 'a', avgPlacementPoints: 4, avgKills: 5 }),
+      row({ memberId: 'b', avgPlacementPoints: 4, avgKills: 1 }),
+    ];
+    const result = rageScores(rows, BANDS, 1.5);
+    const byId = Object.fromEntries(result.map((r) => [r.memberId, r.score]));
+    expect(byId.a).toBeGreaterThan(byId.b);
+  });
+
+  it('기울기(steepness)가 클수록 1위와 나머지의 격차가 커진다', () => {
     const rows = [row({ memberId: 'a', avgPlacementPoints: 6 }), row({ memberId: 'b', avgPlacementPoints: 3 })];
-    const low = winProbabilities(rows, 0.5);
-    const high = winProbabilities(rows, 3);
-    const aLow = low.find((r) => r.memberId === 'a')!.probability;
-    const aHigh = high.find((r) => r.memberId === 'a')!.probability;
+    const low = rageScores(rows, BANDS, 0.5);
+    const high = rageScores(rows, BANDS, 3);
+    const aLow = low.find((r) => r.memberId === 'a')!.score;
+    const aHigh = high.find((r) => r.memberId === 'a')!.score;
     expect(aHigh).toBeGreaterThan(aLow);
+  });
+
+  it('서로 다른 밴드는 따로 계산한다 — 다른 밴드 인원은 내 z-score에 영향을 안 준다', () => {
+    const bands = [[2], [4]];
+    const rows = [
+      row({ memberId: 'a', tier: 2, avgPlacementPoints: 6 }),
+      row({ memberId: 'b', tier: 2, avgPlacementPoints: 2 }),
+      row({ memberId: 'c', tier: 4, avgPlacementPoints: 100 }), // 다른 밴드의 극단값
+    ];
+    const result = rageScores(rows, bands, 1.5);
+    const byId = Object.fromEntries(result.map((r) => [r.memberId, r.score]));
+    // c가 아무리 극단적이어도 a/b의 점수(밴드 [2] 안에서만 계산)는 그대로다.
+    expect(byId.a).toBeCloseTo(rageScores([rows[0], rows[1]], [[2]], 1.5)[0].score);
+  });
+
+  it('어느 밴드에도 안 속하는 사람은 결과에서 빠진다', () => {
+    const rows = [row({ memberId: 'a', tier: 9 })];
+    expect(rageScores(rows, BANDS, 1.5)).toEqual([]);
   });
 });
 
-describe('topByWinProbability', () => {
-  it('확률 내림차순으로 정렬해 limit만큼 자른다', () => {
+describe('topByRageScore', () => {
+  it('점수 내림차순으로 정렬해 limit만큼 자른다', () => {
     const rows = [
       row({ memberId: 'a', avgPlacementPoints: 8 }),
       row({ memberId: 'b', avgPlacementPoints: 6 }),
       row({ memberId: 'c', avgPlacementPoints: 4 }),
       row({ memberId: 'd', avgPlacementPoints: 2 }),
     ];
-    const top = topByWinProbability(rows, 1.5, 3);
+    const top = topByRageScore(rows, BANDS, 1.5, 3);
     expect(top.map((r) => r.memberId)).toEqual(['a', 'b', 'c']);
-    expect(top[0].probability).toBeGreaterThanOrEqual(top[1].probability);
-    expect(top[1].probability).toBeGreaterThanOrEqual(top[2].probability);
+    expect(top[0].score).toBeGreaterThanOrEqual(top[1].score);
+    expect(top[1].score).toBeGreaterThanOrEqual(top[2].score);
   });
 });
 
-describe('WIN_PROBABILITY_TEMPERATURE', () => {
+describe('RAGE_SCORE_STEEPNESS', () => {
   it('양수다', () => {
-    expect(WIN_PROBABILITY_TEMPERATURE).toBeGreaterThan(0);
+    expect(RAGE_SCORE_STEEPNESS).toBeGreaterThan(0);
   });
 });

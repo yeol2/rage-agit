@@ -11,18 +11,21 @@ export const siteConfig = {
   },
 
   nav: [
-    { label: 'DASHBOARD', href: '/dashboard', ready: true },
-    { label: 'MEMBERS', href: '/members', ready: true },
-    { label: 'MATCHES', href: '/matches', ready: false },
-    { label: 'RANKINGS', href: '/rankings', ready: false },
+    { label: '소개', href: '/about', ready: true },
+    { label: '대시보드', href: '/dashboard', ready: true },
+    { label: '클랜원', href: '/members', ready: true },
+    { label: '매치 기록', href: '/matches', ready: true },
   ],
 
   hero: {
     eyebrow: 'VICTORY ANALYTICS',
     statusLabel: 'LIVE · CLAN SCRIM',
-    headlineMuted: '내 우승확률,',
-    headlineWhite: '직접',
-    headlineAccent: '확인하자.',
+    headline: {
+      lead: '내 ',
+      highlight: '우승확률,',
+      tailHighlight: '직접',
+      tailRest: ' 확인하자.',
+    },
     body: '카카오 계정 하나만 등록하면 클랜 내전 전적을 바로 볼 수 있어요. 최근 10경기 동안 얼마나 잘했는지, 킬·데미지·순위·생존율로 쪼개서 확인합니다.',
     ctaLabel: '대시보드 보기',
     ctaHref: '/dashboard',
@@ -42,7 +45,7 @@ export const siteConfig = {
     links: [
       { label: '대시보드', href: '/dashboard', ready: true },
       { label: '클랜원', href: '/members', ready: true },
-      { label: '매치 기록', href: '/matches', ready: false },
+      { label: '매치 기록', href: '/matches', ready: true },
       { label: '랭킹', href: '/rankings', ready: false },
     ],
     tagline: '배틀그라운드 클랜 RAGE의 내전 기록 보관소.',
@@ -62,6 +65,10 @@ export const siteConfig = {
       replayLabel: '다시보기',
       replayPendingLabel: '다시보기 준비중',
     },
+  },
+
+  matches: {
+    pageHeading: '내전 기록',
   },
 
   memberDirectory: {
@@ -107,5 +114,102 @@ export const siteConfig = {
         ready: false,
       },
     ],
+  },
+
+  about: {
+    eyebrow: 'ABOUT',
+    headline: {
+      emphasis: '"내가 쟤보단 잘하지 않나?"',
+      plainLead: '이제 ',
+      plainHighlight: '숫자',
+      plainTail: '로 나옵니다',
+    },
+    body: '클랜원 469명, 내전 100번 넘게 쌓인 기록을 모아서 등수·킬·활동량을 점수 하나로 정리했어요. 감이 아니라 기록으로 확인하는 거예요.',
+
+    why: {
+      eyebrow: '01 · WHY',
+      heading: '왜 이걸 만들었냐면.',
+      intro:
+        '내전이 끝나면 등수도 킬도 각자 흩어져서 클랜톡에 툭툭 던져지고 말아요. 누가 진짜 잘했는지는 아무도 정리해주지 않습니다.',
+      calloutLabel: 'THE REAL QUESTION',
+      calloutHeading: '근데 진짜 궁금한 건 그거잖아요.',
+      calloutPoints: [
+        '등수만 보면 운 좋은 한 판일 수도 있지 않나요?',
+        '킬만 보면 죽어도 킬만 챙기는 사람이 유리하지 않나요?',
+        '애초에 티어가 다른 사람끼리 비교하는 게 맞나요?',
+      ],
+      calloutFooter:
+        '등수든 킬이든 하나만 보면 반쪽짜리예요. 그리고 티어가 다른데 그냥 비교하면 애초에 공정하지도 않고요.',
+      closing: '그래서 만들었습니다. 매치당 등수+킬을 합친 성적을, 같은 티어 사람들끼리만 비교해서 점수로 보여주는 거예요.',
+      closingAccent: '잘한 척, 못한 척 안 통하게.',
+    },
+
+    how: {
+      eyebrow: '02 · HOW',
+      heading: '어떻게 굴러가냐면.',
+      intro:
+        '클랜원이 PUBG 닉네임 하나만 등록해두면 그다음부터는 전부 자동입니다. 계산 방식은 복잡해서 다 안 적을게요 — 큰 흐름만 봐주세요.',
+      steps: [
+        {
+          title: '계정 등록',
+          body: '클랜원이 카카오 PUBG 닉네임만 등록해두면 끝. 비밀번호나 로그인 정보는 애초에 받지 않습니다.',
+        },
+        {
+          title: '내전 자동 수집',
+          body: '매주 목·일 밤, 서버가 등록된 닉네임의 최근 전적을 PUBG 공식 API로 조회해서 내전만 골라 저장합니다.',
+        },
+        {
+          title: '점수 계산',
+          body: '같은 티어 그룹 안에서 상대적으로 얼마나 잘했는지를 통계적으로 점수화합니다. 그룹 평균인 사람은 항상 50점, 잘할수록 100에 가까워집니다.',
+        },
+        {
+          title: '대시보드 공개',
+          body: '누구나 대시보드에서 실시간으로 확인할 수 있어요.',
+        },
+      ],
+    },
+
+    data: {
+      eyebrow: '03 · DATA',
+      heading: '뭘 가져왔고, 뭘 저장했냐면.',
+      intro: '세 군데에서 긁어옵니다. 최근 건 API로 자동, 예전 건 사람이 손으로 옮겼어요.',
+      sources: [
+        {
+          tag: 'LIVE',
+          name: 'PUBG Open API (카카오)',
+          detail: '매주 자동으로 최근 전적을 가져옵니다 (2026-06-07 이후).',
+        },
+        {
+          tag: 'BACKFILL',
+          name: 'dak.gg',
+          detail: 'API가 못 가는 예전 기록을 웹에서 긁어왔습니다 (~2026-06-07).',
+        },
+        {
+          tag: 'MANUAL',
+          name: '디스코드 결과 스크린샷',
+          detail: '그보다 더 예전(2026-02~05) 내전은 디스코드에 올라온 결과 사진을 사람이 직접 옮겼습니다.',
+        },
+      ],
+      endpointsLabel: 'PUBG OPEN API ENDPOINTS WE CALL',
+      endpointsIntro: '저희 서버가 부르는 API는 딱 이 두 개입니다. 전부 PUBG가 공개해둔 조회 전용 API예요.',
+      endpoints: [
+        { path: '/shards/kakao/players', body: '등록한 닉네임으로 계정을 찾습니다.' },
+        { path: '/shards/kakao/matches/{id}', body: '그 계정이 뛴 매치의 상세 기록(등수·킬 등)을 가져옵니다.' },
+      ],
+      storedLabel: 'DB 에 저장된 것',
+      stored: [
+        '등록한 PUBG 닉네임, 계정 식별자',
+        '매치별 등수·킬·데미지·생존시간 등 상세 기록',
+        '디스코드 닉네임 (표시용)',
+        '티어 (자체 기입)',
+      ],
+      notStoredLabel: 'DB 에 저장되지 않는 것',
+      notStored: [
+        '카카오 계정 비밀번호, 이메일, 전화번호 — 애초에 받지도 않습니다',
+        '로그인 토큰, OAuth 정보',
+        '실명, 결제 정보',
+      ],
+      closing: '등록은 PUBG 닉네임 하나 알려주는 것뿐이에요. 계정 접근 권한이나 개인정보는 어디에도 필요 없습니다.',
+    },
   },
 } as const;

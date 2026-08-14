@@ -8,29 +8,46 @@ import { cleanDisplayName, fetchAllMembers } from './memberStats';
 // 1~2경기짜리 우연을 실력처럼 보여주는 걸 막는다.
 export const MIN_GAMES_FOR_RANKING = 12;
 
-// z-score를 softmax로 확률화할 때 쓰는 온도. 값이 클수록 1위와 나머지의 격차가 커진다.
-// 아직 임시값이다 — 과거 내전 백필이 끝나 표본이 다 모인 뒤에 실제 분포를 보고 정한다.
-export const WIN_PROBABILITY_TEMPERATURE = 1.5;
+// 최근 이 개월 수 안에 참가한 적이 없으면 랭킹에서 뺀다.
+// 통산 경기 수 자격만으로는 예전에 많이 뛰고 지금은 접은 사람이 계속
+// 최상위권에 남는 문제가 있었다.
+export const ACTIVE_WITHIN_MONTHS = 3;
+
+// z-score를 0~100 RAGE Score로 눌러 담는 로지스틱 곡선의 기울기.
+// 클수록 평균에서 조금만 벗어나도 점수가 0/100 쪽으로 빨리 붙는다.
+export const RAGE_SCORE_STEEPNESS = 1.0;
 
 export interface RankingStatsRow {
   memberId: string;
   discordNickname: string;
   tier: number;
   totalGameCount: number;
+  windowGameCount: number;
   avgKills: number;
   avgPlacementPoints: number;
+  avgRank: number;
+  lastPlayedAt: string;
 }
 
-export interface RankingStatsRowWithProbability extends RankingStatsRow {
-  probability: number;
+export interface RankingStatsRowWithScore extends RankingStatsRow {
+  score: number;
 }
 
-export function eligibleForRanking(rows: RankingStatsRow[]): RankingStatsRow[] {
-  return rows.filter((row) => row.totalGameCount >= MIN_GAMES_FOR_RANKING);
+export function eligibleForRanking(rows: RankingStatsRow[], now: Date = new Date()): RankingStatsRow[] {
+  const cutoff = new Date(now);
+  cutoff.setMonth(cutoff.getMonth() - ACTIVE_WITHIN_MONTHS);
+  return rows.filter(
+    (row) => row.totalGameCount >= MIN_GAMES_FOR_RANKING && new Date(row.lastPlayedAt) >= cutoff,
+  );
 }
 
 export function topByAvgKills(rows: RankingStatsRow[], limit = 3): RankingStatsRow[] {
   return [...rows].sort((a, b) => b.avgKills - a.avgKills).slice(0, limit);
+}
+
+// 등수는 숫자가 낮을수록(1등에 가까울수록) 좋다 — 오름차순 정렬.
+export function topByAvgRank(rows: RankingStatsRow[], limit = 3): RankingStatsRow[] {
+  return [...rows].sort((a, b) => a.avgRank - b.avgRank).slice(0, limit);
 }
 
 function mean(values: number[]): number {
@@ -41,54 +58,79 @@ function stddev(values: number[], avg: number): number {
   return Math.sqrt(mean(values.map((v) => (v - avg) ** 2)));
 }
 
-// 그룹(같은 티어 탭 안) 평균/표준편차로 z-score를 낸 뒤 softmax로 확률화한다.
-// 표준편차가 0이면(전원 동점) z-score가 정의되지 않으니 균등 확률로 나눈다.
-export function winProbabilities(
-  rows: RankingStatsRow[],
-  temperature: number,
-): RankingStatsRowWithProbability[] {
-  if (rows.length === 0) return [];
-
-  const points = rows.map((r) => r.avgPlacementPoints);
-  const avg = mean(points);
-  const sd = stddev(points, avg);
-
-  if (sd === 0) {
-    return rows.map((row) => ({ ...row, probability: 1 / rows.length }));
-  }
-
-  const weights = rows.map((row) => Math.exp(((row.avgPlacementPoints - avg) / sd) * temperature));
-  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-
-  return rows.map((row, i) => ({ ...row, probability: weights[i] / totalWeight }));
+// 매치당 종합점수 = 배치점수 + 킬. 클랜이 실제로 쓰는 "합계"(점수+킬=합계) 규칙과
+// 같은 기준이다 — scripts/read-screenshot-guide.md 의 시트 검산식 참고.
+function totalScore(row: Pick<RankingStatsRow, 'avgPlacementPoints' | 'avgKills'>): number {
+  return row.avgPlacementPoints + row.avgKills;
 }
 
-export function topByWinProbability(
+// row.tier 가 속하는 밴드(0~1.5, 2~2.5 같은 고정 티어 그룹)의 인덱스를 찾는다.
+// "전체" 탭에서도 이 고정 밴드 기준으로 이미 계산된 점수를 그대로 모아 보여준다 —
+// 전체 인원을 하나로 다시 묶어 계산하면 인원수 많은 쪽 점수가 눌리는 문제가 생긴다.
+function tierBandIndexOf(tier: number, tierBands: number[][]): number {
+  return tierBands.findIndex((band) => band.includes(tier));
+}
+
+// 각자 자기 고정 티어 밴드 안에서 z-score를 낸 뒤, 로지스틱으로 0~100 점수화한다.
+// z=0(밴드 평균)이면 항상 50점 — 밴드 인원수와 무관하다.
+// 표준편차가 0(밴드 전원 동점, 또는 1명)이면 z=0으로 두어 50점을 준다.
+export function rageScores(
   rows: RankingStatsRow[],
-  temperature: number,
+  tierBands: number[][],
+  steepness: number,
+): RankingStatsRowWithScore[] {
+  const byBand = new Map<number, RankingStatsRow[]>();
+  for (const row of rows) {
+    const idx = tierBandIndexOf(row.tier, tierBands);
+    if (idx === -1) continue;
+    if (!byBand.has(idx)) byBand.set(idx, []);
+    byBand.get(idx)!.push(row);
+  }
+
+  const result: RankingStatsRowWithScore[] = [];
+  for (const bandRows of byBand.values()) {
+    const points = bandRows.map(totalScore);
+    const avg = mean(points);
+    const sd = stddev(points, avg);
+
+    for (let i = 0; i < bandRows.length; i++) {
+      const z = sd === 0 ? 0 : (points[i] - avg) / sd;
+      const score = 100 / (1 + Math.exp(-steepness * z));
+      result.push({ ...bandRows[i], score });
+    }
+  }
+  return result;
+}
+
+export function topByRageScore(
+  rows: RankingStatsRow[],
+  tierBands: number[][],
+  steepness: number,
   limit = 3,
-): RankingStatsRowWithProbability[] {
-  return winProbabilities(rows, temperature)
-    .sort((a, b) => b.probability - a.probability)
+): RankingStatsRowWithScore[] {
+  return rageScores(rows, tierBands, steepness)
+    .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }
 
-export type RankingWindow = 'recent10' | 'alltime';
+export type RankingWindow = 'recent12' | 'alltime';
 
 interface RankingViewRow {
   member_id: string;
   tier: number;
+  game_count: number;
   avg_kills: number;
   avg_placement_points: number;
+  avg_rank: number;
 }
 
 // member_alltime_stats 는 통산 game_count(자격 판정 기준)를 항상 같이 조회한다 —
-// 최근10 창을 볼 때도 자격은 통산 경기 수로 판정한다(0011 설계 참고).
+// 최근12 창을 볼 때도 자격은 통산 경기 수로 판정한다(0011 설계 참고).
 export async function fetchRankingStats(window: RankingWindow): Promise<RankingStatsRow[]> {
   const [alltimeResult, members] = await Promise.all([
     getSupabase()
       .from('member_alltime_stats')
-      .select('member_id, tier, game_count, avg_kills, avg_placement_points'),
+      .select('member_id, tier, game_count, avg_kills, avg_placement_points, avg_rank, last_played_at'),
     fetchAllMembers(),
   ]);
   if (alltimeResult.error) {
@@ -97,17 +139,20 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
   const alltimeData = alltimeResult.data ?? [];
 
   let windowData: RankingViewRow[] = alltimeData;
-  if (window === 'recent10') {
+  if (window === 'recent12') {
     // 6각형이 쓰는 member_recent_stats 가 아니라 랭킹 전용 뷰다 —
-    // 이쪽만 스크린샷 백필까지 합쳐서 최근 10경기를 센다 (0012).
+    // 이쪽만 스크린샷 백필까지 합쳐서 최근 12경기(내전 3회)를 센다 (0013).
     const { data, error } = await getSupabase()
       .from('member_recent_ranking_stats')
-      .select('member_id, tier, avg_kills, avg_placement_points');
+      .select('member_id, tier, game_count, avg_kills, avg_placement_points, avg_rank');
     if (error) throw new Error(`최근 전적을 불러오지 못했습니다: ${error.message}`);
     windowData = data ?? [];
   }
 
   const totalGameCountByMember = new Map(alltimeData.map((r) => [r.member_id, r.game_count as number]));
+  const lastPlayedByMember = new Map(
+    alltimeData.map((r) => [r.member_id, r.last_played_at as string]),
+  );
   const nicknameByMember = new Map(members.map((m) => [m.id, cleanDisplayName(m.discordNickname)]));
 
   return windowData
@@ -117,7 +162,10 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
       discordNickname: nicknameByMember.get(row.member_id)!,
       tier: row.tier,
       totalGameCount: totalGameCountByMember.get(row.member_id) ?? 0,
+      windowGameCount: row.game_count,
       avgKills: Number(row.avg_kills),
       avgPlacementPoints: Number(row.avg_placement_points),
+      avgRank: Number(row.avg_rank),
+      lastPlayedAt: lastPlayedByMember.get(row.member_id) ?? new Date(0).toISOString(),
     }));
 }

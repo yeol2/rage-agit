@@ -16,10 +16,13 @@ export function Hero() {
       </div>
 
       <h1 className="mt-7 text-5xl font-bold leading-[1.12] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-        <span className="block text-muted">{hero.headlineMuted}</span>
-        <span className="mt-1 block">
-          <span className="text-foreground">{hero.headlineWhite}</span>{' '}
-          <span className="text-accent">{hero.headlineAccent}</span>
+        <span className="block">
+          <span className="text-subtext">{hero.headline.lead}</span>
+          <span className="text-accent">{hero.headline.highlight}</span>
+        </span>
+        <span className="mt-1 block text-subtext">
+          <span className="text-foreground">{hero.headline.tailHighlight}</span>
+          {hero.headline.tailRest}
         </span>
       </h1>
 

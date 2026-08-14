@@ -19,7 +19,7 @@ describe('Footer', () => {
 
   it('keeps not-yet-built pages disabled', () => {
     render(<Footer />);
-    expect(screen.queryByRole('link', { name: '매치 기록' })).not.toBeInTheDocument();
-    expect(screen.getByText('매치 기록')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByRole('link', { name: '랭킹' })).not.toBeInTheDocument();
+    expect(screen.getByText('랭킹')).toHaveAttribute('aria-disabled', 'true');
   });
 });
