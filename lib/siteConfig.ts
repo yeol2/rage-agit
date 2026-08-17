@@ -12,7 +12,7 @@ export const siteConfig = {
 
   nav: [
     { label: '소개', href: '/about', ready: true },
-    { label: '대시보드', href: '/dashboard', ready: true },
+    { label: '리더보드', href: '/dashboard', ready: true },
     { label: '클랜원', href: '/members', ready: true },
     { label: '매치 기록', href: '/matches', ready: true },
   ],
@@ -27,7 +27,7 @@ export const siteConfig = {
       tailRest: ' 확인하자.',
     },
     body: '카카오 계정 하나만 등록하면 클랜 내전 전적을 바로 볼 수 있어요. 최근 10경기 동안 얼마나 잘했는지, 킬·데미지·순위·생존율로 쪼개서 확인합니다.',
-    ctaLabel: '대시보드 보기',
+    ctaLabel: '리더보드 보기',
     ctaHref: '/dashboard',
   },
 
@@ -43,7 +43,7 @@ export const siteConfig = {
     descriptionAccent: '감이 아니라 기록입니다.',
     credit: 'Data based on KAKAO PUBG Open API',
     links: [
-      { label: '대시보드', href: '/dashboard', ready: true },
+      { label: '리더보드', href: '/dashboard', ready: true },
       { label: '클랜원', href: '/members', ready: true },
       { label: '매치 기록', href: '/matches', ready: true },
       { label: '랭킹', href: '/rankings', ready: false },
@@ -52,10 +52,10 @@ export const siteConfig = {
   },
 
   dashboard: {
-    pageHeading: '대시보드',
+    pageHeading: '리더보드',
     tierRanking: {
-      eyebrow: 'TIER RANKING',
-      heading: '티어 랭킹',
+      eyebrow: 'LEADERBOARD',
+      heading: '리더보드',
     },
     recentScrims: {
       eyebrow: 'RECENT SCRIMS',
@@ -163,8 +163,8 @@ export const siteConfig = {
           body: '같은 티어 그룹 안에서 상대적으로 얼마나 잘했는지를 통계적으로 점수화합니다. 그룹 평균인 사람은 항상 50점, 잘할수록 100에 가까워집니다.',
         },
         {
-          title: '대시보드 공개',
-          body: '누구나 대시보드에서 실시간으로 확인할 수 있어요.',
+          title: '리더보드 공개',
+          body: '누구나 리더보드에서 실시간으로 확인할 수 있어요.',
         },
       ],
     },

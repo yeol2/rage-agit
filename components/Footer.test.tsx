@@ -5,9 +5,9 @@ import { Footer } from './Footer';
 afterEach(cleanup);
 
 describe('Footer', () => {
-  it('renders 대시보드 as a real link now that the page exists', () => {
+  it('renders 리더보드 as a real link now that the page exists', () => {
     render(<Footer />);
-    const link = screen.getByRole('link', { name: '대시보드' });
+    const link = screen.getByRole('link', { name: '리더보드' });
     expect(link).toHaveAttribute('href', '/dashboard');
   });
 

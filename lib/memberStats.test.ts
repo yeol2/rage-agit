@@ -150,8 +150,7 @@ describe('cleanDisplayName', () => {
   });
 
   it('괄호 앞뒤 공백은 정리하되 괄호 뒤에 남은 글자는 그대로 둔다', () => {
-    // '()나 이모티콘'만 떼라는 요청이라, 슬래시 부계정 표기나 뒤에 붙은
-    // 한글 별칭처럼 괄호·이모지가 아닌 장식은 건드리지 않는다.
+    // 괄호 뒤에 붙은 한글 별칭처럼 괄호·이모지·슬래시가 아닌 장식은 건드리지 않는다.
     expect(cleanDisplayName('Ez_D (98)은킹')).toBe('Ez_D 은킹');
   });
 
@@ -159,8 +158,8 @@ describe('cleanDisplayName', () => {
     expect(cleanDisplayName('Ez_E-')).toBe('Ez_E-');
   });
 
-  it('괄호가 없으면 손대지 않는다(슬래시 부계정 표기 포함)', () => {
-    expect(cleanDisplayName('Ez_F/Ez_G')).toBe('Ez_F/Ez_G');
+  it('슬래시 뒤 부계정 표기는 뗀다', () => {
+    expect(cleanDisplayName('Ez_F/Ez_G')).toBe('Ez_F');
   });
 });
 

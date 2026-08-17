@@ -4,7 +4,7 @@ import { Footer } from '@/components/Footer';
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen">
       <Nav />
       <About />
       <Footer />

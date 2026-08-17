@@ -76,7 +76,7 @@ describe('TierRankingPodium', () => {
 
   it('역대 전체 탭으로 바꾸면 통산 데이터로 다시 채운다', () => {
     render(<TierRankingPodium recent12={RECENT10} alltime={ALLTIME} />);
-    fireEvent.click(screen.getByRole('button', { name: '역대 전체' }));
+    fireEvent.click(screen.getByRole('tab', { name: '역대 전체' }));
 
     const slot1 = screen.getByTestId('podium-slot-1');
     const slot2 = screen.getByTestId('podium-slot-2');

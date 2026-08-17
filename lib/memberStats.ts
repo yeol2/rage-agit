@@ -49,15 +49,16 @@ export function tierGroupFor(tier: number): TierCohortGroup | null {
 // 표본 크기를 걱정할 이유가 없다(집계가 아니라 목록일 뿐이다).
 export const ALL_TIERS = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
 
-// discord_nickname 원본은 그대로 두고 화면에서만 다듬는다 — 괄호 태그와
-// 이모지만 뗀다. 슬래시 부계정 표기나 괄호 뒤에 남는 한글 별칭처럼
-// '()나 이모티콘'이 아닌 장식은 그대로 둔다(요청 범위 밖이다).
+// discord_nickname 원본은 그대로 두고 화면에서만 다듬는다 — 괄호 태그,
+// 이모지, 슬래시 뒤 부계정 표기를 뗀다("Ez_A/Ez_B" 처럼 본계정+부계정을
+// 합쳐놓은 표기가 화면에서 너무 길어져서 본계정만 남긴다).
 const EMOJI_PATTERN = /\p{Extended_Pictographic}/gu;
 
 export function cleanDisplayName(discordNickname: string): string {
   return discordNickname
     .replace(/\([^)]*\)/g, '')
     .replace(EMOJI_PATTERN, '')
+    .split('/')[0]
     .replace(/\s+/g, ' ')
     .trim();
 }

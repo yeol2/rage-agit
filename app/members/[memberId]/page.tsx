@@ -32,7 +32,7 @@ export default async function MemberDetailPage({
   const ramp = tierColorRamp(member.tier);
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen">
       <Nav />
       <AccessGate>
         <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">

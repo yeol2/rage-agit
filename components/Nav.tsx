@@ -4,8 +4,9 @@ import { Logo } from './Logo';
 
 export function Nav() {
   return (
-    <header className="w-full border-b border-white/5">
-      <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8 sm:py-5">
+    <header className="w-full">
+      {/* 원본 Frame 24: 카드 전체폭 / 높이 82.42 / 좌우 패딩 82.42 / space-between */}
+      <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:h-[67px] sm:px-[67px] sm:py-0">
         <Link href="/" className="flex items-center gap-3">
           <Logo />
           <span className="whitespace-nowrap text-lg font-bold tracking-tight text-foreground sm:text-xl">

@@ -19,14 +19,6 @@ export function About() {
     <>
       {/* ── HERO ── */}
       <section className="relative overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-[520px]"
-          style={{
-            background:
-              'radial-gradient(600px 320px at 20% 0%, #FF923326 0%, transparent 70%)',
-          }}
-        />
         <div className="relative mx-auto max-w-shell px-5 py-20 sm:px-8 md:py-28">
           <div className="flex items-center gap-4">
             <p className="hud shrink-0 text-[11px] text-foreground sm:text-xs">{about.eyebrow}</p>

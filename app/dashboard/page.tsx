@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen">
       <Nav />
       <h1 className="sr-only">{siteConfig.dashboard.pageHeading}</h1>
       <TierRankingPodium recent12={recent12} alltime={alltime} />

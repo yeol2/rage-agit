@@ -5,9 +5,9 @@ import { Nav } from './Nav';
 afterEach(cleanup);
 
 describe('Nav', () => {
-  it('renders 대시보드 as a real link now that the page exists', () => {
+  it('renders 리더보드 as a real link now that the page exists', () => {
     render(<Nav />);
-    const link = screen.getByRole('link', { name: '대시보드' });
+    const link = screen.getByRole('link', { name: '리더보드' });
     expect(link).toHaveAttribute('href', '/dashboard');
   });
 

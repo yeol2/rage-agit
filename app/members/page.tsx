@@ -18,7 +18,7 @@ export default async function MembersPage() {
   const copy = siteConfig.memberDirectory;
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen">
       <Nav />
       <AccessGate>
         <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">

@@ -16,7 +16,7 @@ export default async function MatchesPage() {
   const sessions = await fetchScrimSessions();
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen">
       <Nav />
       <h1 className="sr-only">{siteConfig.matches.pageHeading}</h1>
       <RecentScrimsList sessions={sessions} />
