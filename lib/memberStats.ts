@@ -106,30 +106,33 @@ export interface NameplateStyle {
 // 목록/팀 구성 테이블의 작은 카드에서는 그래서 2티어와 2.5티어가 눈으로 안 갈렸다.
 // 배경색은 그대로 두고, 반티어(.5)만 테두리를 없애 같은 색 묶음 안에서도
 // 구분되게 한다(정수 티어는 테두리 있음, 반티어는 테두리 없음).
+//
+// 원래는 "선택함" 미리보기(tierNameplateSelectedStyle)로 시험 삼아 밝게 줬던
+// 값인데, 미리보기 결과가 기본값으로도 마음에 든다고 해서 이 함수의 기본값으로
+// 그대로 승격시켰다.
 export function tierNameplateStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
   const isHalfTier = tier % 1 !== 0;
 
   return {
-    // 배경 채우기도 어두운 화면 바탕에 묻히지 않게 40(25%) 불투명도로 준다.
-    background: `linear-gradient(135deg, ${ramp.from}40, ${ramp.to}40)`,
-    // 정수 티어 테두리는 눈에 확 띄도록 거의 불투명(e6)하게 준다 — 반티어(테두리 없음)와의
+    background: `linear-gradient(135deg, ${ramp.from}73, ${ramp.to}73)`,
+    // 정수 티어 테두리는 눈에 확 띄도록 완전 불투명(ff)하게 준다 — 반티어(테두리 없음)와의
     // 대비가 흐릿하면 구분한 보람이 없다.
-    borderColor: isHalfTier ? 'transparent' : `${ramp.from}e6`,
-    boxShadow: `0 0 10px ${ramp.from}40`,
+    borderColor: isHalfTier ? 'transparent' : `${ramp.from}ff`,
+    boxShadow: `0 0 10px ${ramp.from}66`,
   };
 }
 
 // 팀 구성 테이블 2단계(팀짜기)에서 네임플레이트를 클릭해 "선택함" 상태를 표시할 때
-// 쓸 진한 배색 — 지금은 아무 데서도 안 부르지만, 색 규칙만 먼저 정해둔다.
-// 기본 상태(background 40, e6)보다 한 단계 더 진해야 하므로 배경/테두리 모두 위로 올린다.
+// 쓸 배색 — 지금은 아무 데서도 안 부르지만, 색 규칙만 먼저 정해둔다.
+// 기본 상태가 이미 밝아졌으므로 그보다 한 단계 더 진하게(배경 불투명도up, 발광 확대) 잡는다.
 export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
 
   return {
-    background: `linear-gradient(135deg, ${ramp.from}73, ${ramp.to}73)`,
+    background: `linear-gradient(135deg, ${ramp.from}b3, ${ramp.to}b3)`,
     borderColor: `${ramp.from}ff`,
-    boxShadow: `0 0 10px ${ramp.from}66`,
+    boxShadow: `0 0 16px ${ramp.from}99`,
   };
 }
 

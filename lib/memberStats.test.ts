@@ -211,7 +211,7 @@ describe('tierColorRamp', () => {
 
 describe('tierNameplateStyle', () => {
   it('정수 티어는 테두리가 있다', () => {
-    expect(tierNameplateStyle(2).borderColor).toBe('#db8a42e6');
+    expect(tierNameplateStyle(2).borderColor).toBe('#db8a42ff');
   });
 
   it('반티어는 테두리를 없애 같은 색 묶음 안에서도 구분한다', () => {
@@ -232,7 +232,8 @@ describe('tierNameplateSelectedStyle', () => {
     const base = tierNameplateStyle(2);
     const selected = tierNameplateSelectedStyle(2);
     expect(selected).not.toEqual(base);
-    // 색상(from/to)은 같은 티어라 동일해야 하고 불투명도만 더 진해야 한다.
-    expect(selected.borderColor.slice(0, 7)).toBe('#db8a42');
+    // 배경 불투명도(뒤 2자리 hex)는 selected 가 base 보다 더 진해야 한다.
+    expect(selected.background).not.toBe(base.background);
+    expect(selected.background).toContain('#db8a42b3');
   });
 });

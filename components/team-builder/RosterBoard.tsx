@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import type { Roster, RosterEntry } from '@/lib/scrimRoster';
-import { cleanDisplayName, stripTrailingKoreanTag, tierNameplateStyle } from '@/lib/memberStats';
+import {
+  cleanDisplayName,
+  stripTrailingKoreanTag,
+  tierNameplateSelectedStyle,
+  tierNameplateStyle,
+} from '@/lib/memberStats';
 
 const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   1: '1티어 (0~1.5)',
@@ -18,7 +23,10 @@ function displayName(entry: RosterEntry): string {
 
 // 클랜원 페이지와 같은 티어 색 네임플레이트. 매칭된 사람만 티어가 있어 색을 입힐 수
 // 있고, member_id 도 있어 개인 페이지로 링크한다 — 미매칭은 그냥 텍스트로 둔다.
-function Nameplate({ entry }: { entry: RosterEntry }) {
+//
+// selected 는 아직 실제 클릭 기능(2단계 팀짜기)이 없어 미리보기 용도로만 받는다 —
+// tierNameplateSelectedStyle 이 실제 화면에서 어떻게 보이는지 확인하기 위함.
+function Nameplate({ entry, selected = false }: { entry: RosterEntry; selected?: boolean }) {
   const name = displayName(entry);
 
   if (!entry.matched || entry.tier === null || !entry.memberId) {
@@ -33,7 +41,7 @@ function Nameplate({ entry }: { entry: RosterEntry }) {
     <Link
       href={`/members/${entry.memberId}`}
       className="block truncate rounded-md border-[1.5px] px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
-      style={tierNameplateStyle(entry.tier)}
+      style={selected ? tierNameplateSelectedStyle(entry.tier) : tierNameplateStyle(entry.tier)}
     >
       {name}
     </Link>
