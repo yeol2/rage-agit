@@ -6,7 +6,7 @@ import {
   ALL_TIERS,
   cleanDisplayName,
   stripTrailingKoreanTag,
-  tierColorRamp,
+  tierNameplateStyle,
   type MemberSummary,
 } from '@/lib/memberStats';
 
@@ -42,24 +42,17 @@ export function MemberDirectory({ members }: { members: MemberSummary[] }) {
         <section key={tier} className="mt-8">
           <h3 className="hud text-xs text-accent">{tier}티어</h3>
           <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-            {tierMembers.map((member) => {
-              const ramp = tierColorRamp(member.tier);
-              return (
-                <li key={member.id}>
-                  <Link
-                    href={`/members/${member.id}`}
-                    className="block truncate rounded-md border px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
-                    style={{
-                      background: `linear-gradient(135deg, ${ramp.from}26, ${ramp.to}26)`,
-                      borderColor: `${ramp.from}66`,
-                      boxShadow: `0 0 10px ${ramp.from}40`,
-                    }}
-                  >
-                    {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
-                  </Link>
-                </li>
-              );
-            })}
+            {tierMembers.map((member) => (
+              <li key={member.id}>
+                <Link
+                  href={`/members/${member.id}`}
+                  className="block truncate rounded-md border px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
+                  style={tierNameplateStyle(member.tier)}
+                >
+                  {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
+                </Link>
+              </li>
+            ))}
           </ul>
         </section>
       ))}

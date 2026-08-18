@@ -40,12 +40,13 @@ describe('MemberDirectory', () => {
     );
   });
 
-  it('같은 티어끼리는 같은 배색을 쓴다', () => {
+  it('같은 색 묶음이어도 반티어는 정수 티어보다 진하게 그려 구분한다', () => {
     render(<MemberDirectory members={members} />);
-    const bravo = screen.getByRole('link', { name: 'Ez_Bravo' });
-    const charlie = screen.getByRole('link', { name: 'Ez_Charlie' });
-    // 2티어와 2.5티어는 tierColorRamp 상 같은 배색을 공유한다.
-    expect(bravo.style.borderColor).toBe(charlie.style.borderColor);
+    const bravo = screen.getByRole('link', { name: 'Ez_Bravo' }); // 2티어
+    const charlie = screen.getByRole('link', { name: 'Ez_Charlie' }); // 2.5티어
+    // 색상(rgb) 자체는 2~2.5티어가 tierColorRamp 상 같은 묶음이라 같아야 하지만,
+    // 불투명도(alpha)는 tierNameplateStyle 이 반티어를 더 진하게 줘서 달라야 한다.
+    expect(bravo.style.borderColor).not.toBe(charlie.style.borderColor);
   });
 
   it('검색하면 일치하는 이름만 남는다', async () => {

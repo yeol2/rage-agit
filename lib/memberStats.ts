@@ -96,6 +96,30 @@ export function tierColorRamp(tier: number): TierColorRamp {
   return found.ramp;
 }
 
+export interface NameplateStyle {
+  background: string;
+  borderColor: string;
+  boxShadow: string;
+}
+
+// tierColorRamp 는 정수·반티어를 묶어 같은 색을 쓴다(2~2.5, 3~3.5) — 클랜원
+// 목록/팀 구성 테이블의 작은 카드에서는 그래서 2티어와 2.5티어가 눈으로 안 갈렸다.
+// 색상은 그대로 두고 반티어(.5)만 그라데이션을 더 진하게(불투명도를 올려) 줘서
+// 같은 색 묶음 안에서도 구분되게 한다.
+export function tierNameplateStyle(tier: number): NameplateStyle {
+  const ramp = tierColorRamp(tier);
+  const isHalfTier = tier % 1 !== 0;
+  const bgAlpha = isHalfTier ? '4d' : '26';
+  const borderAlpha = isHalfTier ? '99' : '66';
+  const shadowAlpha = isHalfTier ? '66' : '40';
+
+  return {
+    background: `linear-gradient(135deg, ${ramp.from}${bgAlpha}, ${ramp.to}${bgAlpha})`,
+    borderColor: `${ramp.from}${borderAlpha}`,
+    boxShadow: `0 0 10px ${ramp.from}${shadowAlpha}`,
+  };
+}
+
 // value 가 cohortValues 안에서 몇 번째 백분위인지. 자기 자신도 비교 대상에 포함된다
 // (표본이 자기 혼자면 100이 나오는데, 이건 의도된 동작이다).
 //

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Roster, RosterEntry } from '@/lib/scrimRoster';
-import { cleanDisplayName, stripTrailingKoreanTag, tierColorRamp } from '@/lib/memberStats';
+import { cleanDisplayName, stripTrailingKoreanTag, tierNameplateStyle } from '@/lib/memberStats';
 
 const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   1: '1티어 (0~1.5)',
@@ -29,16 +29,11 @@ function Nameplate({ entry }: { entry: RosterEntry }) {
     );
   }
 
-  const ramp = tierColorRamp(entry.tier);
   return (
     <Link
       href={`/members/${entry.memberId}`}
       className="block truncate rounded-md border px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
-      style={{
-        background: `linear-gradient(135deg, ${ramp.from}26, ${ramp.to}26)`,
-        borderColor: `${ramp.from}66`,
-        boxShadow: `0 0 10px ${ramp.from}40`,
-      }}
+      style={tierNameplateStyle(entry.tier)}
     >
       {name}
     </Link>
