@@ -8,10 +8,20 @@ const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   4: '4티어 (4~5)',
 };
 
+// cleanDisplayName 은 괄호 밖에 붙은 한글 태그("Ez_Gimli 김리", "Ez_Jhoney주헌")는
+// 못 뗀다 — 클랜원 페이지엔 없는 케이스라 공용 함수를 안 건드리고 여기서만 추가로
+// 뒤쪽 한글 덩어리를 잘라낸다. 결과가 통째로 비면(닉네임이 한글뿐인 경우) 자르지 않는다.
+function stripTrailingKorean(name: string): string {
+  const stripped = name.replace(/\s*[가-힣]+$/, '').trim();
+  return stripped.length > 0 ? stripped : name;
+}
+
 // 괄호 태그·이모지·부계정 표기를 뗀 "Ez_XXXX" 형태만 보여준다 — 클랜원 페이지와
-// 같은 정리 규칙(lib/memberStats.ts의 cleanDisplayName)을 그대로 쓴다.
+// 같은 정리 규칙(lib/memberStats.ts의 cleanDisplayName)을 기본으로 쓰고, 이 화면
+// 전용으로 뒤쪽 한글 태그까지 마저 없앤다.
 function displayName(entry: RosterEntry): string {
-  return entry.discordNickname ? cleanDisplayName(entry.discordNickname) : '(닉네임 정보 없음)';
+  if (!entry.discordNickname) return '(닉네임 정보 없음)';
+  return stripTrailingKorean(cleanDisplayName(entry.discordNickname));
 }
 
 export function RosterBoard({ roster }: { roster: Roster | null }) {
