@@ -45,7 +45,7 @@ describe('MemberDirectory', () => {
     const bravo = screen.getByRole('link', { name: 'Ez_Bravo' }); // 2티어
     const charlie = screen.getByRole('link', { name: 'Ez_Charlie' }); // 2.5티어
     expect(bravo.style.borderColor).not.toBe(charlie.style.borderColor);
-    expect(charlie.style.borderColor).toBe('rgba(255, 255, 255, 0.16)');
+    expect(charlie.style.borderColor).toBe('rgba(255, 255, 255, 0.55)');
   });
 
   it('검색하면 일치하는 이름만 남는다', async () => {

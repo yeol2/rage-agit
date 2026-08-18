@@ -116,10 +116,10 @@ export function tierNameplateStyle(tier: number): NameplateStyle {
 
   return {
     background: `linear-gradient(135deg, ${ramp.from}73, ${ramp.to}73)`,
-    // 정수 티어 테두리는 티어 색 그대로 완전 불투명(ff). 반티어는 완전히 투명하게
-    // 없애버리면 "테두리가 없다"는 게 잘 안 느껴져서, 대신 흐린 회백색 테두리를 줘
-    // "색 있는 링 vs 무채색 링"으로 한눈에 갈리게 한다.
-    borderColor: isHalfTier ? 'rgba(255, 255, 255, 0.16)' : `${ramp.from}ff`,
+    // 정수 티어 테두리는 티어 색 그대로 완전 불투명(ff). 반티어는 흰색 테두리를 쓰되,
+    // 배경(45% 불투명도)에 묻히지 않도록 충분히 진하게(0.55) 줘야 "색 있는 링 vs
+    // 뚜렷한 흰색 링"으로 확실히 갈린다 — 너무 흐리면(0.16) 사실상 안 보였다.
+    borderColor: isHalfTier ? 'rgba(255, 255, 255, 0.55)' : `${ramp.from}ff`,
     boxShadow: `0 0 10px ${ramp.from}66`,
   };
 }
