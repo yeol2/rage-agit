@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { LeaderboardBackdrop } from '@/components/LeaderboardBackdrop';
 
 export const metadata: Metadata = {
   title: 'RAGE AGIT',
@@ -11,7 +10,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko">
       <body className="relative overflow-x-hidden bg-background text-foreground">
-        <LeaderboardBackdrop />
         <div className="relative">{children}</div>
       </body>
     </html>

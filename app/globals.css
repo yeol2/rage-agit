@@ -12,6 +12,7 @@ html,
 body {
   margin: 0;
   padding: 0;
+  /* tailwind.config.ts 의 background 토큰과 반드시 같은 값. */
   background: #0e0b13;
 }
 
