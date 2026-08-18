@@ -46,7 +46,7 @@ export function MemberDirectory({ members }: { members: MemberSummary[] }) {
               <li key={member.id}>
                 <Link
                   href={`/members/${member.id}`}
-                  className="block truncate rounded-md border px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
+                  className="block truncate rounded-md border-2 px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
                   style={tierNameplateStyle(member.tier)}
                 >
                   {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}

@@ -112,7 +112,9 @@ export function tierNameplateStyle(tier: number): NameplateStyle {
 
   return {
     background: `linear-gradient(135deg, ${ramp.from}26, ${ramp.to}26)`,
-    borderColor: isHalfTier ? 'transparent' : `${ramp.from}66`,
+    // 정수 티어 테두리는 눈에 확 띄도록 거의 불투명(e6)하게 준다 — 반티어(테두리 없음)와의
+    // 대비가 흐릿하면 구분한 보람이 없다.
+    borderColor: isHalfTier ? 'transparent' : `${ramp.from}e6`,
     boxShadow: `0 0 10px ${ramp.from}40`,
   };
 }

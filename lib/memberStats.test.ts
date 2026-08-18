@@ -211,7 +211,7 @@ describe('tierColorRamp', () => {
 
 describe('tierNameplateStyle', () => {
   it('정수 티어는 테두리가 있다', () => {
-    expect(tierNameplateStyle(2).borderColor).toBe('#db8a4266');
+    expect(tierNameplateStyle(2).borderColor).toBe('#db8a42e6');
   });
 
   it('반티어는 테두리를 없애 같은 색 묶음 안에서도 구분한다', () => {
