@@ -40,12 +40,12 @@ describe('MemberDirectory', () => {
     );
   });
 
-  it('같은 색 묶음이어도 반티어는 테두리를 없애 정수 티어와 구분한다', () => {
+  it('같은 색 묶음이어도 반티어는 무채색 테두리를 써서 정수 티어와 구분한다', () => {
     render(<MemberDirectory members={members} />);
     const bravo = screen.getByRole('link', { name: 'Ez_Bravo' }); // 2티어
     const charlie = screen.getByRole('link', { name: 'Ez_Charlie' }); // 2.5티어
-    expect(bravo.style.borderColor).not.toBe('transparent');
-    expect(charlie.style.borderColor).toBe('transparent');
+    expect(bravo.style.borderColor).not.toBe(charlie.style.borderColor);
+    expect(charlie.style.borderColor).toBe('rgba(255, 255, 255, 0.16)');
   });
 
   it('검색하면 일치하는 이름만 남는다', async () => {

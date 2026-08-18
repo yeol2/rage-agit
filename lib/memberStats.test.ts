@@ -214,8 +214,8 @@ describe('tierNameplateStyle', () => {
     expect(tierNameplateStyle(2).borderColor).toBe('#db8a42ff');
   });
 
-  it('반티어는 테두리를 없애 같은 색 묶음 안에서도 구분한다', () => {
-    expect(tierNameplateStyle(2.5).borderColor).toBe('transparent');
+  it('반티어는 무채색 테두리를 써서 정수 티어(색 있는 테두리)와 구분한다', () => {
+    expect(tierNameplateStyle(2.5).borderColor).toBe('rgba(255, 255, 255, 0.16)');
   });
 
   it('배경색(그라데이션)은 정수·반티어가 같은 묶음이면 동일하다', () => {
