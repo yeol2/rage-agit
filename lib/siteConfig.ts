@@ -14,6 +14,7 @@ export const siteConfig = {
     { label: '소개', href: '/about', ready: true },
     { label: '리더보드', href: '/dashboard', ready: true },
     { label: '클랜원', href: '/members', ready: true },
+    { label: '내전', href: '/team-builder', ready: true },
     { label: '매치 기록', href: '/matches', ready: true },
   ],
 
@@ -45,6 +46,7 @@ export const siteConfig = {
     links: [
       { label: '리더보드', href: '/dashboard', ready: true },
       { label: '클랜원', href: '/members', ready: true },
+      { label: '내전', href: '/team-builder', ready: true },
       { label: '매치 기록', href: '/matches', ready: true },
       { label: '랭킹', href: '/rankings', ready: false },
     ],
