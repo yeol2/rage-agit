@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyMatch, extractMatchSummary, extractParticipants } from './matches.mjs';
+import { classifyMatch, extractMatchSummary, extractParticipants, isRestartMatch } from './matches.mjs';
 
 // 실제 응답을 본떠 작게 만든다.
 // 진짜 응답(참가자 64명)을 저장소에 넣으면 클랜원 실명이 git 에 들어간다.
@@ -131,6 +131,120 @@ describe('classifyMatch', () => {
     expect(
       classifyMatch({ matchType: 'custom', participantCount: 39, clanMemberCount: 39 }).isScrim,
     ).toBe(false);
+  });
+
+  it('전원 스탯이 0이면 인원·비율 조건을 만족해도 내전이 아니다(리방)', () => {
+    const participants = Array.from({ length: 64 }, () => ({
+      kills: 0,
+      damageDealt: 0,
+      timeSurvived: 0,
+    }));
+    const result = classifyMatch({
+      matchType: 'custom',
+      participantCount: 64,
+      clanMemberCount: 63,
+      participants,
+    });
+    expect(result.isScrim).toBe(false);
+    expect(result.reason).toContain('리방');
+  });
+
+  it('한 명이라도 스탯이 있으면 정상적인 내전으로 본다', () => {
+    const participants = Array.from({ length: 64 }, (_, i) => ({
+      kills: i === 0 ? 1 : 0,
+      damageDealt: 0,
+      timeSurvived: 0,
+    }));
+    const result = classifyMatch({
+      matchType: 'custom',
+      participantCount: 64,
+      clanMemberCount: 63,
+      participants,
+    });
+    expect(result.isScrim).toBe(true);
+  });
+
+  it('participants 를 안 넘기면 리방 검사를 건너뛴다', () => {
+    // 호출부(dak.gg 백필)가 아직 이 검사를 안 쓰는 경우를 대비한 하위 호환성.
+    const result = classifyMatch({ matchType: 'custom', participantCount: 64, clanMemberCount: 63 });
+    expect(result.isScrim).toBe(true);
+  });
+
+  it('경기 시간이 60초 미만이면 스탯과 무관하게 내전이 아니다(리방)', () => {
+    const result = classifyMatch({
+      matchType: 'custom',
+      participantCount: 64,
+      clanMemberCount: 63,
+      durationSeconds: 45,
+    });
+    expect(result.isScrim).toBe(false);
+    expect(result.reason).toContain('경기 시간');
+  });
+
+  it('경계값 60초는 내전으로 본다', () => {
+    expect(
+      classifyMatch({
+        matchType: 'custom',
+        participantCount: 64,
+        clanMemberCount: 63,
+        durationSeconds: 60,
+      }).isScrim,
+    ).toBe(true);
+    expect(
+      classifyMatch({
+        matchType: 'custom',
+        participantCount: 64,
+        clanMemberCount: 63,
+        durationSeconds: 59,
+      }).isScrim,
+    ).toBe(false);
+  });
+
+  it('durationSeconds 를 안 넘기면(dak.gg 백필 등) 그 검사를 건너뛴다', () => {
+    const result = classifyMatch({
+      matchType: 'custom',
+      participantCount: 64,
+      clanMemberCount: 63,
+      durationSeconds: null,
+    });
+    expect(result.isScrim).toBe(true);
+  });
+});
+
+describe('isRestartMatch', () => {
+  it('전원 킬·데미지·생존시간이 0이면 리방이다', () => {
+    const participants = [
+      { kills: 0, damageDealt: 0, timeSurvived: 0 },
+      { kills: 0, damageDealt: 0, timeSurvived: 3 },
+    ];
+    expect(isRestartMatch(participants)).toBe(true);
+  });
+
+  it('한 명이라도 킬이 있으면 리방이 아니다', () => {
+    const participants = [
+      { kills: 1, damageDealt: 0, timeSurvived: 0 },
+      { kills: 0, damageDealt: 0, timeSurvived: 0 },
+    ];
+    expect(isRestartMatch(participants)).toBe(false);
+  });
+
+  it('한 명이라도 데미지를 줬으면 리방이 아니다', () => {
+    const participants = [{ kills: 0, damageDealt: 50, timeSurvived: 10 }];
+    expect(isRestartMatch(participants)).toBe(false);
+  });
+
+  it('생존시간이 임계값(5초)을 넘으면 리방이 아니다', () => {
+    const participants = [{ kills: 0, damageDealt: 0, timeSurvived: 6 }];
+    expect(isRestartMatch(participants)).toBe(false);
+  });
+
+  it('생존시간이 임계값 이내면 리방이다', () => {
+    const participants = [{ kills: 0, damageDealt: 0, timeSurvived: 5 }];
+    expect(isRestartMatch(participants)).toBe(true);
+  });
+
+  it('참가자가 없으면 리방이 아니다(빈 매치를 오판하지 않는다)', () => {
+    expect(isRestartMatch([])).toBe(false);
   });
 });
 
