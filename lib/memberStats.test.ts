@@ -6,6 +6,7 @@ import {
   buildHexagonAxes,
   cleanDisplayName,
   percentile,
+  stripTrailingKoreanTag,
   tierColorRamp,
   tierGroupFor,
   type MemberRecentStatsRow,
@@ -160,6 +161,24 @@ describe('cleanDisplayName', () => {
 
   it('슬래시 뒤 부계정 표기는 뗀다', () => {
     expect(cleanDisplayName('Ez_F/Ez_G')).toBe('Ez_F');
+  });
+});
+
+describe('stripTrailingKoreanTag', () => {
+  it('공백 뒤에 붙은 한글 태그를 뗀다', () => {
+    expect(stripTrailingKoreanTag('Ez_Gimli 김리')).toBe('Ez_Gimli');
+  });
+
+  it('공백 없이 바로 붙은 한글도 뗀다', () => {
+    expect(stripTrailingKoreanTag('Ez_Jhoney주헌')).toBe('Ez_Jhoney');
+  });
+
+  it('한글이 없으면 그대로 둔다', () => {
+    expect(stripTrailingKoreanTag('Ez_Code')).toBe('Ez_Code');
+  });
+
+  it('통째로 한글이면 자르지 않는다', () => {
+    expect(stripTrailingKoreanTag('은킹')).toBe('은킹');
   });
 });
 

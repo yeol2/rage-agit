@@ -1,5 +1,6 @@
+import Link from 'next/link';
 import type { Roster, RosterEntry } from '@/lib/scrimRoster';
-import { cleanDisplayName } from '@/lib/memberStats';
+import { cleanDisplayName, stripTrailingKoreanTag, tierColorRamp } from '@/lib/memberStats';
 
 const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   1: '1티어 (0~1.5)',
@@ -8,20 +9,40 @@ const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   4: '4티어 (4~5)',
 };
 
-// cleanDisplayName 은 괄호 밖에 붙은 한글 태그("Ez_Gimli 김리", "Ez_Jhoney주헌")는
-// 못 뗀다 — 클랜원 페이지엔 없는 케이스라 공용 함수를 안 건드리고 여기서만 추가로
-// 뒤쪽 한글 덩어리를 잘라낸다. 결과가 통째로 비면(닉네임이 한글뿐인 경우) 자르지 않는다.
-function stripTrailingKorean(name: string): string {
-  const stripped = name.replace(/\s*[가-힣]+$/, '').trim();
-  return stripped.length > 0 ? stripped : name;
-}
-
-// 괄호 태그·이모지·부계정 표기를 뗀 "Ez_XXXX" 형태만 보여준다 — 클랜원 페이지와
-// 같은 정리 규칙(lib/memberStats.ts의 cleanDisplayName)을 기본으로 쓰고, 이 화면
-// 전용으로 뒤쪽 한글 태그까지 마저 없앤다.
+// 괄호 태그·이모지·부계정 표기·뒤에 붙은 한글 장식을 뗀 "Ez_XXXX" 형태만 보여준다 —
+// 클랜원 페이지(MemberDirectory)와 같은 정리 규칙을 그대로 쓴다.
 function displayName(entry: RosterEntry): string {
   if (!entry.discordNickname) return '(닉네임 정보 없음)';
-  return stripTrailingKorean(cleanDisplayName(entry.discordNickname));
+  return stripTrailingKoreanTag(cleanDisplayName(entry.discordNickname));
+}
+
+// 클랜원 페이지와 같은 티어 색 네임플레이트. 매칭된 사람만 티어가 있어 색을 입힐 수
+// 있고, member_id 도 있어 개인 페이지로 링크한다 — 미매칭은 그냥 텍스트로 둔다.
+function Nameplate({ entry }: { entry: RosterEntry }) {
+  const name = displayName(entry);
+
+  if (!entry.matched || entry.tier === null || !entry.memberId) {
+    return (
+      <span className="block truncate rounded-md border border-white/10 px-3 py-2 text-xs text-menu">
+        {name}
+      </span>
+    );
+  }
+
+  const ramp = tierColorRamp(entry.tier);
+  return (
+    <Link
+      href={`/members/${entry.memberId}`}
+      className="block truncate rounded-md border px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
+      style={{
+        background: `linear-gradient(135deg, ${ramp.from}26, ${ramp.to}26)`,
+        borderColor: `${ramp.from}66`,
+        boxShadow: `0 0 10px ${ramp.from}40`,
+      }}
+    >
+      {name}
+    </Link>
+  );
 }
 
 export function RosterBoard({ roster }: { roster: Roster | null }) {
@@ -46,10 +67,10 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
               <h3 className="hud text-xs text-accent">
                 {TIER_SLOT_LABELS[slot]} — {slotEntries.length}/16명
               </h3>
-              <ul className="mt-3 space-y-1">
+              <ul className="mt-3 grid grid-cols-2 gap-2">
                 {slotEntries.map((entry) => (
-                  <li key={entry.id} className="truncate text-sm text-foreground">
-                    {displayName(entry)}
+                  <li key={entry.id}>
+                    <Nameplate entry={entry} />
                   </li>
                 ))}
               </ul>
@@ -60,10 +81,10 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
       <section className="mt-8">
         <h3 className="hud text-xs text-menu">미매칭 ({unmatched.length})</h3>
-        <ul className="mt-3 flex flex-wrap gap-2">
+        <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">
           {unmatched.map((entry) => (
-            <li key={entry.id} className="rounded-md border border-white/10 px-3 py-1 text-xs text-menu">
-              {displayName(entry)}
+            <li key={entry.id}>
+              <Nameplate entry={entry} />
             </li>
           ))}
         </ul>

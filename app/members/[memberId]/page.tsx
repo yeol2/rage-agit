@@ -10,6 +10,7 @@ import {
   fetchMember,
   fetchMemberRecentStats,
   fetchTierCohortStats,
+  stripTrailingKoreanTag,
   tierColorRamp,
   tierGroupFor,
 } from '@/lib/memberStats';
@@ -45,7 +46,7 @@ export default async function MemberDetailPage({
             }}
           >
             <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              {cleanDisplayName(member.discordNickname)}
+              {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
             </h1>
             <p className="mt-2 text-sm text-menu">{member.tier}티어</p>
 

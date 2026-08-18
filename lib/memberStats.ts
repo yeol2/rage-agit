@@ -63,6 +63,16 @@ export function cleanDisplayName(discordNickname: string): string {
     .trim();
 }
 
+// cleanDisplayName 은 괄호 뒤에 남은 한글 장식(예: "Ez_D (98)은킹" → "Ez_D 은킹")을
+// 의도적으로 남긴다 — 구분용으로 쓰던 자리라 그대로 둔 것들이 있다. 반면 클랜원
+// 목록/개인 페이지, 팀 구성 테이블처럼 "Ez_XXXX" 순수 형태만 보여줘야 하는 화면은
+// cleanDisplayName 뒤에 이 함수를 한 번 더 거친다. 결과가 통째로 비면(닉네임이
+// 한글뿐인 경우) 자르지 않는다.
+export function stripTrailingKoreanTag(name: string): string {
+  const stripped = name.replace(/\s*[가-힣]+$/, '').trim();
+  return stripped.length > 0 ? stripped : name;
+}
+
 export interface TierColorRamp {
   from: string;
   to: string;

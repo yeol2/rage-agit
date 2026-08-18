@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ALL_TIERS, cleanDisplayName, tierColorRamp, type MemberSummary } from '@/lib/memberStats';
+import {
+  ALL_TIERS,
+  cleanDisplayName,
+  stripTrailingKoreanTag,
+  tierColorRamp,
+  type MemberSummary,
+} from '@/lib/memberStats';
 
 export function MemberDirectory({ members }: { members: MemberSummary[] }) {
   const [query, setQuery] = useState('');
@@ -49,7 +55,7 @@ export function MemberDirectory({ members }: { members: MemberSummary[] }) {
                       boxShadow: `0 0 10px ${ramp.from}40`,
                     }}
                   >
-                    {cleanDisplayName(member.discordNickname)}
+                    {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
                   </Link>
                 </li>
               );
