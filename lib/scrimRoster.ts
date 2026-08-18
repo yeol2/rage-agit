@@ -1,7 +1,31 @@
 // 팀 구성 테이블 — 순수 계산 함수는 여기 위쪽, 네트워크 호출은 이 파일 뒷부분에만
 // 있다(lib/memberStats.ts 와 같은 패턴). 위쪽은 Supabase 없이 테스트한다.
 
-import { getSupabase } from './supabaseBrowser';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+// 대시보드/클랜원 페이지가 쓰는 공용 lib/supabaseBrowser.ts 의 getSupabase() 는 일부러
+// 캐시(revalidate=300)를 기대하고 쓰인다 — 이 화면은 반대로 관리자가 업로드하면
+// 바로 최신 값을 봐야 해서, fetch 자체에 no-store 를 강제하는 별도 클라이언트를 쓴다.
+function noStoreFetch(input: RequestInfo | URL, init?: RequestInit) {
+  return fetch(input, { ...init, cache: 'no-store' });
+}
+
+let freshClient: SupabaseClient | null = null;
+function getFreshSupabase(): SupabaseClient {
+  if (freshClient) return freshClient;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY 가 필요합니다');
+  }
+
+  freshClient = createClient(url, anonKey, {
+    auth: { persistSession: false },
+    global: { fetch: noStoreFetch },
+  });
+  return freshClient;
+}
 
 export interface ParsedRosterRow {
   username: string;
@@ -132,7 +156,7 @@ export interface Roster {
 // discord_username 은 anon 키로 못 읽으므로(0016 마이그레이션) 여기서 select 하지
 // 않는다 — 화면에는 discord_nickname 만 보여준다.
 export async function fetchLatestRoster(): Promise<Roster | null> {
-  const { data: rosterRow, error: rosterError } = await getSupabase()
+  const { data: rosterRow, error: rosterError } = await getFreshSupabase()
     .from('scrim_rosters')
     .select('id, fetched_at')
     .order('fetched_at', { ascending: false })
@@ -141,7 +165,7 @@ export async function fetchLatestRoster(): Promise<Roster | null> {
   if (rosterError) throw new Error(`팀 구성 명단을 불러오지 못했습니다: ${rosterError.message}`);
   if (!rosterRow) return null;
 
-  const { data: entriesData, error: entriesError } = await getSupabase()
+  const { data: entriesData, error: entriesError } = await getFreshSupabase()
     .from('scrim_roster_entries')
     .select('id, discord_nickname, member_id, tier, tier_slot, matched')
     .eq('roster_id', rosterRow.id);
