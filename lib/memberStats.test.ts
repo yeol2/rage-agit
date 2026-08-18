@@ -9,6 +9,7 @@ import {
   stripTrailingKoreanTag,
   tierColorRamp,
   tierGroupFor,
+  tierNameplateSelectedStyle,
   tierNameplateStyle,
   type MemberRecentStatsRow,
 } from './memberStats';
@@ -209,16 +210,29 @@ describe('tierColorRamp', () => {
 });
 
 describe('tierNameplateStyle', () => {
-  it('같은 색 묶음이어도 반티어는 정수 티어보다 진하다', () => {
-    const whole = tierNameplateStyle(2);
-    const half = tierNameplateStyle(2.5);
-    expect(whole).not.toEqual(half);
-    // 색상(from/to)은 같은 묶음이라 동일해야 하고, 불투명도(뒤 2자리 hex)만 달라야 한다.
-    expect(whole.borderColor.slice(0, 7)).toBe(half.borderColor.slice(0, 7));
-    expect(whole.borderColor).not.toBe(half.borderColor);
+  it('정수 티어는 테두리가 있다', () => {
+    expect(tierNameplateStyle(2).borderColor).toBe('#db8a4266');
+  });
+
+  it('반티어는 테두리를 없애 같은 색 묶음 안에서도 구분한다', () => {
+    expect(tierNameplateStyle(2.5).borderColor).toBe('transparent');
+  });
+
+  it('배경색(그라데이션)은 정수·반티어가 같은 묶음이면 동일하다', () => {
+    expect(tierNameplateStyle(2).background).toBe(tierNameplateStyle(2.5).background);
   });
 
   it('정수 티어끼리는 같은 스타일을 낸다', () => {
     expect(tierNameplateStyle(3)).toEqual(tierNameplateStyle(3));
+  });
+});
+
+describe('tierNameplateSelectedStyle', () => {
+  it('기본 네임플레이트보다 진한 배색을 낸다', () => {
+    const base = tierNameplateStyle(2);
+    const selected = tierNameplateSelectedStyle(2);
+    expect(selected).not.toEqual(base);
+    // 색상(from/to)은 같은 티어라 동일해야 하고 불투명도만 더 진해야 한다.
+    expect(selected.borderColor.slice(0, 7)).toBe('#db8a42');
   });
 });

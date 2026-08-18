@@ -104,19 +104,28 @@ export interface NameplateStyle {
 
 // tierColorRamp 는 정수·반티어를 묶어 같은 색을 쓴다(2~2.5, 3~3.5) — 클랜원
 // 목록/팀 구성 테이블의 작은 카드에서는 그래서 2티어와 2.5티어가 눈으로 안 갈렸다.
-// 색상은 그대로 두고 반티어(.5)만 그라데이션을 더 진하게(불투명도를 올려) 줘서
-// 같은 색 묶음 안에서도 구분되게 한다.
+// 배경색은 그대로 두고, 반티어(.5)만 테두리를 없애 같은 색 묶음 안에서도
+// 구분되게 한다(정수 티어는 테두리 있음, 반티어는 테두리 없음).
 export function tierNameplateStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
   const isHalfTier = tier % 1 !== 0;
-  const bgAlpha = isHalfTier ? '4d' : '26';
-  const borderAlpha = isHalfTier ? '99' : '66';
-  const shadowAlpha = isHalfTier ? '66' : '40';
 
   return {
-    background: `linear-gradient(135deg, ${ramp.from}${bgAlpha}, ${ramp.to}${bgAlpha})`,
-    borderColor: `${ramp.from}${borderAlpha}`,
-    boxShadow: `0 0 10px ${ramp.from}${shadowAlpha}`,
+    background: `linear-gradient(135deg, ${ramp.from}26, ${ramp.to}26)`,
+    borderColor: isHalfTier ? 'transparent' : `${ramp.from}66`,
+    boxShadow: `0 0 10px ${ramp.from}40`,
+  };
+}
+
+// 팀 구성 테이블 2단계(팀짜기)에서 네임플레이트를 클릭해 "선택함" 상태를 표시할 때
+// 쓸 진한 배색 — 지금은 아무 데서도 안 부르지만, 색 규칙만 먼저 정해둔다.
+export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
+  const ramp = tierColorRamp(tier);
+
+  return {
+    background: `linear-gradient(135deg, ${ramp.from}4d, ${ramp.to}4d)`,
+    borderColor: `${ramp.from}99`,
+    boxShadow: `0 0 10px ${ramp.from}66`,
   };
 }
 
