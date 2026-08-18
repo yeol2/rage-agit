@@ -32,7 +32,7 @@ function Nameplate({ entry }: { entry: RosterEntry }) {
   return (
     <Link
       href={`/members/${entry.memberId}`}
-      className="block truncate rounded-md border-2 px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
+      className="block truncate rounded-md border-[1.5px] px-3 py-2 text-xs text-foreground transition-transform hover:scale-[1.03]"
       style={tierNameplateStyle(entry.tier)}
     >
       {name}
