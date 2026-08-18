@@ -1,4 +1,5 @@
 import type { Roster, RosterEntry } from '@/lib/scrimRoster';
+import { cleanDisplayName } from '@/lib/memberStats';
 
 const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   1: '1티어 (0~1.5)',
@@ -7,8 +8,10 @@ const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   4: '4티어 (4~5)',
 };
 
+// 괄호 태그·이모지·부계정 표기를 뗀 "Ez_XXXX" 형태만 보여준다 — 클랜원 페이지와
+// 같은 정리 규칙(lib/memberStats.ts의 cleanDisplayName)을 그대로 쓴다.
 function displayName(entry: RosterEntry): string {
-  return entry.discordNickname ?? '(닉네임 정보 없음)';
+  return entry.discordNickname ? cleanDisplayName(entry.discordNickname) : '(닉네임 정보 없음)';
 }
 
 export function RosterBoard({ roster }: { roster: Roster | null }) {
