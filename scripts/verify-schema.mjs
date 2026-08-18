@@ -375,6 +375,26 @@ check(
   'member_recent_stats 에 랭킹과 어긋나는 배치 점수 칸이 남아 있지 않다',
 );
 
+console.log('\n0016 — 팀 구성 테이블: 명단 업로드 롤');
+
+for (const table of ['scrim_rosters', 'scrim_roster_entries']) {
+  check(
+    (await one(`select count(*) from information_schema.tables where table_name = '${table}'`)) === 1,
+    `${table} 테이블이 있다`,
+  );
+}
+
+const rosterEntryGrants = await client.query(`
+  select grantee, column_name from information_schema.column_privileges
+  where table_name = 'scrim_roster_entries' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  const cols = rosterEntryGrants.rows.filter((r) => r.grantee === role).map((r) => r.column_name);
+  check(!cols.includes('discord_username'), `${role} 은 scrim_roster_entries.discord_username 을 못 읽는다`);
+  check(cols.includes('discord_nickname'), `${role} 은 scrim_roster_entries.discord_nickname 을 읽을 수 있다`);
+}
+
 await client.end();
 
 console.log('');
