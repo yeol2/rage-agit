@@ -111,7 +111,8 @@ export function tierNameplateStyle(tier: number): NameplateStyle {
   const isHalfTier = tier % 1 !== 0;
 
   return {
-    background: `linear-gradient(135deg, ${ramp.from}26, ${ramp.to}26)`,
+    // 배경 채우기도 어두운 화면 바탕에 묻히지 않게 40(25%) 불투명도로 준다.
+    background: `linear-gradient(135deg, ${ramp.from}40, ${ramp.to}40)`,
     // 정수 티어 테두리는 눈에 확 띄도록 거의 불투명(e6)하게 준다 — 반티어(테두리 없음)와의
     // 대비가 흐릿하면 구분한 보람이 없다.
     borderColor: isHalfTier ? 'transparent' : `${ramp.from}e6`,
@@ -121,12 +122,13 @@ export function tierNameplateStyle(tier: number): NameplateStyle {
 
 // 팀 구성 테이블 2단계(팀짜기)에서 네임플레이트를 클릭해 "선택함" 상태를 표시할 때
 // 쓸 진한 배색 — 지금은 아무 데서도 안 부르지만, 색 규칙만 먼저 정해둔다.
+// 기본 상태(background 40, e6)보다 한 단계 더 진해야 하므로 배경/테두리 모두 위로 올린다.
 export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
 
   return {
-    background: `linear-gradient(135deg, ${ramp.from}4d, ${ramp.to}4d)`,
-    borderColor: `${ramp.from}99`,
+    background: `linear-gradient(135deg, ${ramp.from}73, ${ramp.to}73)`,
+    borderColor: `${ramp.from}ff`,
     boxShadow: `0 0 10px ${ramp.from}66`,
   };
 }
