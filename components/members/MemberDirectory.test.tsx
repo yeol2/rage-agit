@@ -40,12 +40,13 @@ describe('MemberDirectory', () => {
     );
   });
 
-  it('같은 색 묶음이어도 반티어는 무채색 테두리를 써서 정수 티어와 구분한다', () => {
+  it('같은 색 묶음이어도 반티어는 진한 색, 정수 티어는 밝은 색을 써서 구분한다', () => {
     render(<MemberDirectory members={members} />);
     const bravo = screen.getByRole('link', { name: 'Ez_Bravo' }); // 2티어
     const charlie = screen.getByRole('link', { name: 'Ez_Charlie' }); // 2.5티어
-    expect(bravo.style.borderColor).not.toBe(charlie.style.borderColor);
-    expect(charlie.style.borderColor).toBe('rgba(255, 255, 255, 0.55)');
+    // jsdom은 완전 불투명(alpha=ff) 8자리 hex를 alpha 없는 rgb()로 정규화한다.
+    expect(bravo.style.borderColor).toBe('rgb(255, 222, 144)');
+    expect(charlie.style.borderColor).toBe('rgb(219, 138, 66)');
   });
 
   it('검색하면 일치하는 이름만 남는다', async () => {

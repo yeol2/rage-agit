@@ -210,16 +210,25 @@ describe('tierColorRamp', () => {
 });
 
 describe('tierNameplateStyle', () => {
-  it('정수 티어는 테두리가 있다', () => {
-    expect(tierNameplateStyle(2).borderColor).toBe('#db8a42ff');
+  it('정수 티어는 묶음의 밝은 색(to)을 단색으로 쓴다', () => {
+    // 2~2.5티어 묶음: from #db8a42(진함), to #ffde90(밝음).
+    expect(tierNameplateStyle(2)).toEqual({
+      background: '#ffde9073',
+      borderColor: '#ffde90ff',
+      boxShadow: '0 0 10px #ffde9066',
+    });
   });
 
-  it('반티어는 무채색 테두리를 써서 정수 티어(색 있는 테두리)와 구분한다', () => {
-    expect(tierNameplateStyle(2.5).borderColor).toBe('rgba(255, 255, 255, 0.55)');
+  it('반티어는 같은 묶음의 진한 색(from)을 단색으로 써서 정수 티어와 구분한다', () => {
+    expect(tierNameplateStyle(2.5)).toEqual({
+      background: '#db8a4273',
+      borderColor: '#db8a42ff',
+      boxShadow: '0 0 10px #db8a4266',
+    });
   });
 
-  it('배경색(그라데이션)은 정수·반티어가 같은 묶음이면 동일하다', () => {
-    expect(tierNameplateStyle(2).background).toBe(tierNameplateStyle(2.5).background);
+  it('그라데이션이 아니라 단색이라 정수·반티어의 배경색이 서로 다르다', () => {
+    expect(tierNameplateStyle(2).background).not.toBe(tierNameplateStyle(2.5).background);
   });
 
   it('정수 티어끼리는 같은 스타일을 낸다', () => {
@@ -228,12 +237,11 @@ describe('tierNameplateStyle', () => {
 });
 
 describe('tierNameplateSelectedStyle', () => {
-  it('기본 네임플레이트보다 진한 배색을 낸다', () => {
-    const base = tierNameplateStyle(2);
-    const selected = tierNameplateSelectedStyle(2);
+  it('같은 티어의 기본 네임플레이트보다 진한 배색을 낸다', () => {
+    const base = tierNameplateStyle(2.5);
+    const selected = tierNameplateSelectedStyle(2.5);
     expect(selected).not.toEqual(base);
-    // 배경 불투명도(뒤 2자리 hex)는 selected 가 base 보다 더 진해야 한다.
-    expect(selected.background).not.toBe(base.background);
-    expect(selected.background).toContain('#db8a42b3');
+    // 색상(from)은 같은 반티어라 동일해야 하고 불투명도만 더 진해야 한다.
+    expect(selected.background).toBe('#db8a42b3');
   });
 });

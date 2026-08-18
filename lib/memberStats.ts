@@ -102,38 +102,34 @@ export interface NameplateStyle {
   boxShadow: string;
 }
 
-// tierColorRamp 는 정수·반티어를 묶어 같은 색을 쓴다(2~2.5, 3~3.5) — 클랜원
-// 목록/팀 구성 테이블의 작은 카드에서는 그래서 2티어와 2.5티어가 눈으로 안 갈렸다.
-// 배경색은 그대로 두고, 반티어(.5)만 테두리를 없애 같은 색 묶음 안에서도
-// 구분되게 한다(정수 티어는 테두리 있음, 반티어는 테두리 없음).
-//
-// 원래는 "선택함" 미리보기(tierNameplateSelectedStyle)로 시험 삼아 밝게 줬던
-// 값인데, 미리보기 결과가 기본값으로도 마음에 든다고 해서 이 함수의 기본값으로
-// 그대로 승격시켰다.
+// tierColorRamp 는 정수·반티어를 묶어 같은 그라데이션(from~to)을 쓴다(2~2.5, 3~3.5) —
+// 그라데이션 자체로는 2티어와 2.5티어가 눈으로 안 갈렸다. 그라데이션을 없애고 단색으로
+// 바꾸되, 묶음 안의 두 색(from=진한 색, to=밝은 색)을 각각 반티어/정수 티어에 나눠 써서
+// 같은 묶음 안에서도 확실히 갈리게 한다 — 어두운 색이 .5, 밝은 색이 정수 티어.
 export function tierNameplateStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
   const isHalfTier = tier % 1 !== 0;
+  const color = isHalfTier ? ramp.from : ramp.to;
 
   return {
-    background: `linear-gradient(135deg, ${ramp.from}73, ${ramp.to}73)`,
-    // 정수 티어 테두리는 티어 색 그대로 완전 불투명(ff). 반티어는 흰색 테두리를 쓰되,
-    // 배경(45% 불투명도)에 묻히지 않도록 충분히 진하게(0.55) 줘야 "색 있는 링 vs
-    // 뚜렷한 흰색 링"으로 확실히 갈린다 — 너무 흐리면(0.16) 사실상 안 보였다.
-    borderColor: isHalfTier ? 'rgba(255, 255, 255, 0.55)' : `${ramp.from}ff`,
-    boxShadow: `0 0 10px ${ramp.from}66`,
+    background: `${color}73`,
+    borderColor: `${color}ff`,
+    boxShadow: `0 0 10px ${color}66`,
   };
 }
 
 // 팀 구성 테이블 2단계(팀짜기)에서 네임플레이트를 클릭해 "선택함" 상태를 표시할 때
 // 쓸 배색 — 지금은 아무 데서도 안 부르지만, 색 규칙만 먼저 정해둔다.
-// 기본 상태가 이미 밝아졌으므로 그보다 한 단계 더 진하게(배경 불투명도up, 발광 확대) 잡는다.
+// 기본 상태보다 한 단계 더 진하게(배경 불투명도up, 발광 확대) 잡는다.
 export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
+  const isHalfTier = tier % 1 !== 0;
+  const color = isHalfTier ? ramp.from : ramp.to;
 
   return {
-    background: `linear-gradient(135deg, ${ramp.from}b3, ${ramp.to}b3)`,
-    borderColor: `${ramp.from}ff`,
-    boxShadow: `0 0 16px ${ramp.from}99`,
+    background: `${color}b3`,
+    borderColor: `${color}ff`,
+    boxShadow: `0 0 16px ${color}99`,
   };
 }
 
