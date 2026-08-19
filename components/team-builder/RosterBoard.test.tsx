@@ -237,4 +237,54 @@ describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ rosterId: 'roster-1' }) }),
     );
   });
+
+  it('"전체 리롤" 버튼을 누르면 tier 없이 API를 호출한다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    const fetchMock = stubFetchForTeamAssignmentsThen(entries, { entries });
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+    await screen.findByRole('table');
+    await userEvent.click(screen.getByRole('button', { name: '전체 리롤' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scrim-roster/reroll',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ rosterId: 'roster-1' }) }),
+    );
+  });
+
+  it('"1티어 리롤" 버튼을 누르면 tier: 1 과 함께 API를 호출한다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    const fetchMock = stubFetchForTeamAssignmentsThen(entries, { entries });
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+    await screen.findByRole('table');
+    await userEvent.click(screen.getByRole('button', { name: '1티어 리롤' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scrim-roster/reroll',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ rosterId: 'roster-1', tier: 1 }),
+      }),
+    );
+  });
+
+  it('리롤 버튼 클릭 후 응답으로 02 표 entries 가 갱신된다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    const rerolled = entries.map((entry) => (entry.id === 'a' ? { ...entry, teamNumber: 2 } : entry));
+    const fetchMock = stubFetchForTeamAssignmentsThen(entries, { entries: rerolled });
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+    await screen.findByRole('table');
+    await userEvent.click(screen.getByRole('button', { name: '전체 리롤' }));
+
+    await screen.findByRole('button', { name: '전체 리롤' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/scrim-roster/reroll', expect.anything());
+  });
 });

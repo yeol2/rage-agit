@@ -201,6 +201,8 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [swapError, setSwapError] = useState<string | null>(null);
   const [vipSorting, setVipSorting] = useState(false);
   const [vipSortError, setVipSortError] = useState<string | null>(null);
+  const [rerollingKey, setRerollingKey] = useState<string | null>(null);
+  const [rerollError, setRerollError] = useState<string | null>(null);
 
   if (!roster) {
     return <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>;
@@ -377,6 +379,30 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       setVipSortError(err instanceof Error ? err.message : 'VIP 정렬에 실패했습니다.');
     } finally {
       setVipSorting(false);
+    }
+  }
+
+  // "전체 리롤" / "N티어 리롤" 버튼 — tier 생략 시 1~4 티어 각각 독립적으로,
+  // 지정 시 그 티어만 고정 안 된 사람끼리 무작위로 재배치한다.
+  async function handleReroll(tier?: 1 | 2 | 3 | 4) {
+    const key = tier === undefined ? 'all' : String(tier);
+    setRerollingKey(key);
+    setRerollError(null);
+
+    try {
+      const response = await fetch('/api/scrim-roster/reroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tier === undefined ? { rosterId } : { rosterId, tier }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? '리롤에 실패했습니다.');
+
+      setEntries(body.entries as RosterEntry[]);
+    } catch (err) {
+      setRerollError(err instanceof Error ? err.message : '리롤에 실패했습니다.');
+    } finally {
+      setRerollingKey(null);
     }
   }
 
@@ -719,6 +745,26 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                 {vipSorting ? '정렬 중…' : 'VIP 정렬'}
               </button>
               {vipSortError && <p className="text-xs text-red-400">{vipSortError}</p>}
+              <button
+                type="button"
+                onClick={() => void handleReroll()}
+                disabled={rerollingKey !== null}
+                className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {rerollingKey === 'all' ? '리롤 중…' : '전체 리롤'}
+              </button>
+              {([1, 2, 3, 4] as const).map((tier) => (
+                <button
+                  key={tier}
+                  type="button"
+                  onClick={() => void handleReroll(tier)}
+                  disabled={rerollingKey !== null}
+                  className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {rerollingKey === String(tier) ? '리롤 중…' : `${tier}티어 리롤`}
+                </button>
+              ))}
+              {rerollError && <p className="text-xs text-red-400">{rerollError}</p>}
             </div>
           </div>
         </div>
