@@ -7,8 +7,10 @@ import {
   moveEntryToSlot,
   groupEntriesByTier,
   assignTeamNumbers,
+  computeVipSort,
   type RosterEntry,
   type TeamAssignmentInput,
+  type VipSortInput,
 } from './scrimRoster';
 
 describe('parseRosterFile', () => {
@@ -252,5 +254,46 @@ describe('assignTeamNumbers', () => {
 
   it('빈 배열이면 빈 맵을 낸다', () => {
     expect(assignTeamNumbers([]).size).toBe(0);
+  });
+});
+
+describe('computeVipSort', () => {
+  function entry(overrides: Partial<VipSortInput>): VipSortInput {
+    return { id: 'e1', tierSlot: null, teamNumber: null, vipRank: null, ...overrides };
+  }
+
+  it('참가 중인 VIP를 등수 오름차순으로 1번팀부터 채워지게 스왑한다', () => {
+    // 2등 VIP(a)가 2티어 5번팀에, 6등 VIP(b)가 1티어 9번팀에 있다고 하자.
+    // 정렬 후: a → 2티어 1번팀(원래 1번팀에 있던 c와 맞바뀜),
+    //          b → 1티어 2번팀(원래 2번팀에 있던 d와 맞바뀜).
+    const entries = [
+      entry({ id: 'a', tierSlot: 2, teamNumber: 5, vipRank: 2 }),
+      entry({ id: 'b', tierSlot: 1, teamNumber: 9, vipRank: 6 }),
+      entry({ id: 'c', tierSlot: 2, teamNumber: 1 }),
+      entry({ id: 'd', tierSlot: 1, teamNumber: 2 }),
+    ];
+    const changes = computeVipSort(entries);
+    expect(changes.get('a')).toBe(1);
+    expect(changes.get('c')).toBe(5);
+    expect(changes.get('b')).toBe(2);
+    expect(changes.get('d')).toBe(9);
+  });
+
+  it('참가 중인 VIP가 없으면 빈 맵을 낸다', () => {
+    const entries = [entry({ id: 'a', tierSlot: 1, teamNumber: 1, vipRank: null })];
+    expect(computeVipSort(entries).size).toBe(0);
+  });
+
+  it('이미 등수 순으로 정렬돼 있으면 아무것도 안 바뀐다(멱등)', () => {
+    const entries = [
+      entry({ id: 'a', tierSlot: 1, teamNumber: 1, vipRank: 2 }),
+      entry({ id: 'b', tierSlot: 3, teamNumber: 2, vipRank: 6 }),
+    ];
+    expect(computeVipSort(entries).size).toBe(0);
+  });
+
+  it('팀 번호가 아직 없는(보류) 항목은 무시한다', () => {
+    const entries = [entry({ id: 'a', tierSlot: null, teamNumber: null, vipRank: 1 })];
+    expect(computeVipSort(entries).size).toBe(0);
   });
 });

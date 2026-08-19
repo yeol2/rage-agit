@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type DragEvent, type FormEvent } from 'react';
+import { useState, type DragEvent, type FormEvent, type MouseEvent } from 'react';
 import Link from 'next/link';
 import {
   sortEntriesByTier,
@@ -54,8 +54,10 @@ function Nameplate({
   entry,
   dragging = false,
   draggable = true,
+  selected = false,
   onDragStart,
   onDragEnd,
+  onClick,
 }: {
   entry: RosterEntry;
   dragging?: boolean;
@@ -63,8 +65,12 @@ function Nameplate({
   // 핸들러를 그대로 붙이면 02의 카드를 01 쪽으로 끌어다 tierSlot 을 바꿔버릴
   // 수 있어(팀 번호는 갱신 안 된 채로) false 로 꺼둔다.
   draggable?: boolean;
+  // 02 표에서 스왑 대상으로 클릭해 골라둔 카드 — tierNameplateSelectedStyle을
+  // dragging과 같은 방식으로 재사용해 진하게 보여준다.
+  selected?: boolean;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onDragEnd?: () => void;
+  onClick?: () => void;
 }) {
   const name = displayName(entry);
   const hasTier = entry.tier !== null;
@@ -84,12 +90,22 @@ function Nameplate({
     onDragStart?.(event);
   }
 
+  // Link 로 렌더링된 카드는 기본 동작이 프로필 페이지 이동이다 — 02 표에서는
+  // 클릭이 스왑 선택이어야 하므로 onClick이 있으면 이동을 막는다.
+  function handleClick(event: MouseEvent<HTMLElement>) {
+    if (!onClick) return;
+    event.preventDefault();
+    onClick();
+  }
+
   const sharedClassName = `block truncate rounded-md border px-3 py-2 text-xs transition-transform ${
     draggable ? 'cursor-grab active:cursor-grabbing' : ''
-  } ${dragging ? 'opacity-40' : 'hover:scale-[1.03]'}`;
+  } ${onClick ? 'cursor-pointer' : ''} ${dragging ? 'opacity-40' : 'hover:scale-[1.03]'} ${
+    selected ? 'ring-2 ring-accent' : ''
+  }`;
 
   const style = hasTier
-    ? dragging
+    ? dragging || selected
       ? tierNameplateSelectedStyle(entry.tier as number)
       : tierNameplateStyle(entry.tier as number)
     : undefined;
@@ -101,6 +117,7 @@ function Nameplate({
         draggable={draggable}
         onDragStart={draggable ? handleDragStart : undefined}
         onDragEnd={draggable ? onDragEnd : undefined}
+        onClick={handleClick}
         className={`${sharedClassName} border-white/10 text-menu`}
       >
         {name}
@@ -113,6 +130,7 @@ function Nameplate({
         draggable={draggable}
         onDragStart={draggable ? handleDragStart : undefined}
         onDragEnd={draggable ? onDragEnd : undefined}
+        onClick={handleClick}
         className={sharedClassName}
         style={style}
       >
@@ -125,6 +143,7 @@ function Nameplate({
         draggable={draggable}
         onDragStart={draggable ? handleDragStart : undefined}
         onDragEnd={draggable ? onDragEnd : undefined}
+        onClick={handleClick}
         className={sharedClassName}
         style={style}
       >
@@ -167,6 +186,10 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [showTeamTable, setShowTeamTable] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [selectedForSwap, setSelectedForSwap] = useState<string | null>(null);
+  const [swapError, setSwapError] = useState<string | null>(null);
+  const [vipSorting, setVipSorting] = useState(false);
+  const [vipSortError, setVipSortError] = useState<string | null>(null);
 
   if (!roster) {
     return <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>;
@@ -239,6 +262,73 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       setAssignError(err instanceof Error ? err.message : '팀 구성에 실패했습니다.');
     } finally {
       setAssigning(false);
+    }
+  }
+
+  // 02 표에서 같은 티어 칼럼 안의 두 사람을 클릭으로 맞바꾼다. 낙관적으로 먼저
+  // 화면을 바꾸고, 저장이 실패하면 되돌린다.
+  async function handleSwapClick(entry: RosterEntry) {
+    setSwapError(null);
+
+    if (!selectedForSwap) {
+      setSelectedForSwap(entry.id);
+      return;
+    }
+    if (selectedForSwap === entry.id) {
+      setSelectedForSwap(null);
+      return;
+    }
+
+    const other = entries.find((e) => e.id === selectedForSwap);
+    setSelectedForSwap(null);
+    // 다른 티어 칼럼을 클릭한 경우 — 스왑 없이 새로 클릭한 칸을 선택 상태로 바꾼다.
+    if (!other || other.tierSlot !== entry.tierSlot) {
+      setSelectedForSwap(entry.id);
+      return;
+    }
+
+    const previous = entries;
+    setEntries((current) =>
+      current.map((e) => {
+        if (e.id === other.id) return { ...e, teamNumber: entry.teamNumber };
+        if (e.id === entry.id) return { ...e, teamNumber: other.teamNumber };
+        return e;
+      }),
+    );
+
+    try {
+      const response = await fetch('/api/scrim-roster/entries/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryIdA: other.id, entryIdB: entry.id }),
+      });
+      if (!response.ok) throw new Error('저장 실패');
+    } catch {
+      setEntries(previous);
+      setSwapError('팀 번호를 맞바꾸지 못했습니다. 다시 시도하세요.');
+    }
+  }
+
+  // "VIP 정렬" 버튼 — 서버가 참가 중인 VIP를 등수 순으로 스왑해 저장하고, 갱신된
+  // 전체 명단을 돌려준다.
+  async function handleVipSort() {
+    setVipSorting(true);
+    setVipSortError(null);
+
+    try {
+      const response = await fetch('/api/scrim-roster/vip-sort', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rosterId }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? 'VIP 정렬에 실패했습니다.');
+
+      setEntries(body.entries as RosterEntry[]);
+    } catch (err) {
+      setVipSortError(err instanceof Error ? err.message : 'VIP 정렬에 실패했습니다.');
+    } finally {
+      setVipSorting(false);
     }
   }
 
@@ -486,40 +576,60 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
             <span style={{ color: '#322F36' }}>02</span> 팀 구성 테이블
           </h2>
 
-          <div className="mt-6 overflow-x-auto">
-            <table className="w-full min-w-[480px] border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="border-b border-white/10 p-2 text-left text-xs text-menu">팀</th>
-                  {TIER_SLOTS.map((slot) => (
-                    <th key={slot} className="border-b border-white/10 p-2 text-left text-xs text-menu">
-                      {slot}티어
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: targetPerTier }, (_, i) => i + 1).map((teamNumber) => (
-                  <tr key={teamNumber} className="border-b border-white/5">
-                    <td className="p-2 text-xs text-menu">{teamNumber}번팀</td>
-                    {TIER_SLOTS.map((slot) => {
-                      const member = entries.find(
-                        (entry) => entry.tierSlot === slot && entry.teamNumber === teamNumber,
-                      );
-                      return (
-                        <td key={slot} className="p-2">
-                          {member ? (
-                            <Nameplate entry={member} draggable={false} />
-                          ) : (
-                            <div className="h-9 w-full rounded-md border border-dashed border-white/10" />
-                          )}
-                        </td>
-                      );
-                    })}
+          <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start">
+            <div className="flex-1 overflow-x-auto">
+              <table className="w-full min-w-[480px] border-collapse text-sm">
+                <thead>
+                  <tr>
+                    <th className="border-b border-white/10 p-2 text-left text-xs text-menu">팀</th>
+                    {TIER_SLOTS.map((slot) => (
+                      <th key={slot} className="border-b border-white/10 p-2 text-left text-xs text-menu">
+                        {slot}티어
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {Array.from({ length: targetPerTier }, (_, i) => i + 1).map((teamNumber) => (
+                    <tr key={teamNumber} className="border-b border-white/5">
+                      <td className="p-2 text-xs text-menu">{teamNumber}번팀</td>
+                      {TIER_SLOTS.map((slot) => {
+                        const member = entries.find(
+                          (entry) => entry.tierSlot === slot && entry.teamNumber === teamNumber,
+                        );
+                        return (
+                          <td key={slot} className="p-2">
+                            {member ? (
+                              <Nameplate
+                                entry={member}
+                                draggable={false}
+                                selected={selectedForSwap === member.id}
+                                onClick={() => void handleSwapClick(member)}
+                              />
+                            ) : (
+                              <div className="h-9 w-full rounded-md border border-dashed border-white/10" />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {swapError && <p className="mt-2 text-sm text-red-400">{swapError}</p>}
+            </div>
+
+            <div className="flex flex-row gap-2 lg:w-40 lg:flex-col">
+              <button
+                type="button"
+                onClick={() => void handleVipSort()}
+                disabled={vipSorting}
+                className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {vipSorting ? '정렬 중…' : 'VIP 정렬'}
+              </button>
+              {vipSortError && <p className="text-xs text-red-400">{vipSortError}</p>}
+            </div>
           </div>
         </div>
       )}

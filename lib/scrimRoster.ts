@@ -219,6 +219,60 @@ export function assignTeamNumbers(entries: TeamAssignmentInput[]): Map<string, n
   return teamNumberById;
 }
 
+export interface VipSortInput {
+  id: string;
+  tierSlot: 1 | 2 | 3 | 4 | null;
+  teamNumber: number | null;
+  vipRank: number | null;
+}
+
+// "VIP 정렬" 버튼 — 내전에 참가 중인(팀 번호가 이미 배정된) VIP를 등수 오름차순으로
+// 1번팀부터 채워지도록 자기 티어 칼럼 안에서 스왑한다. i번째(0-based) VIP는
+// (i+1)번팀 자리와 맞바뀐다 — 원래 그 자리에 있던 사람은 그 VIP가 있던 팀 번호로
+// 옮겨가므로 아무도 빠지지 않는다. 이미 정렬돼 있으면 반환하는 맵이 비어 있다(멱등).
+export function computeVipSort(entries: VipSortInput[]): Map<string, number> {
+  const assigned = entries.filter(
+    (entry): entry is VipSortInput & { tierSlot: 1 | 2 | 3 | 4; teamNumber: number } =>
+      entry.tierSlot !== null && entry.teamNumber !== null,
+  );
+
+  // (티어 칼럼, 팀 번호) 자리에 지금 누가 있는지 — 스왑하면서 계속 갱신한다.
+  const occupantByKey = new Map<string, VipSortInput>();
+  const teamNumberById = new Map<string, number>();
+  for (const entry of assigned) {
+    occupantByKey.set(`${entry.tierSlot}-${entry.teamNumber}`, entry);
+    teamNumberById.set(entry.id, entry.teamNumber);
+  }
+
+  const participatingVips = assigned
+    .filter((entry) => entry.vipRank !== null)
+    .sort((a, b) => (a.vipRank as number) - (b.vipRank as number));
+
+  participatingVips.forEach((vip, index) => {
+    const targetTeam = index + 1;
+    const currentTeam = teamNumberById.get(vip.id) as number;
+    if (currentTeam === targetTeam) return;
+
+    const targetKey = `${vip.tierSlot}-${targetTeam}`;
+    const occupant = occupantByKey.get(targetKey);
+
+    if (occupant && occupant.id !== vip.id) {
+      teamNumberById.set(occupant.id, currentTeam);
+      occupantByKey.set(`${vip.tierSlot}-${currentTeam}`, occupant);
+    }
+
+    teamNumberById.set(vip.id, targetTeam);
+    occupantByKey.set(targetKey, vip);
+  });
+
+  const changes = new Map<string, number>();
+  for (const entry of assigned) {
+    const newTeamNumber = teamNumberById.get(entry.id) as number;
+    if (newTeamNumber !== entry.teamNumber) changes.set(entry.id, newTeamNumber);
+  }
+  return changes;
+}
+
 // discord_username 은 anon 키로 못 읽으므로(0016 마이그레이션) 여기서 select 하지
 // 않는다 — 화면에는 discord_nickname 만 보여준다.
 export async function fetchLatestRoster(): Promise<Roster | null> {
