@@ -84,6 +84,108 @@ describe('RosterBoard - 팀 구성', () => {
   });
 });
 
+describe('RosterBoard - 카드 삭제', () => {
+  it('X 버튼을 누르면 DELETE API를 호출하고 카드를 화면에서 뺀다', async () => {
+    const entries = [makeEntry({ id: 'a', tierSlot: 1, tier: 0, discordNickname: 'Ez_Alpha' })];
+    const roster = makeRoster(entries);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RosterBoard roster={roster} />);
+    expect(screen.getByText('Ez_Alpha')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ez_Alpha 삭제' }));
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/scrim-roster/entries/a', { method: 'DELETE' });
+    await waitFor(() => expect(screen.queryByText('Ez_Alpha')).not.toBeInTheDocument());
+  });
+
+  it('삭제가 실패하면 카드를 되돌리고 에러 메시지를 보여준다', async () => {
+    const entries = [makeEntry({ id: 'a', tierSlot: 1, tier: 0, discordNickname: 'Ez_Alpha' })];
+    const roster = makeRoster(entries);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: '실패' }) }));
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Ez_Alpha 삭제' }));
+
+    expect(await screen.findByText('삭제하지 못했습니다. 다시 시도하세요.')).toBeInTheDocument();
+    expect(screen.getByText('Ez_Alpha')).toBeInTheDocument();
+  });
+
+  it('보류 칸의 카드도 티어 칸과 같은 폭(width prop)으로 렌더링된다', () => {
+    const entries = [makeEntry({ id: 'a', tierSlot: null, tier: 0, discordNickname: 'Ez_Alpha' })];
+    const roster = makeRoster(entries);
+    vi.stubGlobal('fetch', vi.fn());
+
+    render(<RosterBoard roster={roster} />);
+    const card = screen.getByText('Ez_Alpha');
+    expect(card).toHaveStyle({ width: '121px' });
+  });
+});
+
+describe('RosterBoard - 01 되돌리기(다단계)', () => {
+  // jsdom의 DragEvent는 진짜 DataTransfer를 못 만든다 — Nameplate가 쓰는
+  // effectAllowed/setDragImage만 흉내 낸 최소 객체를 만들어 fireEvent에 넘긴다.
+  function dragEventInit() {
+    return { dataTransfer: { effectAllowed: '', setDragImage: vi.fn() } };
+  }
+
+  it('두 번 드래그로 옮기면 "되돌리기"를 두 번 눌러 하나씩 거슬러 올라간다', async () => {
+    const entries = [
+      makeEntry({ id: 'a', tierSlot: 1, tier: 0, discordNickname: 'Ez_Alpha' }),
+      makeEntry({ id: 'b', tierSlot: 2, tier: 2, discordNickname: 'Ez_Bravo' }),
+    ];
+    const roster = makeRoster(entries);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RosterBoard roster={roster} />);
+    const undoButton = screen.getByRole('button', { name: '되돌리기' });
+    expect(undoButton).toBeDisabled();
+
+    const alpha = screen.getByText('Ez_Alpha');
+    const tier2Section = screen.getByText(/2티어 \(2~2\.5\)/).closest('section')!;
+    fireEvent.dragStart(alpha, dragEventInit());
+    fireEvent.drop(tier2Section, dragEventInit());
+
+    await waitFor(() => expect(undoButton).not.toBeDisabled());
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scrim-roster/entries/a',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ tierSlot: 2 }) }),
+    );
+
+    const bravo = screen.getByText('Ez_Bravo');
+    const tier3Section = screen.getByText(/3티어 \(3~3\.5\)/).closest('section')!;
+    fireEvent.dragStart(bravo, dragEventInit());
+    fireEvent.drop(tier3Section, dragEventInit());
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/scrim-roster/entries/b',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ tierSlot: 3 }) }),
+      ),
+    );
+
+    await userEvent.click(undoButton);
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/scrim-roster/entries/b',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ tierSlot: 2 }) }),
+      ),
+    );
+    expect(undoButton).not.toBeDisabled();
+
+    await userEvent.click(undoButton);
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/scrim-roster/entries/a',
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ tierSlot: 1 }) }),
+      ),
+    );
+    expect(undoButton).toBeDisabled();
+  });
+});
+
 describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
   function makeFullEntries(): RosterEntry[] {
     return [
@@ -286,5 +388,86 @@ describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
 
     await screen.findByRole('button', { name: '전체 리롤' });
     expect(fetchMock).toHaveBeenCalledWith('/api/scrim-roster/reroll', expect.anything());
+  });
+
+  it('리롤 전에는 "리롤 되돌리기" 버튼이 비활성화돼 있다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    stubFetchForTeamAssignmentsThen(entries, { entries });
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+    await screen.findByRole('table');
+
+    expect(screen.getByRole('button', { name: '리롤 되돌리기' })).toBeDisabled();
+  });
+
+  it('리롤 후 "리롤 되돌리기"를 누르면 리롤 직전 team_number로 복원하는 changes를 보낸다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    // a는 원래 1번팀 — 리롤 응답에서 3번팀으로 바뀐 걸로 흉내낸다.
+    const rerolled = entries.map((entry) => (entry.id === 'a' ? { ...entry, teamNumber: 3 } : entry));
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/api/scrim-roster/team-assignments') return { ok: true, json: async () => ({ entries }) };
+      if (url === '/api/scrim-roster/reroll') return { ok: true, json: async () => ({ entries: rerolled }) };
+      if (url === '/api/scrim-roster/reroll/undo') return { ok: true, json: async () => ({ entries }) };
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+    await screen.findByRole('table');
+    await userEvent.click(screen.getByRole('button', { name: '전체 리롤' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: '리롤 되돌리기' })).not.toBeDisabled());
+
+    await userEvent.click(screen.getByRole('button', { name: '리롤 되돌리기' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scrim-roster/reroll/undo',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ rosterId: 'roster-1', changes: [{ id: 'a', teamNumber: 1 }] }),
+      }),
+    );
+  });
+
+  it('되돌리기를 두 번 누르면 두 번째는 그 전 스냅샷을 쓴다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    const afterFirstReroll = entries.map((entry) => (entry.id === 'a' ? { ...entry, teamNumber: 3 } : entry));
+    const afterSecondReroll = afterFirstReroll.map((entry) =>
+      entry.id === 'a' ? { ...entry, teamNumber: 5 } : entry,
+    );
+    let rerollCount = 0;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/api/scrim-roster/team-assignments') return { ok: true, json: async () => ({ entries }) };
+      if (url === '/api/scrim-roster/reroll') {
+        rerollCount += 1;
+        return { ok: true, json: async () => ({ entries: rerollCount === 1 ? afterFirstReroll : afterSecondReroll }) };
+      }
+      if (url === '/api/scrim-roster/reroll/undo') return { ok: true, json: async () => ({ entries: afterFirstReroll }) };
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+    await screen.findByRole('table');
+    await userEvent.click(screen.getByRole('button', { name: '전체 리롤' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await userEvent.click(screen.getByRole('button', { name: '전체 리롤' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+
+    await userEvent.click(screen.getByRole('button', { name: '리롤 되돌리기' }));
+
+    // 두 번째 리롤(5번팀)을 되돌리는 거니까 그 직전 스냅샷인 3번팀으로 복원돼야 한다.
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/scrim-roster/reroll/undo',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ rosterId: 'roster-1', changes: [{ id: 'a', teamNumber: 3 }] }),
+      }),
+    );
   });
 });

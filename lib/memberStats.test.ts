@@ -216,7 +216,7 @@ describe('tierNameplateStyle', () => {
       background: 'linear-gradient(135deg, #e8b38440, #ffde9040)',
       borderColor: '#db8a4299',
       boxShadow: '0 0 10px #db8a4260',
-      color: '#f5dfcb',
+      color: '#fbf3ec',
     });
   });
 
@@ -229,7 +229,7 @@ describe('tierNameplateStyle', () => {
       background: 'linear-gradient(135deg, #c09fff40, #9fc1ff40)',
       borderColor: '#9e6bff99',
       boxShadow: '0 0 10px #9e6bff60',
-      color: '#e4d6ff',
+      color: '#f5f0ff',
     });
   });
 });
@@ -243,7 +243,7 @@ describe('tierNameplateSelectedStyle', () => {
       background: 'linear-gradient(135deg, #e8b38473, #ffde9073)',
       borderColor: '#db8a42cc',
       boxShadow: '0 0 10px #db8a4280',
-      color: '#f5dfcb',
+      color: '#fbf3ec',
     });
   });
 });

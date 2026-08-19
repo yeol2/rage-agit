@@ -39,3 +39,18 @@ export async function PATCH(request: Request, { params }: { params: { entryId: s
 
   return NextResponse.json({ ok: true });
 }
+
+// 01/보류 카드의 X 버튼 — 확인 없이 즉시 지운다(잘못 등록한 카드를 되돌리기 없이
+// 바로 뺄 수 있게).
+export async function DELETE(_request: Request, { params }: { params: { entryId: string } }) {
+  const { error } = await getSupabaseServer()
+    .from('scrim_roster_entries')
+    .delete()
+    .eq('id', params.entryId);
+
+  if (error) {
+    return NextResponse.json({ error: '삭제하지 못했습니다.' }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

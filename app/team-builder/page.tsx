@@ -27,7 +27,7 @@ export default async function TeamBuilderPage() {
             <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
           </div>
           <h1 className="mt-6 text-3xl font-bold tracking-tight md:text-4xl">
-            <span style={{ color: '#322F36' }}>01</span> 티어 테이블
+            <span className="mr-3" style={{ color: '#322F36' }}>01</span> 티어 테이블
           </h1>
 
           <div className="mt-8">

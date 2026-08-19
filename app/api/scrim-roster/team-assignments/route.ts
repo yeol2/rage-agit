@@ -50,9 +50,11 @@ export async function POST(request: Request) {
 
   const teamNumberById = assignTeamNumbers(entries);
 
+  // 팀 번호를 다시 매길 때마다 고정은 항상 해제된 상태로 되돌린다 — 이전에
+  // 눌렀던 "팀 구성"에서 고정해둔 자리가 새 배치에도 그대로 남아있으면 안 된다.
   const updateResults = await Promise.all(
     Array.from(teamNumberById.entries()).map(([id, teamNumber]) =>
-      supabase.from('scrim_roster_entries').update({ team_number: teamNumber }).eq('id', id),
+      supabase.from('scrim_roster_entries').update({ team_number: teamNumber, fixed: false }).eq('id', id),
     ),
   );
   if (updateResults.some((result) => result.error)) {

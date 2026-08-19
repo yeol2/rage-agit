@@ -28,6 +28,18 @@ const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
 
 const TIER_SLOTS = [1, 2, 3, 4] as const;
 
+// 01 쪽 실측 너비(px) — 01은 CSS grid로 폭이 정해지므로 그리드 간격/패딩을 줄여
+// 확보한 여유가 실제로 몇 px가 됐는지 브라우저로 재서 넣는다(페이지 전체 폭은
+// 그대로 유지된 채로). 02는 <table> auto-layout이라 이 값을 그대로 강제해
+// 01/02 카드 폭을 맞춘다. 오른쪽 버튼 세로줄(VIP 정렬/리롤)도 이 크기의 1.5배로
+// 비율을 맞춘다.
+const NAMEPLATE_WIDTH = 121;
+const NAMEPLATE_HEIGHT = 38;
+const SIDE_BUTTON_WIDTH = NAMEPLATE_WIDTH * 1.5;
+const SIDE_BUTTON_HEIGHT = NAMEPLATE_HEIGHT * 1.5;
+const SIDE_BUTTON_CLASS =
+  'flex items-center justify-center truncate rounded-md border border-white/15 px-2 text-[21px] font-bold text-white hover:border-accent disabled:cursor-not-allowed disabled:opacity-40';
+
 // 원래는 티어당 16명 고정이었는데, 업로드되는 명단이 60명·68명처럼 매번 달라져서
 // "참가 인원 ÷ 4"로 목표치를 유동적으로 잡는다. 딱 안 나눠떨어지면 반올림한다.
 function targetPerTierFor(totalCount: number): number {
@@ -60,6 +72,7 @@ function Nameplate({
   onDragStart,
   onDragEnd,
   onClick,
+  onDelete,
 }: {
   entry: RosterEntry;
   dragging?: boolean;
@@ -76,6 +89,9 @@ function Nameplate({
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onDragEnd?: () => void;
   onClick?: () => void;
+  // 01/보류 카드에만 넘긴다 — 02(팀 구성 테이블)는 계산된 결과라 개별 삭제가
+  // 없다.
+  onDelete?: () => void;
 }) {
   const name = displayName(entry);
   const hasTier = entry.tier !== null;
@@ -103,7 +119,7 @@ function Nameplate({
     onClick();
   }
 
-  const sharedClassName = `block truncate rounded-md border px-3 py-2 text-xs transition-transform ${
+  const sharedClassName = `block truncate rounded-md border px-3 py-2 text-sm transition-transform ${
     draggable ? 'cursor-grab active:cursor-grabbing' : ''
   } ${onClick ? 'cursor-pointer' : ''} ${dragging ? 'opacity-40' : 'hover:scale-[1.03]'}`;
 
@@ -169,6 +185,20 @@ function Nameplate({
     <div className="relative">
       {plate}
       {entry.vipRank !== null && <VipCrown />}
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onDelete();
+          }}
+          aria-label={`${name} 삭제`}
+          className="absolute right-1 top-1/2 -translate-y-1/2 text-base leading-none text-white/70 hover:text-red-400"
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }
@@ -183,13 +213,16 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<DropTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastMove, setLastMove] = useState<LastMove | null>(null);
+  // 드래그로 티어 칸을 옮길 때마다 쌓인다 — "되돌리기"를 여러 번 누르면 하나씩
+  // 거슬러 올라간다(리롤 되돌리기와 같은 방식).
+  const [moveHistory, setMoveHistory] = useState<LastMove[]>([]);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newNickname, setNewNickname] = useState('');
   const [newTier, setNewTier] = useState<number>(ALL_TIERS[0]);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // "02 팀 구성 테이블"은 01(티어 테이블)이 완전히 다 찼을 때만 넘어갈 수 있다 —
   // 한 번 넘어간 뒤 01 쪽 인원을 다시 옮겨서 조건이 깨져도 이미 시작한 팀 구성을
@@ -203,6 +236,11 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [vipSortError, setVipSortError] = useState<string | null>(null);
   const [rerollingKey, setRerollingKey] = useState<string | null>(null);
   const [rerollError, setRerollError] = useState<string | null>(null);
+  // 리롤 버튼을 누르기 직전마다 그때의 team_number 스냅샷을 쌓아둔다 — "되돌리기"를
+  // 누르면 가장 최근 스냅샷과 지금 상태를 비교해 바뀐 자리만 복원한다(Ctrl+Z처럼
+  // 여러 번 눌러 여러 단계를 거슬러 올라갈 수 있다).
+  const [rerollHistory, setRerollHistory] = useState<Array<Map<string, number | null>>>([]);
+  const [undoingReroll, setUndoingReroll] = useState(false);
 
   if (!roster) {
     return <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>;
@@ -223,7 +261,9 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
     const previous = entries;
     setEntries(moveEntryToSlot(entries, entryId, targetSlot));
     setError(null);
-    if (recordUndo) setLastMove({ entryId, fromSlot: moving.tierSlot });
+    if (recordUndo) {
+      setMoveHistory((history) => [...history, { entryId, fromSlot: moving.tierSlot }]);
+    }
 
     try {
       const response = await fetch(`/api/scrim-roster/entries/${entryId}`, {
@@ -247,9 +287,9 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   }
 
   async function handleUndo() {
-    if (!lastMove) return;
-    const { entryId, fromSlot } = lastMove;
-    setLastMove(null);
+    if (moveHistory.length === 0) return;
+    const { entryId, fromSlot } = moveHistory[moveHistory.length - 1];
+    setMoveHistory((history) => history.slice(0, -1));
     await moveEntry(entryId, fromSlot, false);
   }
 
@@ -271,6 +311,9 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
       setEntries(body.entries as RosterEntry[]);
       setShowTeamTable(true);
+      // 새로 배정된 팀 번호 기준으로 다시 시작 — 이전 배정을 향한 리롤 되돌리기
+      // 스냅샷은 더 이상 의미가 없다.
+      setRerollHistory([]);
     } catch (err) {
       setAssignError(err instanceof Error ? err.message : '팀 구성에 실패했습니다.');
     } finally {
@@ -334,6 +377,22 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
     }
   }
 
+  // 01 티어 칸/보류 카드의 X 버튼 — 확인 없이 즉시 지운다. 실패하면 목록을
+  // 원래대로 되돌린다.
+  async function handleDeleteEntry(entryId: string) {
+    setDeleteError(null);
+    const previous = entries;
+    setEntries((current) => current.filter((entry) => entry.id !== entryId));
+
+    try {
+      const response = await fetch(`/api/scrim-roster/entries/${entryId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('삭제 실패');
+    } catch {
+      setEntries(previous);
+      setDeleteError('삭제하지 못했습니다. 다시 시도하세요.');
+    }
+  }
+
   // "고정" 칼럼 — 그 팀 4명 중 하나라도 고정 안 돼 있으면 전부 고정으로,
   // 4명 다 고정돼 있으면 전부 해제로 맞춘다.
   async function handleTeamFixToggle(teamNumber: number) {
@@ -388,6 +447,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
     const key = tier === undefined ? 'all' : String(tier);
     setRerollingKey(key);
     setRerollError(null);
+    const snapshot = new Map(entries.map((entry) => [entry.id, entry.teamNumber]));
 
     try {
       const response = await fetch('/api/scrim-roster/reroll', {
@@ -399,10 +459,62 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       if (!response.ok) throw new Error(body.error ?? '리롤에 실패했습니다.');
 
       setEntries(body.entries as RosterEntry[]);
+      setRerollHistory((history) => [...history, snapshot]);
     } catch (err) {
       setRerollError(err instanceof Error ? err.message : '리롤에 실패했습니다.');
     } finally {
       setRerollingKey(null);
+    }
+  }
+
+  // 리롤 "되돌리기" — 가장 최근 리롤 스냅샷을 꺼내 지금 상태와 비교해, 그 리롤로
+  // 바뀐 자리만 원래 team_number로 되돌린다. 여러 번 누르면 스냅샷을 하나씩 더
+  // 거슬러 올라간다.
+  async function handleUndoReroll() {
+    if (rerollHistory.length === 0) return;
+    const snapshot = rerollHistory[rerollHistory.length - 1];
+    setRerollHistory((history) => history.slice(0, -1));
+    setUndoingReroll(true);
+    setRerollError(null);
+
+    const changes: Array<{ id: string; teamNumber: number }> = [];
+    for (const entry of entries) {
+      const previousTeamNumber = snapshot.get(entry.id);
+      if (
+        previousTeamNumber !== undefined &&
+        previousTeamNumber !== null &&
+        previousTeamNumber !== entry.teamNumber
+      ) {
+        changes.push({ id: entry.id, teamNumber: previousTeamNumber });
+      }
+    }
+
+    const previousEntries = entries;
+    setEntries((current) =>
+      current.map((entry) => {
+        const previousTeamNumber = snapshot.get(entry.id);
+        return previousTeamNumber !== undefined && previousTeamNumber !== null
+          ? { ...entry, teamNumber: previousTeamNumber }
+          : entry;
+      }),
+    );
+
+    try {
+      const response = await fetch('/api/scrim-roster/reroll/undo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rosterId, changes }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? '되돌리기에 실패했습니다.');
+
+      setEntries(body.entries as RosterEntry[]);
+    } catch (err) {
+      setEntries(previousEntries);
+      setRerollHistory((history) => [...history, snapshot]);
+      setRerollError(err instanceof Error ? err.message : '되돌리기에 실패했습니다.');
+    } finally {
+      setUndoingReroll(false);
     }
   }
 
@@ -462,7 +574,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
           <button
             type="button"
             onClick={() => void handleUndo()}
-            disabled={!lastMove}
+            disabled={moveHistory.length === 0}
             title="되돌리기"
             aria-label="되돌리기"
             className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/15 text-white hover:border-accent disabled:cursor-not-allowed disabled:opacity-30"
@@ -526,7 +638,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         </form>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TIER_SLOTS.map((slot) => {
           const slotEntries = sortEntriesByTier(entries.filter((entry) => entry.tierSlot === slot));
           return (
@@ -541,7 +653,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                 event.preventDefault();
                 void handleDrop(slot);
               }}
-              className={`relative rounded-lg border bg-white/[0.03] p-4 transition-colors ${
+              className={`relative rounded-lg border bg-white/[0.03] p-3 transition-colors ${
                 dragOverTarget === slot
                   ? 'border-accent shadow-[0_0_24px_rgba(255,146,51,0.55)]'
                   : 'border-white/10'
@@ -561,7 +673,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                       </span>
                       <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
                     </div>
-                    <ul className="mt-2 grid grid-cols-2 gap-2">
+                    <ul className="mt-2 grid grid-cols-2 gap-1">
                       {group.entries.map((entry) => (
                         <li key={entry.id}>
                           <Nameplate
@@ -572,6 +684,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                               setDraggingId(entry.id);
                             }}
                             onDragEnd={clearDragState}
+                            onDelete={() => void handleDeleteEntry(entry.id)}
                           />
                         </li>
                       ))}
@@ -607,18 +720,21 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       >
         <div className={dragOverTarget === 'unassigned' ? 'pointer-events-none blur-[2px]' : undefined}>
           <h3 className="hud text-xs text-menu">보류 ({unassigned.length})</h3>
+          {deleteError && <p className="mt-2 text-xs text-red-400">{deleteError}</p>}
 
-          <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">
+          <ul className="mt-3 flex flex-wrap gap-2">
             {unassigned.map((entry) => (
               <li key={entry.id}>
                 <Nameplate
                   entry={entry}
                   dragging={entry.id === draggingId}
+                  width={NAMEPLATE_WIDTH}
                   onDragStart={(event) => {
                     event.dataTransfer.effectAllowed = 'move';
                     setDraggingId(entry.id);
                   }}
                   onDragEnd={clearDragState}
+                  onDelete={() => void handleDeleteEntry(entry.id)}
                 />
               </li>
             ))}
@@ -646,11 +762,11 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
       {showTeamTable && (
         <div className="mt-10 border-t border-white/10 pt-10">
-          <h2 className="text-2xl font-bold tracking-tight">
-            <span style={{ color: '#322F36' }}>02</span> 팀 구성 테이블
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+            <span className="mr-3" style={{ color: '#322F36' }}>02</span> 팀 구성 테이블
           </h2>
 
-          <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] border-collapse text-sm">
                 <thead>
@@ -698,7 +814,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                                   // 01 티어 칸의 실측 너비(px) — 표 auto-layout이
                                   // 내용에 따라 칸 너비를 제멋대로 정해서 그냥 두면
                                   // 01/02 카드 폭이 달라진다.
-                                  width={112}
+                                  width={NAMEPLATE_WIDTH}
                                   dragging={member.id === draggingSwapId}
                                   onDragStart={(event) => {
                                     event.dataTransfer.effectAllowed = 'move';
@@ -708,7 +824,10 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                                   onClick={() => void handleToggleFixed(member)}
                                 />
                               ) : (
-                                <div className="h-9 w-[112px] rounded-md border border-dashed border-white/10" />
+                                <div
+                                  style={{ width: NAMEPLATE_WIDTH, height: NAMEPLATE_HEIGHT }}
+                                  className="rounded-md border border-dashed border-white/10"
+                                />
                               )}
                             </td>
                           );
@@ -735,12 +854,13 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
               {swapError && <p className="mt-2 text-sm text-red-400">{swapError}</p>}
             </div>
 
-            <div className="flex flex-row gap-2 lg:w-40 lg:flex-col">
+            <div className="flex flex-row gap-3 lg:w-44 lg:flex-col">
               <button
                 type="button"
                 onClick={() => void handleVipSort()}
                 disabled={vipSorting}
-                className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ width: SIDE_BUTTON_WIDTH, height: SIDE_BUTTON_HEIGHT }}
+                className={SIDE_BUTTON_CLASS}
               >
                 {vipSorting ? '정렬 중…' : 'VIP 정렬'}
               </button>
@@ -748,8 +868,9 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
               <button
                 type="button"
                 onClick={() => void handleReroll()}
-                disabled={rerollingKey !== null}
-                className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={rerollingKey !== null || undoingReroll}
+                style={{ width: SIDE_BUTTON_WIDTH, height: SIDE_BUTTON_HEIGHT }}
+                className={SIDE_BUTTON_CLASS}
               >
                 {rerollingKey === 'all' ? '리롤 중…' : '전체 리롤'}
               </button>
@@ -758,12 +879,22 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                   key={tier}
                   type="button"
                   onClick={() => void handleReroll(tier)}
-                  disabled={rerollingKey !== null}
-                  className="rounded-md border border-white/15 px-3 py-2 text-xs font-bold text-white hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={rerollingKey !== null || undoingReroll}
+                  style={{ width: SIDE_BUTTON_WIDTH, height: SIDE_BUTTON_HEIGHT }}
+                  className={SIDE_BUTTON_CLASS}
                 >
                   {rerollingKey === String(tier) ? '리롤 중…' : `${tier}티어 리롤`}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => void handleUndoReroll()}
+                disabled={rerollHistory.length === 0 || rerollingKey !== null || undoingReroll}
+                style={{ width: SIDE_BUTTON_WIDTH, height: SIDE_BUTTON_HEIGHT }}
+                className={SIDE_BUTTON_CLASS}
+              >
+                {undoingReroll ? '되돌리는 중…' : '리롤 되돌리기'}
+              </button>
               {rerollError && <p className="text-xs text-red-400">{rerollError}</p>}
             </div>
           </div>

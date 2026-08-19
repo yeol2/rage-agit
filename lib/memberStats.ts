@@ -140,7 +140,7 @@ export function tierNameplateStyle(tier: number): NameplateStyle {
     background: `linear-gradient(135deg, ${start}40, ${ramp.to}40)`,
     borderColor: `${ramp.from}99`,
     boxShadow: `0 0 10px ${ramp.from}60`,
-    color: mixWithWhite(ramp.from, 0.275),
+    color: mixWithWhite(ramp.from, 0.1),
   };
 }
 
@@ -155,7 +155,7 @@ export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
     background: `linear-gradient(135deg, ${start}73, ${ramp.to}73)`,
     borderColor: `${ramp.from}cc`,
     boxShadow: `0 0 10px ${ramp.from}80`,
-    color: mixWithWhite(ramp.from, 0.275),
+    color: mixWithWhite(ramp.from, 0.1),
   };
 }
 
