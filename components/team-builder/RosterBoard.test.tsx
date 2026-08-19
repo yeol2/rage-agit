@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RosterBoard } from './RosterBoard';
 import type { Roster, RosterEntry } from '@/lib/scrimRoster';
@@ -19,6 +19,7 @@ function makeEntry(overrides: Partial<RosterEntry>): RosterEntry {
     matched: true,
     vipRank: null,
     teamNumber: null,
+    fixed: false,
     ...overrides,
   };
 }
@@ -111,7 +112,28 @@ describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
     return fetchMock;
   }
 
-  it('같은 티어 칼럼의 두 칸을 클릭하면 스왑 API를 호출하고 팀 번호가 맞바뀐다', async () => {
+  // jsdom의 DragEvent는 진짜 DataTransfer를 못 만든다 — Nameplate가 쓰는
+  // effectAllowed/setDragImage만 흉내 낸 최소 객체를 만들어 fireEvent에 넘긴다.
+  function dragEventInit() {
+    return { dataTransfer: { effectAllowed: '', setDragImage: vi.fn() } };
+  }
+
+  it('고정된 카드는 드래그할 수 없다', async () => {
+    const entries = makeFullEntries().map((entry) =>
+      entry.id === 'e' ? { ...entry, fixed: true } : entry,
+    );
+    const roster = makeRoster(entries);
+    stubFetchForTeamAssignmentsThen(entries, { ok: true });
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+
+    const table = within(await screen.findByRole('table'));
+    const echo = table.getByText('Ez_Echo');
+    expect(echo.getAttribute('draggable')).toBe('false');
+  });
+
+  it('같은 티어 칼럼으로 드래그하면 스왑 API를 호출한다', async () => {
     const entries = makeFullEntries();
     const roster = makeRoster(entries);
     const fetchMock = stubFetchForTeamAssignmentsThen(entries, { ok: true });
@@ -120,10 +142,12 @@ describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
     await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
 
     const table = within(await screen.findByRole('table'));
-    const alpha = table.getByText('Ez_Alpha');
-    const echo = table.getByText('Ez_Echo');
-    await userEvent.click(alpha);
-    await userEvent.click(echo);
+    const alpha = table.getByText('Ez_Alpha'); // 1티어, 1번팀
+    const echo = table.getByText('Ez_Echo'); // 1티어, 2번팀
+
+    fireEvent.dragStart(alpha, dragEventInit());
+    fireEvent.dragOver(echo, dragEventInit());
+    fireEvent.drop(echo, dragEventInit());
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/scrim-roster/entries/swap',
@@ -134,7 +158,33 @@ describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
     );
   });
 
-  it('다른 티어 칼럼을 클릭하면 스왑 없이 선택만 옮겨간다', async () => {
+  it('고정 안 된 카드를 고정된 칸으로 드롭해도 스왑 API를 호출하지 않는다', async () => {
+    const entries = makeFullEntries().map((entry) =>
+      entry.id === 'e' ? { ...entry, fixed: true } : entry,
+    );
+    const roster = makeRoster(entries);
+    const fetchMock = stubFetchForTeamAssignmentsThen(entries, { ok: true });
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+
+    const table = within(await screen.findByRole('table'));
+    const alpha = table.getByText('Ez_Alpha'); // 1티어, 1번팀 — 고정 안 됨(드래그 시작 가능)
+    const echo = table.getByText('Ez_Echo'); // 1티어, 2번팀 — 고정됨(드롭 대상)
+
+    // Ez_Alpha 쪽에서 드래그를 시작하므로 draggable=false 가드가 아니라
+    // handleSwapDrop 안의 targetEntry.fixed 가드가 막는지를 검증한다.
+    fireEvent.dragStart(alpha, dragEventInit());
+    fireEvent.dragOver(echo, dragEventInit());
+    fireEvent.drop(echo, dragEventInit());
+
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/scrim-roster/entries/swap',
+      expect.anything(),
+    );
+  });
+
+  it('네임플레이트를 클릭하면 고정 API를 호출한다', async () => {
     const entries = makeFullEntries();
     const roster = makeRoster(entries);
     const fetchMock = stubFetchForTeamAssignmentsThen(entries, { ok: true });
@@ -143,12 +193,31 @@ describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
     await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
 
     const table = within(await screen.findByRole('table'));
-    await userEvent.click(table.getByText('Ez_Alpha')); // 1티어
-    await userEvent.click(table.getByText('Ez_Bravo')); // 2티어 — 다른 칼럼
+    await userEvent.click(table.getByText('Ez_Alpha'));
 
-    expect(fetchMock).not.toHaveBeenCalledWith(
-      '/api/scrim-roster/entries/swap',
-      expect.anything(),
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scrim-roster/entries/a',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ fixed: true }) }),
+    );
+  });
+
+  it('"고정" 칼럼을 누르면 그 팀 전체에 대해 team-fix API를 호출한다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    const fetchMock = stubFetchForTeamAssignmentsThen(entries, { ok: true });
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+    await screen.findByRole('table');
+
+    await userEvent.click(screen.getByRole('button', { name: '1번팀 고정' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scrim-roster/entries/team-fix',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ rosterId: 'roster-1', teamNumber: 1, fixed: true }),
+      }),
     );
   });
 

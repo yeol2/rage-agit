@@ -116,6 +116,7 @@ describe('sortEntriesByTier', () => {
       matched: false,
       vipRank: null,
       teamNumber: null,
+      fixed: false,
       ...overrides,
     };
   }
@@ -148,6 +149,7 @@ describe('moveEntryToSlot', () => {
       matched: false,
       vipRank: null,
       teamNumber: null,
+      fixed: false,
       ...overrides,
     };
   }
@@ -187,6 +189,7 @@ describe('groupEntriesByTier', () => {
       matched: false,
       vipRank: null,
       teamNumber: null,
+      fixed: false,
       ...overrides,
     };
   }

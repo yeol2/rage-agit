@@ -54,20 +54,15 @@ function Nameplate({
   entry,
   dragging = false,
   draggable = true,
-  selected = false,
   onDragStart,
   onDragEnd,
   onClick,
 }: {
   entry: RosterEntry;
   dragging?: boolean;
-  // 02 팀 구성 테이블은 아직 드래그로 옮기는 기능이 없다 — 01에서 쓰던 드래그
-  // 핸들러를 그대로 붙이면 02의 카드를 01 쪽으로 끌어다 tierSlot 을 바꿔버릴
-  // 수 있어(팀 번호는 갱신 안 된 채로) false 로 꺼둔다.
+  // 02 표에서는 fixed 인 카드만 false 로 넘어온다(고정된 자리는 드래그로 못
+  // 옮긴다) — 01은 항상 true.
   draggable?: boolean;
-  // 02 표에서 스왑 대상으로 클릭해 골라둔 카드 — tierNameplateSelectedStyle을
-  // dragging과 같은 방식으로 재사용해 진하게 보여준다.
-  selected?: boolean;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onDragEnd?: () => void;
   onClick?: () => void;
@@ -100,12 +95,10 @@ function Nameplate({
 
   const sharedClassName = `block truncate rounded-md border px-3 py-2 text-xs transition-transform ${
     draggable ? 'cursor-grab active:cursor-grabbing' : ''
-  } ${onClick ? 'cursor-pointer' : ''} ${dragging ? 'opacity-40' : 'hover:scale-[1.03]'} ${
-    selected ? 'ring-2 ring-accent' : ''
-  }`;
+  } ${onClick ? 'cursor-pointer' : ''} ${dragging ? 'opacity-40' : 'hover:scale-[1.03]'}`;
 
   const style = hasTier
-    ? dragging || selected
+    ? dragging
       ? tierNameplateSelectedStyle(entry.tier as number)
       : tierNameplateStyle(entry.tier as number)
     : undefined;
@@ -158,6 +151,16 @@ function Nameplate({
     <div className="relative">
       {plate}
       {entry.vipRank !== null && <VipCrown />}
+      {/* 고정 배지는 왕관 반대쪽(왼쪽 위) 모서리에 걸친다 — 둘 다 있을 수 있어서
+          겹치면 안 된다. */}
+      {entry.fixed && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-1.5 -top-2 text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]"
+        >
+          📌
+        </span>
+      )}
     </div>
   );
 }
@@ -186,7 +189,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [showTeamTable, setShowTeamTable] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
-  const [selectedForSwap, setSelectedForSwap] = useState<string | null>(null);
+  const [draggingSwapId, setDraggingSwapId] = useState<string | null>(null);
   const [swapError, setSwapError] = useState<string | null>(null);
   const [vipSorting, setVipSorting] = useState(false);
   const [vipSortError, setVipSortError] = useState<string | null>(null);
@@ -265,33 +268,24 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
     }
   }
 
-  // 02 표에서 같은 티어 칼럼 안의 두 사람을 클릭으로 맞바꾼다. 낙관적으로 먼저
-  // 화면을 바꾸고, 저장이 실패하면 되돌린다.
-  async function handleSwapClick(entry: RosterEntry) {
+  // 02 표에서 같은 티어 칼럼 안의 두 사람을 드래그로 맞바꾼다(01과 같은 방식).
+  // 낙관적으로 먼저 화면을 바꾸고, 저장이 실패하면 되돌린다. 대상이 없거나,
+  // 둘 중 하나라도 고정돼 있거나, 티어 칼럼이 다르면 조용히 아무 일도 안
+  // 일어난다(방어적 — 화면에서 이미 draggable/드롭 조건으로 대부분 막아둔다).
+  async function handleSwapDrop(targetEntry: RosterEntry | undefined) {
+    const sourceId = draggingSwapId;
+    setDraggingSwapId(null);
+    if (!targetEntry || !sourceId || sourceId === targetEntry.id || targetEntry.fixed) return;
+
+    const source = entries.find((e) => e.id === sourceId);
+    if (!source || source.fixed || source.tierSlot !== targetEntry.tierSlot) return;
+
     setSwapError(null);
-
-    if (!selectedForSwap) {
-      setSelectedForSwap(entry.id);
-      return;
-    }
-    if (selectedForSwap === entry.id) {
-      setSelectedForSwap(null);
-      return;
-    }
-
-    const other = entries.find((e) => e.id === selectedForSwap);
-    setSelectedForSwap(null);
-    // 다른 티어 칼럼을 클릭한 경우 — 스왑 없이 새로 클릭한 칸을 선택 상태로 바꾼다.
-    if (!other || other.tierSlot !== entry.tierSlot) {
-      setSelectedForSwap(entry.id);
-      return;
-    }
-
     const previous = entries;
     setEntries((current) =>
       current.map((e) => {
-        if (e.id === other.id) return { ...e, teamNumber: entry.teamNumber };
-        if (e.id === entry.id) return { ...e, teamNumber: other.teamNumber };
+        if (e.id === source.id) return { ...e, teamNumber: targetEntry.teamNumber };
+        if (e.id === targetEntry.id) return { ...e, teamNumber: source.teamNumber };
         return e;
       }),
     );
@@ -300,12 +294,58 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       const response = await fetch('/api/scrim-roster/entries/swap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entryIdA: other.id, entryIdB: entry.id }),
+        body: JSON.stringify({ entryIdA: source.id, entryIdB: targetEntry.id }),
       });
       if (!response.ok) throw new Error('저장 실패');
     } catch {
       setEntries(previous);
       setSwapError('팀 번호를 맞바꾸지 못했습니다. 다시 시도하세요.');
+    }
+  }
+
+  // 02 표 네임플레이트를 클릭하면 그 사람 하나만 고정을 토글한다(특정 티어
+  // 한 자리만 고정하고 싶을 때 쓴다 — 팀 전체를 고정하려면 "고정" 칼럼을 쓴다).
+  async function handleToggleFixed(entry: RosterEntry) {
+    const nextFixed = !entry.fixed;
+    setSwapError(null);
+    const previous = entries;
+    setEntries((current) => current.map((e) => (e.id === entry.id ? { ...e, fixed: nextFixed } : e)));
+
+    try {
+      const response = await fetch(`/api/scrim-roster/entries/${entry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fixed: nextFixed }),
+      });
+      if (!response.ok) throw new Error('저장 실패');
+    } catch {
+      setEntries(previous);
+      setSwapError('고정 상태를 저장하지 못했습니다. 다시 시도하세요.');
+    }
+  }
+
+  // "고정" 칼럼 — 그 팀 4명 중 하나라도 고정 안 돼 있으면 전부 고정으로,
+  // 4명 다 고정돼 있으면 전부 해제로 맞춘다.
+  async function handleTeamFixToggle(teamNumber: number) {
+    const teamEntries = entries.filter((e) => e.teamNumber === teamNumber && e.tierSlot !== null);
+    const nextFixed = !teamEntries.every((e) => e.fixed);
+
+    setSwapError(null);
+    const previous = entries;
+    setEntries((current) =>
+      current.map((e) => (e.teamNumber === teamNumber && e.tierSlot !== null ? { ...e, fixed: nextFixed } : e)),
+    );
+
+    try {
+      const response = await fetch('/api/scrim-roster/entries/team-fix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rosterId, teamNumber, fixed: nextFixed }),
+      });
+      if (!response.ok) throw new Error('저장 실패');
+    } catch {
+      setEntries(previous);
+      setSwapError('팀 고정을 저장하지 못했습니다. 다시 시도하세요.');
     }
   }
 
@@ -578,42 +618,79 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
           <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start">
             <div className="flex-1 overflow-x-auto">
-              <table className="w-full min-w-[480px] border-collapse text-sm">
+              <table className="w-full min-w-[520px] border-collapse text-sm">
                 <thead>
                   <tr>
-                    <th className="border-b border-white/10 p-2 text-left text-xs text-menu">팀</th>
+                    <th className="border-b border-white/10 p-1.5 text-left text-xs text-menu">팀</th>
                     {TIER_SLOTS.map((slot) => (
-                      <th key={slot} className="border-b border-white/10 p-2 text-left text-xs text-menu">
+                      <th key={slot} className="border-b border-white/10 p-1.5 text-left text-xs text-menu">
                         {slot}티어
                       </th>
                     ))}
+                    <th className="border-b border-white/10 p-1.5 text-center text-xs text-menu">고정</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.from({ length: targetPerTier }, (_, i) => i + 1).map((teamNumber) => (
-                    <tr key={teamNumber} className="border-b border-white/5">
-                      <td className="p-2 text-xs text-menu">{teamNumber}번팀</td>
-                      {TIER_SLOTS.map((slot) => {
-                        const member = entries.find(
-                          (entry) => entry.tierSlot === slot && entry.teamNumber === teamNumber,
-                        );
-                        return (
-                          <td key={slot} className="p-2">
-                            {member ? (
-                              <Nameplate
-                                entry={member}
-                                draggable={false}
-                                selected={selectedForSwap === member.id}
-                                onClick={() => void handleSwapClick(member)}
-                              />
-                            ) : (
-                              <div className="h-9 w-full rounded-md border border-dashed border-white/10" />
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                  {Array.from({ length: targetPerTier }, (_, i) => i + 1).map((teamNumber) => {
+                    const teamEntries = entries.filter(
+                      (entry) => entry.teamNumber === teamNumber && entry.tierSlot !== null,
+                    );
+                    const teamAllFixed = teamEntries.length > 0 && teamEntries.every((entry) => entry.fixed);
+
+                    return (
+                      <tr key={teamNumber} className="border-b border-white/5">
+                        <td className="p-1.5 text-xs text-menu">{teamNumber}번팀</td>
+                        {TIER_SLOTS.map((slot) => {
+                          const member = entries.find(
+                            (entry) => entry.tierSlot === slot && entry.teamNumber === teamNumber,
+                          );
+                          return (
+                            <td
+                              key={slot}
+                              className="p-1.5"
+                              onDragOver={(event) => {
+                                if (draggingSwapId) event.preventDefault();
+                              }}
+                              onDrop={(event) => {
+                                event.preventDefault();
+                                void handleSwapDrop(member);
+                              }}
+                            >
+                              {member ? (
+                                <Nameplate
+                                  entry={member}
+                                  draggable={!member.fixed}
+                                  dragging={member.id === draggingSwapId}
+                                  onDragStart={(event) => {
+                                    event.dataTransfer.effectAllowed = 'move';
+                                    setDraggingSwapId(member.id);
+                                  }}
+                                  onDragEnd={() => setDraggingSwapId(null)}
+                                  onClick={() => void handleToggleFixed(member)}
+                                />
+                              ) : (
+                                <div className="h-9 w-full rounded-md border border-dashed border-white/10" />
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="p-1.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => void handleTeamFixToggle(teamNumber)}
+                            aria-label={`${teamNumber}번팀 고정`}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-md border text-sm ${
+                              teamAllFixed
+                                ? 'border-accent bg-accent/20 text-accent'
+                                : 'border-white/15 text-menu hover:border-accent'
+                            }`}
+                          >
+                            📌
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {swapError && <p className="mt-2 text-sm text-red-400">{swapError}</p>}

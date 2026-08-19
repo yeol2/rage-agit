@@ -438,6 +438,26 @@ for (const role of ['anon', 'authenticated']) {
   );
 }
 
+console.log('\n0019 — 팀 구성 테이블: 고정(fix)');
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'scrim_roster_entries' and column_name = 'fixed'`)) === 1,
+  'scrim_roster_entries.fixed 컬럼이 있다',
+);
+
+const fixedGrants = await client.query(`
+  select grantee, column_name from information_schema.column_privileges
+  where table_name = 'scrim_roster_entries' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated') and column_name = 'fixed'
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    fixedGrants.rows.some((r) => r.grantee === role),
+    `${role} 은 scrim_roster_entries.fixed 를 읽을 수 있다`,
+  );
+}
+
 await client.end();
 
 console.log('');

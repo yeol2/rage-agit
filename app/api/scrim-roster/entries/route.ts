@@ -50,6 +50,8 @@ export async function POST(request: Request) {
       vipRank: null,
       // 방금 막 추가한 사람이라 아직 팀 배정 전이다.
       teamNumber: null,
+      // 방금 추가한 사람은 고정될 이유가 없다.
+      fixed: false,
     },
   });
 }

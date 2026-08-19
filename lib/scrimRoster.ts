@@ -150,6 +150,9 @@ export interface RosterEntry {
   vipRank: number | null;
   // "팀 구성" 버튼을 눌러 배정된 팀 번호. 배정 전에는 null.
   teamNumber: number | null;
+  // 관리자가 고정해둔 자리 — 드래그로 못 옮기고(클라이언트), 나중에 만들 전체/
+  // 티어별 리롤도 건드리지 않는다(서버).
+  fixed: boolean;
 }
 
 export interface Roster {
@@ -289,7 +292,7 @@ export async function fetchLatestRoster(): Promise<Roster | null> {
   // 판단하는 데만 쓴다. 수동 추가한 사람은 member_id 가 없어 자연스럽게 null 이 된다.
   const { data: entriesData, error: entriesError } = await getFreshSupabase()
     .from('scrim_roster_entries')
-    .select('id, discord_nickname, member_id, tier, tier_slot, matched, team_number, members(vip_rank)')
+    .select('id, discord_nickname, member_id, tier, tier_slot, matched, team_number, fixed, members(vip_rank)')
     .eq('roster_id', rosterRow.id);
   if (entriesError) throw new Error(`팀 구성 명단을 불러오지 못했습니다: ${entriesError.message}`);
 
@@ -304,6 +307,7 @@ export async function fetchLatestRoster(): Promise<Roster | null> {
       tierSlot: row.tier_slot,
       matched: row.matched,
       teamNumber: row.team_number,
+      fixed: row.fixed,
       // PostgREST 는 관계를 배열로 내려줄 수도, 단일 객체로 내려줄 수도 있다
       // (여기선 다대일이라 실제로는 객체 하나) — 양쪽 다 받아둔다.
       vipRank: (Array.isArray(row.members) ? row.members[0] : row.members)?.vip_rank ?? null,

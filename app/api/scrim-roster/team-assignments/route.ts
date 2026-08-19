@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
   const { data: updatedRows, error: refetchError } = await supabase
     .from('scrim_roster_entries')
-    .select('id, discord_nickname, member_id, tier, tier_slot, matched, team_number, members(vip_rank)')
+    .select('id, discord_nickname, member_id, tier, tier_slot, matched, team_number, fixed, members(vip_rank)')
     .eq('roster_id', rosterId);
   if (refetchError || !updatedRows) {
     return NextResponse.json({ error: '갱신된 명단을 불러오지 못했습니다.' }, { status: 500 });
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
       tierSlot: row.tier_slot,
       matched: row.matched,
       teamNumber: row.team_number,
+      fixed: row.fixed,
       vipRank: (Array.isArray(row.members) ? row.members[0] : row.members)?.vip_rank ?? null,
     })),
   });
