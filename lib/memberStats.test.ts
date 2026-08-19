@@ -5,6 +5,7 @@ import {
   MIN_GAMES_FOR_HEXAGON,
   buildHexagonAxes,
   cleanDisplayName,
+  fixedNameplateStyle,
   percentile,
   stripTrailingKoreanTag,
   tierColorRamp,
@@ -212,7 +213,7 @@ describe('tierColorRamp', () => {
 describe('tierNameplateStyle', () => {
   it('0~5티어 전부 tierColorRamp 의 그라데이션(from→to)을 쓰고, 글자색은 흰색에 티어색을 섞는다', () => {
     expect(tierNameplateStyle(2)).toEqual({
-      background: 'linear-gradient(135deg, #db8a4240, #ffde9040)',
+      background: 'linear-gradient(135deg, #e8b38440, #ffde9040)',
       borderColor: '#db8a4299',
       boxShadow: '0 0 10px #db8a4260',
       color: '#f5dfcb',
@@ -225,7 +226,7 @@ describe('tierNameplateStyle', () => {
 
   it('단독 티어(0, 5)도 같은 방식으로 그라데이션을 쓴다', () => {
     expect(tierNameplateStyle(0)).toEqual({
-      background: 'linear-gradient(135deg, #9e6bff40, #9fc1ff40)',
+      background: 'linear-gradient(135deg, #c09fff40, #9fc1ff40)',
       borderColor: '#9e6bff99',
       boxShadow: '0 0 10px #9e6bff60',
       color: '#e4d6ff',
@@ -239,10 +240,21 @@ describe('tierNameplateSelectedStyle', () => {
     const selected = tierNameplateSelectedStyle(2);
     expect(selected).not.toEqual(base);
     expect(selected).toEqual({
-      background: 'linear-gradient(135deg, #db8a4273, #ffde9073)',
+      background: 'linear-gradient(135deg, #e8b38473, #ffde9073)',
       borderColor: '#db8a42cc',
       boxShadow: '0 0 10px #db8a4280',
       color: '#f5dfcb',
+    });
+  });
+});
+
+describe('fixedNameplateStyle', () => {
+  it('티어와 무관하게 항상 같은 회색조를 낸다', () => {
+    expect(fixedNameplateStyle()).toEqual({
+      background: 'rgba(255, 255, 255, 0.06)',
+      borderColor: 'rgba(255, 255, 255, 0.14)',
+      boxShadow: 'none',
+      color: '#A0A0A2',
     });
   });
 });

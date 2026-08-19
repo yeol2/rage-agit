@@ -12,6 +12,7 @@ import {
 import {
   ALL_TIERS,
   cleanDisplayName,
+  fixedNameplateStyle,
   stripTrailingKoreanTag,
   tierNameplateSelectedStyle,
   tierNameplateStyle,
@@ -54,6 +55,8 @@ function Nameplate({
   entry,
   dragging = false,
   draggable = true,
+  fixed = false,
+  width,
   onDragStart,
   onDragEnd,
   onClick,
@@ -63,6 +66,13 @@ function Nameplate({
   // 02 표에서는 fixed 인 카드만 false 로 넘어온다(고정된 자리는 드래그로 못
   // 옮긴다) — 01은 항상 true.
   draggable?: boolean;
+  // entry.fixed 를 그대로 읽지 않고 호출하는 쪽이 명시적으로 넘긴다 — 고정은
+  // 02(팀 구성 테이블) 개념이라, 같은 entry가 01 티어 칸에도 그려질 때는 고정
+  // 여부와 무관하게 항상 false로 둬야 01 쪽 카드가 같이 어두워지지 않는다.
+  fixed?: boolean;
+  // 02 표의 <table> 칸은 auto-layout이라 내용에 따라 칸 너비가 제멋대로
+  // 정해진다 — 01의 실측 너비(px)를 그대로 박아서 두 표의 카드 폭을 맞춘다.
+  width?: number;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onDragEnd?: () => void;
   onClick?: () => void;
@@ -97,11 +107,17 @@ function Nameplate({
     draggable ? 'cursor-grab active:cursor-grabbing' : ''
   } ${onClick ? 'cursor-pointer' : ''} ${dragging ? 'opacity-40' : 'hover:scale-[1.03]'}`;
 
-  const style = hasTier
-    ? dragging
-      ? tierNameplateSelectedStyle(entry.tier as number)
-      : tierNameplateStyle(entry.tier as number)
+  // 고정된 카드는 티어 색과 무관하게 색감을 죽인 회색조로 표시한다(참고 이미지의
+  // 비활성 탭처럼) — fixed인 카드는 애초에 드래그가 안 되니 dragging과 겹칠 일이
+  // 없다.
+  const tierStyle = hasTier
+    ? fixed
+      ? fixedNameplateStyle()
+      : dragging
+        ? tierNameplateSelectedStyle(entry.tier as number)
+        : tierNameplateStyle(entry.tier as number)
     : undefined;
+  const style = width !== undefined ? { ...tierStyle, width } : tierStyle;
 
   let plate;
   if (!hasTier) {
@@ -147,20 +163,12 @@ function Nameplate({
 
   // 왕관은 클랜원 명단과 같은 규칙으로 VIP 에게만 — 카드 자체가 아니라 감싼 상자에
   // 붙여서, 드래그 중 카드가 반투명해져도 왕관은 또렷하게 남는다.
+  // 고정 여부는 배지가 아니라 카드 자체를 회색조로 죽여서(fixedNameplateStyle)
+  // 나타낸다.
   return (
     <div className="relative">
       {plate}
       {entry.vipRank !== null && <VipCrown />}
-      {/* 고정 배지는 왕관 반대쪽(왼쪽 위) 모서리에 걸친다 — 둘 다 있을 수 있어서
-          겹치면 안 된다. */}
-      {entry.fixed && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-1.5 -top-2 text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]"
-        >
-          📌
-        </span>
-      )}
     </div>
   );
 }
@@ -616,12 +624,12 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
             <span style={{ color: '#322F36' }}>02</span> 팀 구성 테이블
           </h2>
 
-          <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start">
-            <div className="flex-1 overflow-x-auto">
+          <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] border-collapse text-sm">
                 <thead>
                   <tr>
-                    <th className="border-b border-white/10 p-1.5 text-left text-xs text-menu">팀</th>
+                    <th className="border-b border-white/10 py-1.5 pl-1.5 pr-4 text-left text-xs text-menu">팀</th>
                     {TIER_SLOTS.map((slot) => (
                       <th key={slot} className="border-b border-white/10 p-1.5 text-left text-xs text-menu">
                         {slot}티어
@@ -639,7 +647,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
                     return (
                       <tr key={teamNumber} className="border-b border-white/5">
-                        <td className="p-1.5 text-xs text-menu">{teamNumber}번팀</td>
+                        <td className="py-1.5 pl-1.5 pr-4 text-xs text-white">{teamNumber}</td>
                         {TIER_SLOTS.map((slot) => {
                           const member = entries.find(
                             (entry) => entry.tierSlot === slot && entry.teamNumber === teamNumber,
@@ -660,6 +668,11 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                                 <Nameplate
                                   entry={member}
                                   draggable={!member.fixed}
+                                  fixed={member.fixed}
+                                  // 01 티어 칸의 실측 너비(px) — 표 auto-layout이
+                                  // 내용에 따라 칸 너비를 제멋대로 정해서 그냥 두면
+                                  // 01/02 카드 폭이 달라진다.
+                                  width={112}
                                   dragging={member.id === draggingSwapId}
                                   onDragStart={(event) => {
                                     event.dataTransfer.effectAllowed = 'move';
@@ -669,7 +682,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                                   onClick={() => void handleToggleFixed(member)}
                                 />
                               ) : (
-                                <div className="h-9 w-full rounded-md border border-dashed border-white/10" />
+                                <div className="h-9 w-[112px] rounded-md border border-dashed border-white/10" />
                               )}
                             </td>
                           );

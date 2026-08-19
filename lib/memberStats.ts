@@ -114,14 +114,30 @@ function mixWithWhite(hex: string, amount: number): string {
   return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
 }
 
+// 02(팀 구성 테이블)에서 고정된 카드에 쓴다 — 티어 색과 무관하게 채도를 다
+// 죽인 회색조 하나로 통일한다(참고 이미지의 비활성 브라우저 탭처럼). tier
+// 배색을 옅게/진하게 조절하는 게 아니라 아예 색 자체를 꺼서 "잠긴" 느낌을 준다.
+// text-menu(#A0A0A2, 이 프로젝트에서 이미 쓰는 흐린 회색 라벨 색)를 그대로 쓴다.
+export function fixedNameplateStyle(): NameplateStyle {
+  return {
+    background: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    boxShadow: 'none',
+    color: '#A0A0A2',
+  };
+}
+
 // 0~5티어 전부 같은 방식 — tierColorRamp 의 그라데이션(from→to)을 깐다.
 // 어두운 배경(#0E0B13) 위라 너무 옅으면(26/66/40) 색이 죽어 보인다는 피드백을 받아
-// 전체적으로 한 단계씩 밝혔다.
+// 전체적으로 한 단계씩 밝혔다. 시작 지점(from)은 그마저도 너무 어두워 보인다는
+// 피드백을 받아 흰색을 살짝 섞어 밝힌 색을 쓴다(예: 5티어 시작이 탁한 카키색
+// 대신 또렷한 노란색으로 보이도록).
 export function tierNameplateStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
+  const start = mixWithWhite(ramp.from, 0.65);
 
   return {
-    background: `linear-gradient(135deg, ${ramp.from}40, ${ramp.to}40)`,
+    background: `linear-gradient(135deg, ${start}40, ${ramp.to}40)`,
     borderColor: `${ramp.from}99`,
     boxShadow: `0 0 10px ${ramp.from}60`,
     color: mixWithWhite(ramp.from, 0.275),
@@ -133,9 +149,10 @@ export function tierNameplateStyle(tier: number): NameplateStyle {
 // 기본 상태(40/99/60)보다 한 단계 더 진해야 한다.
 export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
+  const start = mixWithWhite(ramp.from, 0.65);
 
   return {
-    background: `linear-gradient(135deg, ${ramp.from}73, ${ramp.to}73)`,
+    background: `linear-gradient(135deg, ${start}73, ${ramp.to}73)`,
     borderColor: `${ramp.from}cc`,
     boxShadow: `0 0 10px ${ramp.from}80`,
     color: mixWithWhite(ramp.from, 0.275),
