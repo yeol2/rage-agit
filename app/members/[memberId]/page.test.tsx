@@ -25,7 +25,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-const member = { id: 'm-1', discordNickname: 'Ez_Alpha', tier: 2 };
+const member = { id: 'm-1', discordNickname: 'Ez_Alpha', tier: 2, vipRank: null };
 const stats = {
   memberId: 'm-1',
   tier: 2,

@@ -395,6 +395,29 @@ for (const role of ['anon', 'authenticated']) {
   check(cols.includes('discord_nickname'), `${role} 은 scrim_roster_entries.discord_nickname 을 읽을 수 있다`);
 }
 
+console.log('\n0017 — 클랜원 VIP 등수');
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'members' and column_name = 'vip_rank'`)) === 1,
+  'members.vip_rank 컬럼이 있다',
+);
+check(
+  (await one(`select count(*) from pg_indexes
+    where tablename = 'members' and indexname = 'members_clan_vip_rank_key'`)) === 1,
+  'vip_rank 에 유일 인덱스가 걸려 있다',
+);
+
+const memberVipGrants = await client.query(`
+  select grantee, column_name from information_schema.column_privileges
+  where table_name = 'members' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  const cols = memberVipGrants.rows.filter((r) => r.grantee === role).map((r) => r.column_name);
+  check(cols.includes('vip_rank'), `${role} 은 members.vip_rank 를 읽을 수 있다`);
+}
+
 await client.end();
 
 console.log('');

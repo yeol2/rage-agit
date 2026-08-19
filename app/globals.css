@@ -30,3 +30,23 @@ body {
 .clip-corner {
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
 }
+
+/* VIP 네임플레이트 — 디스코드 "홀로그램" 역할 색(연보라 #A9A9FF → 주황 #FFAA3C →
+   핑크 #FFB2E0)을 흉내낸다. 배경 위치를 계속 흘려보내 은은하게 반짝이는 느낌을 준다. */
+@keyframes holo-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.vip-holographic {
+  background: linear-gradient(120deg, #a9a9ff, #ffaa3c, #ffb2e0, #a9a9ff);
+  background-size: 300% 300%;
+  animation: holo-shimmer 6s ease-in-out infinite;
+}

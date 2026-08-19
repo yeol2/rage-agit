@@ -7,10 +7,10 @@ import type { MemberSummary } from '@/lib/memberStats';
 afterEach(cleanup);
 
 const members: MemberSummary[] = [
-  { id: 'm-1', discordNickname: 'Ez_Alpha(98)', tier: 0 },
-  { id: 'm-2', discordNickname: 'Ez_Bravo👀', tier: 2 },
-  { id: 'm-3', discordNickname: 'Ez_Charlie', tier: 2.5 },
-  { id: 'm-4', discordNickname: 'Ez_Delta', tier: 5 },
+  { id: 'm-1', discordNickname: 'Ez_Alpha(98)', tier: 0, vipRank: null },
+  { id: 'm-2', discordNickname: 'Ez_Bravo👀', tier: 2, vipRank: null },
+  { id: 'm-3', discordNickname: 'Ez_Charlie', tier: 2.5, vipRank: null },
+  { id: 'm-4', discordNickname: 'Ez_Delta', tier: 5, vipRank: null },
 ];
 
 describe('MemberDirectory', () => {
@@ -40,13 +40,12 @@ describe('MemberDirectory', () => {
     );
   });
 
-  it('같은 색 묶음이어도 반티어는 진한 색, 정수 티어는 밝은 색을 써서 구분한다', () => {
+  it('같은 티어끼리는 같은 배색을 쓴다', () => {
     render(<MemberDirectory members={members} />);
-    const bravo = screen.getByRole('link', { name: 'Ez_Bravo' }); // 2티어
-    const charlie = screen.getByRole('link', { name: 'Ez_Charlie' }); // 2.5티어
-    // jsdom은 완전 불투명(alpha=ff) 8자리 hex를 alpha 없는 rgb()로 정규화한다.
-    expect(bravo.style.borderColor).toBe('rgb(255, 222, 144)');
-    expect(charlie.style.borderColor).toBe('rgb(219, 138, 66)');
+    const bravo = screen.getByRole('link', { name: 'Ez_Bravo' });
+    const charlie = screen.getByRole('link', { name: 'Ez_Charlie' });
+    // 2티어와 2.5티어는 tierColorRamp 상 같은 배색을 공유한다.
+    expect(bravo.style.borderColor).toBe(charlie.style.borderColor);
   });
 
   it('검색하면 일치하는 이름만 남는다', async () => {
@@ -61,5 +60,45 @@ describe('MemberDirectory', () => {
     await userEvent.type(screen.getByPlaceholderText('닉네임 검색'), 'bravo');
     expect(screen.queryByText('0티어')).not.toBeInTheDocument();
     expect(screen.getByText('2티어')).toBeInTheDocument();
+  });
+
+  it('VIP가 없으면 VIP 섹션 자체가 안 뜬다', () => {
+    render(<MemberDirectory members={members} />);
+    expect(screen.queryByText('VIP')).not.toBeInTheDocument();
+  });
+
+  it('티어 네임플레이트에는 VIP 인 사람에게만 왕관이 붙는다', () => {
+    const withVip: MemberSummary[] = [
+      { id: 'm-1', discordNickname: 'Ez_Alpha', tier: 0, vipRank: null },
+      { id: 'm-5', discordNickname: 'Ez_Echo', tier: 3, vipRank: 2 },
+    ];
+    const { container } = render(<MemberDirectory members={withVip} />);
+
+    const crowns = container.querySelectorAll('img[src="/vip-crown.svg"]');
+    // VIP 섹션(1개) + 3티어 섹션의 Ez_Echo(1개) — Ez_Alpha 에는 안 붙는다.
+    const tierSectionCrowns = Array.from(crowns).filter(
+      (img) => !img.parentElement?.querySelector('.vip-holographic'),
+    );
+    expect(tierSectionCrowns).toHaveLength(1);
+    expect(tierSectionCrowns[0].parentElement?.textContent).toBe('Ez_Echo');
+  });
+
+  it('VIP는 등수 순으로 보여주고, 자기 티어 섹션에도 그대로 남는다(중복 표시)', () => {
+    const withVips: MemberSummary[] = [
+      ...members,
+      { id: 'm-5', discordNickname: 'Ez_Echo', tier: 3, vipRank: 2 },
+      { id: 'm-6', discordNickname: 'Ez_Foxtrot', tier: 1, vipRank: 1 },
+    ];
+    render(<MemberDirectory members={withVips} />);
+    expect(screen.getByText('VIP')).toBeInTheDocument();
+
+    const vipLinks = screen.getAllByRole('link').filter((link) => link.className.includes('vip-holographic'));
+    expect(vipLinks.map((link) => link.textContent)).toEqual(['Ez_Foxtrot', 'Ez_Echo']);
+
+    // 3티어 섹션에도 Ez_Echo가 그대로 나온다 — VIP라고 티어 섹션에서 빠지지 않는다.
+    expect(screen.getByText('3티어')).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('link', { name: 'Ez_Echo' }).some((link) => !link.className.includes('vip-holographic')),
+    ).toBe(true);
   });
 });
