@@ -235,12 +235,16 @@ export interface MemberSummary {
   id: string;
   discordNickname: string;
   tier: number;
+  // VIP 등수(1등이 최상위) — 내전 펀딩을 많이 했거나 VIP 명단에 있는 사람에게만 있다.
+  // VIP 라고 해서 tier 섹션에서 빠지지 않는다 — 클랜원 목록에는 VIP 섹션과 원래 티어
+  // 섹션 양쪽에 다 나오는 게 의도된 동작이다.
+  vipRank: number | null;
 }
 
 export async function fetchAllMembers(): Promise<MemberSummary[]> {
   const { data, error } = await getSupabase()
     .from('members')
-    .select('id, discord_nickname, tier')
+    .select('id, discord_nickname, tier, vip_rank')
     .eq('is_active', true)
     .order('discord_nickname');
   if (error) throw new Error(`클랜원 명단을 불러오지 못했습니다: ${error.message}`);
@@ -249,19 +253,20 @@ export async function fetchAllMembers(): Promise<MemberSummary[]> {
     id: row.id,
     discordNickname: row.discord_nickname,
     tier: row.tier,
+    vipRank: row.vip_rank,
   }));
 }
 
 export async function fetchMember(memberId: string): Promise<MemberSummary | null> {
   const { data, error } = await getSupabase()
     .from('members')
-    .select('id, discord_nickname, tier')
+    .select('id, discord_nickname, tier, vip_rank')
     .eq('id', memberId)
     .maybeSingle();
   if (error) throw new Error(`클랜원 정보를 불러오지 못했습니다: ${error.message}`);
   if (!data) return null;
 
-  return { id: data.id, discordNickname: data.discord_nickname, tier: data.tier };
+  return { id: data.id, discordNickname: data.discord_nickname, tier: data.tier, vipRank: data.vip_rank };
 }
 
 function toStatsRow(row: {
