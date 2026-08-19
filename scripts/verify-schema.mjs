@@ -418,6 +418,26 @@ for (const role of ['anon', 'authenticated']) {
   check(cols.includes('vip_rank'), `${role} 은 members.vip_rank 를 읽을 수 있다`);
 }
 
+console.log('\n0018 — 팀 구성 테이블: 팀 번호');
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'scrim_roster_entries' and column_name = 'team_number'`)) === 1,
+  'scrim_roster_entries.team_number 컬럼이 있다',
+);
+
+const teamNumberGrants = await client.query(`
+  select grantee, column_name from information_schema.column_privileges
+  where table_name = 'scrim_roster_entries' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated') and column_name = 'team_number'
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    teamNumberGrants.rows.some((r) => r.grantee === role),
+    `${role} 은 scrim_roster_entries.team_number 를 읽을 수 있다`,
+  );
+}
+
 await client.end();
 
 console.log('');

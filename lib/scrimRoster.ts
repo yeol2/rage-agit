@@ -145,12 +145,78 @@ export interface RosterEntry {
   tier: number | null;
   tierSlot: 1 | 2 | 3 | 4 | null;
   matched: boolean;
+  // 매칭된 클랜원이 VIP면 그 등수 — 네임플레이트에 왕관을 띄울지 판단하는 데 쓴다.
+  // 클랜원 명단(members)에서 조인해 온 값이라 roster 테이블 자체에는 없다.
+  vipRank: number | null;
+  // "팀 구성" 버튼을 눌러 배정된 팀 번호. 배정 전에는 null.
+  teamNumber: number | null;
 }
 
 export interface Roster {
   id: string;
   fetchedAt: string;
   entries: RosterEntry[];
+}
+
+// 화면(RosterBoard)의 티어 칸 안에서 기본 정렬 순서 — 이 클랜은 0티어가 최상위라
+// 숫자가 작을수록 상위 티어다. 오름차순으로 정렬해 실력 순으로 보이게 한다.
+// tier 가 없는 항목(미매칭)은 뒤로 보낸다.
+export function sortEntriesByTier(entries: RosterEntry[]): RosterEntry[] {
+  return [...entries].sort((a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity));
+}
+
+// 드래그 앤 드롭으로 한 사람을 다른 티어 칸(1~4)이나 미매칭(null)으로 옮긴다 —
+// 16명 미달/초과를 사람이 손으로 맞추는 용도. 대상을 못 찾으면 원본을 그대로
+// 돌려준다(방어적).
+export function moveEntryToSlot(
+  entries: RosterEntry[],
+  entryId: string,
+  targetSlot: 1 | 2 | 3 | 4 | null,
+): RosterEntry[] {
+  return entries.map((entry) => (entry.id === entryId ? { ...entry, tierSlot: targetSlot } : entry));
+}
+
+export interface TierGroup {
+  tier: number | null;
+  entries: RosterEntry[];
+}
+
+// 한 티어 칸(예: "2티어 (2~2.5)")은 실제로는 여러 실제 티어(2, 2.5)를 섞어서 담고
+// 있어서, 그 안에서도 몇 티어인지 구분되도록 실제 tier 값별로 나눈다. 인원이 다른
+// 칸으로 다 빠지면 그 묶음 자체가 사라지고(입력이 이미 sortEntriesByTier로 정렬돼
+// 있다고 가정 — 같은 tier 는 항상 붙어 있다), 누가 다시 들어오면 다시 생긴다 —
+// 화면이 매번 이 함수로 다시 계산하기 때문에 별도로 "숨김" 상태를 관리할 필요가 없다.
+export function groupEntriesByTier(sortedEntries: RosterEntry[]): TierGroup[] {
+  const groups: TierGroup[] = [];
+  for (const entry of sortedEntries) {
+    const last = groups[groups.length - 1];
+    if (last && last.tier === entry.tier) {
+      last.entries.push(entry);
+    } else {
+      groups.push({ tier: entry.tier, entries: [entry] });
+    }
+  }
+  return groups;
+}
+
+export interface TeamAssignmentInput {
+  id: string;
+  tier: number | null;
+  tierSlot: 1 | 2 | 3 | 4 | null;
+}
+
+// "팀 구성" 버튼을 누르면 01의 각 티어 칸에 보이는 순서(실제 티어 오름차순) 그대로
+// 1번팀부터 차례로 매긴다. 네 칸 모두 인원수가 같다는 전제(호출하는 쪽에서 검증)
+// 하에 각 팀은 티어별로 정확히 한 명씩 받는다.
+export function assignTeamNumbers(entries: TeamAssignmentInput[]): Map<string, number> {
+  const teamNumberById = new Map<string, number>();
+  for (const slot of [1, 2, 3, 4] as const) {
+    const slotEntries = entries
+      .filter((entry) => entry.tierSlot === slot)
+      .sort((a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity));
+    slotEntries.forEach((entry, index) => teamNumberById.set(entry.id, index + 1));
+  }
+  return teamNumberById;
 }
 
 // discord_username 은 anon 키로 못 읽으므로(0016 마이그레이션) 여기서 select 하지
@@ -165,9 +231,11 @@ export async function fetchLatestRoster(): Promise<Roster | null> {
   if (rosterError) throw new Error(`팀 구성 명단을 불러오지 못했습니다: ${rosterError.message}`);
   if (!rosterRow) return null;
 
+  // members(vip_rank) 는 member_id 외래키를 타고 오는 조인이다 — VIP 왕관을 띄울지
+  // 판단하는 데만 쓴다. 수동 추가한 사람은 member_id 가 없어 자연스럽게 null 이 된다.
   const { data: entriesData, error: entriesError } = await getFreshSupabase()
     .from('scrim_roster_entries')
-    .select('id, discord_nickname, member_id, tier, tier_slot, matched')
+    .select('id, discord_nickname, member_id, tier, tier_slot, matched, team_number, members(vip_rank)')
     .eq('roster_id', rosterRow.id);
   if (entriesError) throw new Error(`팀 구성 명단을 불러오지 못했습니다: ${entriesError.message}`);
 
@@ -181,6 +249,10 @@ export async function fetchLatestRoster(): Promise<Roster | null> {
       tier: row.tier,
       tierSlot: row.tier_slot,
       matched: row.matched,
+      teamNumber: row.team_number,
+      // PostgREST 는 관계를 배열로 내려줄 수도, 단일 객체로 내려줄 수도 있다
+      // (여기선 다대일이라 실제로는 객체 하나) — 양쪽 다 받아둔다.
+      vipRank: (Array.isArray(row.members) ? row.members[0] : row.members)?.vip_rank ?? null,
     })),
   };
 }
