@@ -100,36 +100,45 @@ export interface NameplateStyle {
   background: string;
   borderColor: string;
   boxShadow: string;
+  color: string;
 }
 
-// tierColorRamp 는 정수·반티어를 묶어 같은 그라데이션(from~to)을 쓴다(2~2.5, 3~3.5) —
-// 그라데이션 자체로는 2티어와 2.5티어가 눈으로 안 갈렸다. 그라데이션을 없애고 단색으로
-// 바꾸되, 묶음 안의 두 색(from=진한 색, to=밝은 색)을 각각 반티어/정수 티어에 나눠 써서
-// 같은 묶음 안에서도 확실히 갈리게 한다 — 어두운 색이 .5, 밝은 색이 정수 티어.
+// 흰색에 티어 색을 섞는다 — 글자는 근본적으로 흰색이되, 티어 색이 눈에 띄게 비치는
+// 정도. amount 는 섞는 비율(0~1)이다. 0.15(너무 옅음) → 0.4(너무 진함) → 0.275(중간)로 조정했다.
+function mixWithWhite(hex: string, amount: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const mix = (channel: number) => Math.round(channel * amount + 255 * (1 - amount));
+  const toHex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
+}
+
+// 0~5티어 전부 같은 방식 — tierColorRamp 의 그라데이션(from→to)을 깐다.
+// 어두운 배경(#0E0B13) 위라 너무 옅으면(26/66/40) 색이 죽어 보인다는 피드백을 받아
+// 전체적으로 한 단계씩 밝혔다.
 export function tierNameplateStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
-  const isHalfTier = tier % 1 !== 0;
-  const color = isHalfTier ? ramp.from : ramp.to;
 
   return {
-    background: `${color}73`,
-    borderColor: `${color}ff`,
-    boxShadow: `0 0 10px ${color}66`,
+    background: `linear-gradient(135deg, ${ramp.from}40, ${ramp.to}40)`,
+    borderColor: `${ramp.from}99`,
+    boxShadow: `0 0 10px ${ramp.from}60`,
+    color: mixWithWhite(ramp.from, 0.275),
   };
 }
 
 // 팀 구성 테이블 2단계(팀짜기)에서 네임플레이트를 클릭해 "선택함" 상태를 표시할 때
 // 쓸 배색 — 지금은 아무 데서도 안 부르지만, 색 규칙만 먼저 정해둔다.
-// 기본 상태보다 한 단계 더 진하게(배경 불투명도up, 발광 확대) 잡는다.
+// 기본 상태(40/99/60)보다 한 단계 더 진해야 한다.
 export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
   const ramp = tierColorRamp(tier);
-  const isHalfTier = tier % 1 !== 0;
-  const color = isHalfTier ? ramp.from : ramp.to;
 
   return {
-    background: `${color}b3`,
-    borderColor: `${color}ff`,
-    boxShadow: `0 0 16px ${color}99`,
+    background: `linear-gradient(135deg, ${ramp.from}73, ${ramp.to}73)`,
+    borderColor: `${ramp.from}cc`,
+    boxShadow: `0 0 10px ${ramp.from}80`,
+    color: mixWithWhite(ramp.from, 0.275),
   };
 }
 

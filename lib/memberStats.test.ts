@@ -210,38 +210,39 @@ describe('tierColorRamp', () => {
 });
 
 describe('tierNameplateStyle', () => {
-  it('정수 티어는 묶음의 밝은 색(to)을 단색으로 쓴다', () => {
-    // 2~2.5티어 묶음: from #db8a42(진함), to #ffde90(밝음).
+  it('0~5티어 전부 tierColorRamp 의 그라데이션(from→to)을 쓰고, 글자색은 흰색에 티어색을 섞는다', () => {
     expect(tierNameplateStyle(2)).toEqual({
-      background: '#ffde9073',
-      borderColor: '#ffde90ff',
-      boxShadow: '0 0 10px #ffde9066',
+      background: 'linear-gradient(135deg, #db8a4240, #ffde9040)',
+      borderColor: '#db8a4299',
+      boxShadow: '0 0 10px #db8a4260',
+      color: '#f5dfcb',
     });
   });
 
-  it('반티어는 같은 묶음의 진한 색(from)을 단색으로 써서 정수 티어와 구분한다', () => {
-    expect(tierNameplateStyle(2.5)).toEqual({
-      background: '#db8a4273',
-      borderColor: '#db8a42ff',
-      boxShadow: '0 0 10px #db8a4266',
+  it('같은 색 묶음이면 정수·반티어가 같은 스타일을 낸다', () => {
+    expect(tierNameplateStyle(2)).toEqual(tierNameplateStyle(2.5));
+  });
+
+  it('단독 티어(0, 5)도 같은 방식으로 그라데이션을 쓴다', () => {
+    expect(tierNameplateStyle(0)).toEqual({
+      background: 'linear-gradient(135deg, #9e6bff40, #9fc1ff40)',
+      borderColor: '#9e6bff99',
+      boxShadow: '0 0 10px #9e6bff60',
+      color: '#e4d6ff',
     });
-  });
-
-  it('그라데이션이 아니라 단색이라 정수·반티어의 배경색이 서로 다르다', () => {
-    expect(tierNameplateStyle(2).background).not.toBe(tierNameplateStyle(2.5).background);
-  });
-
-  it('정수 티어끼리는 같은 스타일을 낸다', () => {
-    expect(tierNameplateStyle(3)).toEqual(tierNameplateStyle(3));
   });
 });
 
 describe('tierNameplateSelectedStyle', () => {
-  it('같은 티어의 기본 네임플레이트보다 진한 배색을 낸다', () => {
-    const base = tierNameplateStyle(2.5);
-    const selected = tierNameplateSelectedStyle(2.5);
+  it('기본 네임플레이트보다 진한 그라데이션을 낸다', () => {
+    const base = tierNameplateStyle(2);
+    const selected = tierNameplateSelectedStyle(2);
     expect(selected).not.toEqual(base);
-    // 색상(from)은 같은 반티어라 동일해야 하고 불투명도만 더 진해야 한다.
-    expect(selected.background).toBe('#db8a42b3');
+    expect(selected).toEqual({
+      background: 'linear-gradient(135deg, #db8a4273, #ffde9073)',
+      borderColor: '#db8a42cc',
+      boxShadow: '0 0 10px #db8a4280',
+      color: '#f5dfcb',
+    });
   });
 });
