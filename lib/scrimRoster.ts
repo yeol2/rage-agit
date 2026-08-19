@@ -276,6 +276,45 @@ export function computeVipSort(entries: VipSortInput[]): Map<string, number> {
   return changes;
 }
 
+export interface RerollInput {
+  id: string;
+  tierSlot: 1 | 2 | 3 | 4 | null;
+  teamNumber: number | null;
+  fixed: boolean;
+}
+
+// "전체 리롤" / "N티어 리롤" 버튼 — tiers 생략 시 [1,2,3,4] 전체. 각 티어 안에서
+// fixed=false 이고 teamNumber가 있는 엔트리들의 team_number 값 집합을
+// Fisher-Yates로 무작위 재분배한다. fixed 엔트리는 값 집합에도 안 들어가며
+// changes 에도 절대 안 나타난다.
+export function computeReroll(
+  entries: RerollInput[],
+  tiers: Array<1 | 2 | 3 | 4> = [1, 2, 3, 4],
+): Map<string, number> {
+  const changes = new Map<string, number>();
+
+  for (const tier of tiers) {
+    const rerollable = entries.filter(
+      (entry): entry is RerollInput & { tierSlot: 1 | 2 | 3 | 4; teamNumber: number } =>
+        entry.tierSlot === tier && entry.teamNumber !== null && !entry.fixed,
+    );
+    if (rerollable.length < 2) continue;
+
+    const shuffledNumbers = rerollable.map((entry) => entry.teamNumber);
+    for (let i = shuffledNumbers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledNumbers[i], shuffledNumbers[j]] = [shuffledNumbers[j], shuffledNumbers[i]];
+    }
+
+    rerollable.forEach((entry, index) => {
+      const newTeamNumber = shuffledNumbers[index];
+      if (newTeamNumber !== entry.teamNumber) changes.set(entry.id, newTeamNumber);
+    });
+  }
+
+  return changes;
+}
+
 // discord_username 은 anon 키로 못 읽으므로(0016 마이그레이션) 여기서 select 하지
 // 않는다 — 화면에는 discord_nickname 만 보여준다.
 export async function fetchLatestRoster(): Promise<Roster | null> {

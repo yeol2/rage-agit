@@ -8,9 +8,11 @@ import {
   groupEntriesByTier,
   assignTeamNumbers,
   computeVipSort,
+  computeReroll,
   type RosterEntry,
   type TeamAssignmentInput,
   type VipSortInput,
+  type RerollInput,
 } from './scrimRoster';
 
 describe('parseRosterFile', () => {
@@ -298,5 +300,78 @@ describe('computeVipSort', () => {
   it('팀 번호가 아직 없는(보류) 항목은 무시한다', () => {
     const entries = [entry({ id: 'a', tierSlot: null, teamNumber: null, vipRank: 1 })];
     expect(computeVipSort(entries).size).toBe(0);
+  });
+});
+
+describe('computeReroll', () => {
+  function entry(overrides: Partial<RerollInput>): RerollInput {
+    return { id: 'e1', tierSlot: null, teamNumber: null, fixed: false, ...overrides };
+  }
+
+  it('fixed 엔트리는 changes 에 절대 안 나타난다', () => {
+    const entries = [
+      entry({ id: 'a', tierSlot: 1, teamNumber: 1, fixed: true }),
+      entry({ id: 'b', tierSlot: 1, teamNumber: 2, fixed: false }),
+      entry({ id: 'c', tierSlot: 1, teamNumber: 3, fixed: false }),
+    ];
+    const changes = computeReroll(entries);
+    expect(changes.has('a')).toBe(false);
+  });
+
+  it('반환된 team_number 값의 집합이 섞기 전 unfixed 엔트리들의 값 집합과 정확히 같다', () => {
+    const entries = [
+      entry({ id: 'a', tierSlot: 1, teamNumber: 1, fixed: false }),
+      entry({ id: 'b', tierSlot: 1, teamNumber: 2, fixed: false }),
+      entry({ id: 'c', tierSlot: 1, teamNumber: 3, fixed: false }),
+      entry({ id: 'd', tierSlot: 1, teamNumber: 4, fixed: false }),
+    ];
+    const changes = computeReroll(entries);
+    const resultingNumbers = entries.map((e) => changes.get(e.id) ?? e.teamNumber).sort();
+    expect(resultingNumbers).toEqual([1, 2, 3, 4]);
+  });
+
+  it('tier 를 지정하면 다른 티어는 전혀 안 건드린다', () => {
+    const entries = [
+      entry({ id: 'a', tierSlot: 1, teamNumber: 1, fixed: false }),
+      entry({ id: 'b', tierSlot: 1, teamNumber: 2, fixed: false }),
+      entry({ id: 'c', tierSlot: 2, teamNumber: 1, fixed: false }),
+      entry({ id: 'd', tierSlot: 2, teamNumber: 2, fixed: false }),
+    ];
+    const changes = computeReroll(entries, [1]);
+    expect(changes.has('c')).toBe(false);
+    expect(changes.has('d')).toBe(false);
+  });
+
+  it('tiers 를 생략하면 1~4 티어 전체를 대상으로 하되 각 티어 안에서만 섞는다', () => {
+    const entries = [
+      entry({ id: 'a', tierSlot: 1, teamNumber: 1, fixed: false }),
+      entry({ id: 'b', tierSlot: 1, teamNumber: 2, fixed: false }),
+      entry({ id: 'c', tierSlot: 2, teamNumber: 1, fixed: false }),
+      entry({ id: 'd', tierSlot: 2, teamNumber: 2, fixed: false }),
+    ];
+    const changes = computeReroll(entries);
+    const tier1Numbers = ['a', 'b'].map((id) => changes.get(id) ?? entries.find((e) => e.id === id)!.teamNumber).sort();
+    const tier2Numbers = ['c', 'd'].map((id) => changes.get(id) ?? entries.find((e) => e.id === id)!.teamNumber).sort();
+    expect(tier1Numbers).toEqual([1, 2]);
+    expect(tier2Numbers).toEqual([1, 2]);
+  });
+
+  it('대상 엔트리가 0~1명이면(섞을 게 없음) 빈 맵을 낸다', () => {
+    const oneEntry = [entry({ id: 'a', tierSlot: 1, teamNumber: 1, fixed: false })];
+    expect(computeReroll(oneEntry).size).toBe(0);
+
+    const allFixed = [
+      entry({ id: 'a', tierSlot: 1, teamNumber: 1, fixed: true }),
+      entry({ id: 'b', tierSlot: 1, teamNumber: 2, fixed: true }),
+    ];
+    expect(computeReroll(allFixed).size).toBe(0);
+  });
+
+  it('team_number 가 없는(미배정) 엔트리는 대상에서 제외한다', () => {
+    const entries = [
+      entry({ id: 'a', tierSlot: null, teamNumber: null, fixed: false }),
+      entry({ id: 'b', tierSlot: 1, teamNumber: 1, fixed: false }),
+    ];
+    expect(computeReroll(entries).has('a')).toBe(false);
   });
 });
