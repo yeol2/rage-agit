@@ -458,6 +458,26 @@ for (const role of ['anon', 'authenticated']) {
   );
 }
 
+console.log('\n0020 — 03 내전 시트: 진행 상태(stage)');
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'scrim_rosters' and column_name = 'stage'`)) === 1,
+  'scrim_rosters.stage 컬럼이 있다',
+);
+
+const stageGrants = await client.query(`
+  select grantee, column_name from information_schema.column_privileges
+  where table_name = 'scrim_rosters' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated') and column_name = 'stage'
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    stageGrants.rows.some((r) => r.grantee === role),
+    `${role} 은 scrim_rosters.stage 를 읽을 수 있다`,
+  );
+}
+
 await client.end();
 
 console.log('');
