@@ -158,6 +158,7 @@ export interface RosterEntry {
 export interface Roster {
   id: string;
   fetchedAt: string;
+  stage: '01' | '02' | '03';
   entries: RosterEntry[];
 }
 
@@ -320,7 +321,7 @@ export function computeReroll(
 export async function fetchLatestRoster(): Promise<Roster | null> {
   const { data: rosterRow, error: rosterError } = await getFreshSupabase()
     .from('scrim_rosters')
-    .select('id, fetched_at')
+    .select('id, fetched_at, stage')
     .order('fetched_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -338,6 +339,7 @@ export async function fetchLatestRoster(): Promise<Roster | null> {
   return {
     id: rosterRow.id,
     fetchedAt: rosterRow.fetched_at,
+    stage: rosterRow.stage as '01' | '02' | '03',
     entries: (entriesData ?? []).map((row) => ({
       id: row.id,
       discordNickname: row.discord_nickname,

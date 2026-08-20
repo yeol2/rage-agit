@@ -24,8 +24,8 @@ function makeEntry(overrides: Partial<RosterEntry>): RosterEntry {
   };
 }
 
-function makeRoster(entries: RosterEntry[]): Roster {
-  return { id: 'roster-1', fetchedAt: new Date().toISOString(), entries };
+function makeRoster(entries: RosterEntry[], stage: '01' | '02' | '03' = '01'): Roster {
+  return { id: 'roster-1', fetchedAt: new Date().toISOString(), stage, entries };
 }
 
 describe('RosterBoard - 팀 구성', () => {

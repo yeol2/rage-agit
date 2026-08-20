@@ -61,6 +61,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '팀 번호 저장에 실패했습니다.' }, { status: 500 });
   }
 
+  const { error: stageError } = await supabase
+    .from('scrim_rosters')
+    .update({ stage: '02' })
+    .eq('id', rosterId);
+  if (stageError) {
+    return NextResponse.json({ error: '진행 상태 저장에 실패했습니다.' }, { status: 500 });
+  }
+
   const { data: updatedRows, error: refetchError } = await supabase
     .from('scrim_roster_entries')
     .select('id, discord_nickname, member_id, tier, tier_slot, matched, team_number, fixed, members(vip_rank)')
@@ -70,6 +78,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({
+    stage: '02',
     entries: updatedRows.map((row) => ({
       id: row.id,
       discordNickname: row.discord_nickname,
