@@ -82,22 +82,24 @@ describe('computeRoundSheet', () => {
     expect(rows).toEqual([
       {
         teamNumber: 1,
-        place: 1,
+        standing: 1,
         totalKills: 13,
+        totalPlacementPoints: 13,
         totalScore: 26,
         rounds: [
-          { roundNo: 1, kills: 5, teamRank: 5, cumulativeTotal: 8 },
-          { roundNo: 2, kills: 8, teamRank: 1, cumulativeTotal: 26 },
+          { roundNo: 1, kills: 5, teamRank: 5, rankScore: 3, cumulativeTotal: 8 },
+          { roundNo: 2, kills: 8, teamRank: 1, rankScore: 10, cumulativeTotal: 26 },
         ],
       },
       {
         teamNumber: 2,
-        place: 2,
+        standing: 2,
         totalKills: 12,
+        totalPlacementPoints: 10,
         totalScore: 22,
         rounds: [
-          { roundNo: 1, kills: 10, teamRank: 1, cumulativeTotal: 20 },
-          { roundNo: 2, kills: 2, teamRank: 10, cumulativeTotal: 22 },
+          { roundNo: 1, kills: 10, teamRank: 1, rankScore: 10, cumulativeTotal: 20 },
+          { roundNo: 2, kills: 2, teamRank: 10, rankScore: 0, cumulativeTotal: 22 },
         ],
       },
     ]);
@@ -105,7 +107,7 @@ describe('computeRoundSheet', () => {
 
   it('라운드가 0개면 모든 팀이 0점, 팀번호 순서 그대로 순위를 매긴다', () => {
     const rows = computeRoundSheet([], [1, 2, 3]);
-    expect(rows.map((r) => [r.teamNumber, r.place, r.totalScore])).toEqual([
+    expect(rows.map((r) => [r.teamNumber, r.standing, r.totalScore])).toEqual([
       [1, 1, 0],
       [2, 2, 0],
       [3, 3, 0],
@@ -115,6 +117,12 @@ describe('computeRoundSheet', () => {
   it('매칭 안 된 팀(kills/teamRank null)은 그 라운드 점수를 0으로 취급한다', () => {
     const round1: TeamRoundResult[] = [{ teamNumber: 1, kills: null, teamRank: null }];
     const rows = computeRoundSheet([round1], [1]);
-    expect(rows[0].rounds[0]).toEqual({ roundNo: 1, kills: null, teamRank: null, cumulativeTotal: 0 });
+    expect(rows[0].rounds[0]).toEqual({
+      roundNo: 1,
+      kills: null,
+      teamRank: null,
+      rankScore: null,
+      cumulativeTotal: 0,
+    });
   });
 });

@@ -67,37 +67,51 @@ export interface RoundSheetRound {
   roundNo: number;
   kills: number | null;
   teamRank: number | null;
+  // 그 라운드의 team_rank에 해당하는 배치점수(placementPoints) — 매칭 안
+  // 됐으면(teamRank null) 이것도 null.
+  rankScore: number | null;
   cumulativeTotal: number;
 }
 
 export interface RoundSheetRow {
   teamNumber: number;
-  place: number;
+  // 최종 누적 Total 기준 정렬 순위(1~16) — 메달·행 순서를 정하는 값. 시트의
+  // "PLACE" 칸(배치점수 누적)과는 다른 개념이라 이름을 구분해뒀다.
+  standing: number;
   totalKills: number;
+  totalPlacementPoints: number;
   totalScore: number;
   rounds: RoundSheetRound[];
 }
 
-// 라운드별(매치 순서대로) 팀 결과를 받아 누적 Total과 최종 순위(PLACE)까지 낸다.
-// 매칭 안 된 팀(kills/teamRank null)은 그 라운드 점수를 0으로 취급한다.
+// 라운드별(매치 순서대로) 팀 결과를 받아 누적 킬/배치점수/Total과 최종 순위
+// (standing)까지 낸다. 매칭 안 된 팀(kills/teamRank null)은 그 라운드
+// 킬·배치점수를 0으로 취급한다.
 export function computeRoundSheet(
   roundsResults: TeamRoundResult[][],
   teamNumbers: number[],
 ): RoundSheetRow[] {
   const cumulativeKills = new Map<number, number>(teamNumbers.map((t) => [t, 0]));
+  const cumulativePlacementPoints = new Map<number, number>(teamNumbers.map((t) => [t, 0]));
   const cumulativeScore = new Map<number, number>(teamNumbers.map((t) => [t, 0]));
   const roundsByTeam = new Map<number, RoundSheetRound[]>(teamNumbers.map((t) => [t, []]));
 
   roundsResults.forEach((roundResult, index) => {
     const roundNo = index + 1;
     for (const { teamNumber, kills, teamRank } of roundResult) {
-      const roundScore = kills !== null && teamRank !== null ? kills + placementPoints(teamRank) : 0;
+      const roundPlacementPoints = teamRank !== null ? placementPoints(teamRank) : 0;
+      const roundScore = (kills ?? 0) + roundPlacementPoints;
       cumulativeKills.set(teamNumber, (cumulativeKills.get(teamNumber) ?? 0) + (kills ?? 0));
+      cumulativePlacementPoints.set(
+        teamNumber,
+        (cumulativePlacementPoints.get(teamNumber) ?? 0) + roundPlacementPoints,
+      );
       cumulativeScore.set(teamNumber, (cumulativeScore.get(teamNumber) ?? 0) + roundScore);
       roundsByTeam.get(teamNumber)?.push({
         roundNo,
         kills,
         teamRank,
+        rankScore: teamRank !== null ? roundPlacementPoints : null,
         cumulativeTotal: cumulativeScore.get(teamNumber) ?? 0,
       });
     }
@@ -105,15 +119,16 @@ export function computeRoundSheet(
 
   const rows: RoundSheetRow[] = teamNumbers.map((teamNumber) => ({
     teamNumber,
-    place: 0,
+    standing: 0,
     totalKills: cumulativeKills.get(teamNumber) ?? 0,
+    totalPlacementPoints: cumulativePlacementPoints.get(teamNumber) ?? 0,
     totalScore: cumulativeScore.get(teamNumber) ?? 0,
     rounds: roundsByTeam.get(teamNumber) ?? [],
   }));
 
   rows.sort((a, b) => b.totalScore - a.totalScore);
   rows.forEach((row, index) => {
-    row.place = index + 1;
+    row.standing = index + 1;
   });
 
   return rows;

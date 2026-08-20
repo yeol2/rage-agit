@@ -98,7 +98,7 @@ describe('RosterBoard - 팀 구성', () => {
     expect(screen.getByText('02')).toBeInTheDocument();
   });
 
-  it('stage 03 이면 "내전 드가자~" 없이 바로 03 시트가 보인다', async () => {
+  it('stage 03 이면 "내전 드가자~"가 비활성화된 채로 바로 03 시트가 보인다', async () => {
     const entries = [
       makeEntry({ id: 'a', tierSlot: 1, tier: 0, teamNumber: 1 }),
       makeEntry({ id: 'b', tierSlot: 2, tier: 2, teamNumber: 1 }),
@@ -114,7 +114,7 @@ describe('RosterBoard - 팀 구성', () => {
     render(<RosterBoard roster={roster} />);
 
     expect(await screen.findByText('경기 0개 기록됨')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '내전 드가자~' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '내전 드가자~' })).toBeDisabled();
   });
 
   it('stage 02 에서 "내전 드가자~" 를 누르면 stage API를 호출하고 03 시트를 연다', async () => {

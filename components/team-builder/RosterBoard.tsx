@@ -19,6 +19,7 @@ import {
 } from '@/lib/memberStats';
 import { VipCrown } from '@/components/VipCrown';
 import { RoundSheet } from '@/components/team-builder/RoundSheet';
+import { NAMEPLATE_HEIGHT, NAMEPLATE_WIDTH } from '@/lib/teamBuilderLayout';
 
 const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   1: '1티어 (0~1.5)',
@@ -29,13 +30,7 @@ const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
 
 const TIER_SLOTS = [1, 2, 3, 4] as const;
 
-// 01 쪽 실측 너비(px) — 01은 CSS grid로 폭이 정해지므로 그리드 간격/패딩을 줄여
-// 확보한 여유가 실제로 몇 px가 됐는지 브라우저로 재서 넣는다(페이지 전체 폭은
-// 그대로 유지된 채로). 02는 <table> auto-layout이라 이 값을 그대로 강제해
-// 01/02 카드 폭을 맞춘다. 오른쪽 버튼 세로줄(VIP 정렬/리롤)도 이 크기의 1.5배로
-// 비율을 맞춘다.
-const NAMEPLATE_WIDTH = 121;
-const NAMEPLATE_HEIGHT = 38;
+// 오른쪽 버튼 세로줄(VIP 정렬/리롤)은 네임플레이트 크기의 1.5배로 비율을 맞춘다.
 const SIDE_BUTTON_WIDTH = NAMEPLATE_WIDTH * 1.5;
 const SIDE_BUTTON_HEIGHT = NAMEPLATE_HEIGHT * 1.5;
 const SIDE_BUTTON_CLASS =
@@ -927,16 +922,15 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
           <div className="mt-8 flex flex-col items-end gap-2">
             {enterRoundSheetError && <p className="text-sm text-red-400">{enterRoundSheetError}</p>}
-            {stage === '02' && (
-              <button
-                type="button"
-                onClick={() => void handleEnterRoundSheet()}
-                disabled={enteringRoundSheet}
-                className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {enteringRoundSheet ? '여는 중…' : '내전 드가자~'}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => void handleEnterRoundSheet()}
+              disabled={stage === '03' || enteringRoundSheet}
+              title={stage === '03' ? '이미 내전 시트가 열려 있습니다' : '내전 드가자~'}
+              className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-menu disabled:opacity-40"
+            >
+              {enteringRoundSheet ? '여는 중…' : '내전 드가자~'}
+            </button>
           </div>
 
           {stage === '03' && (

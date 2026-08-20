@@ -14,15 +14,17 @@ function mockSheetResponse(roundCount: number) {
     teams: [
       {
         teamNumber: 1,
-        place: 1,
+        standing: 1,
         players: ['Ez_Alpha', 'Ez_Bravo', 'Ez_Charlie', 'Ez_Delta'],
         totalKills: 10,
+        totalPlacementPoints: 10,
         totalScore: 20,
         rounds: Array.from({ length: roundCount }, (_, i) => ({
           roundNo: i + 1,
           kills: 5,
           teamRank: 1,
-          cumulativeTotal: (i + 1) * 10,
+          rankScore: 10,
+          cumulativeTotal: (i + 1) * 15,
         })),
       },
     ],
@@ -30,7 +32,7 @@ function mockSheetResponse(roundCount: number) {
 }
 
 describe('RoundSheet', () => {
-  it('마운트 시 round-sheet 를 불러와 라운드 수만큼만 ROUND 칼럼을 보여준다', async () => {
+  it('마운트 시 round-sheet 를 불러와 ROUND 1~4 껍데기를 항상 다 보여준다', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, json: async () => mockSheetResponse(2) }),
@@ -40,8 +42,11 @@ describe('RoundSheet', () => {
 
     await screen.findByText('ROUND 1');
     expect(screen.getByText('ROUND 2')).toBeInTheDocument();
-    expect(screen.queryByText('ROUND 3')).not.toBeInTheDocument();
-    expect(screen.getByText(/Ez_Alpha \/ Ez_Bravo \/ Ez_Charlie \/ Ez_Delta/)).toBeInTheDocument();
+    // 아직 안 온 라운드(3~4)도 껍데기는 그려지고, 값은 "-"로 비어 있다.
+    expect(screen.getByText('ROUND 3')).toBeInTheDocument();
+    expect(screen.getByText('ROUND 4')).toBeInTheDocument();
+    // "Ez_" 접두사는 빼고 보여준다.
+    expect(screen.getByText('Alpha / Bravo / Charlie / Delta')).toBeInTheDocument();
   });
 
   it('"폴링" 버튼을 눌러 새 경기를 찾으면 시트를 다시 불러온다', async () => {
