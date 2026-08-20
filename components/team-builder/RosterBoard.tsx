@@ -18,6 +18,7 @@ import {
   tierNameplateStyle,
 } from '@/lib/memberStats';
 import { VipCrown } from '@/components/VipCrown';
+import { RoundSheet } from '@/components/team-builder/RoundSheet';
 
 const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   1: '1티어 (0~1.5)',
@@ -224,12 +225,14 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [addError, setAddError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // "02 팀 구성 테이블"은 01(티어 테이블)이 완전히 다 찼을 때만 넘어갈 수 있다 —
+  // 01/02/03 진행 상태 — roster.stage(DB)로 초기화해서 새로고침해도 유지된다.
   // 한 번 넘어간 뒤 01 쪽 인원을 다시 옮겨서 조건이 깨져도 이미 시작한 팀 구성을
-  // 되돌리진 않는다(showTeamTable은 버튼을 누른 뒤로는 계속 true로 둔다).
-  const [showTeamTable, setShowTeamTable] = useState(false);
+  // 되돌리진 않는다(단방향 진행).
+  const [stage, setStage] = useState<'01' | '02' | '03'>(roster?.stage ?? '01');
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [enteringRoundSheet, setEnteringRoundSheet] = useState(false);
+  const [enterRoundSheetError, setEnterRoundSheetError] = useState<string | null>(null);
   const [draggingSwapId, setDraggingSwapId] = useState<string | null>(null);
   const [swapError, setSwapError] = useState<string | null>(null);
   const [vipSorting, setVipSorting] = useState(false);
@@ -310,7 +313,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       if (!response.ok) throw new Error(body.error ?? '팀 구성에 실패했습니다.');
 
       setEntries(body.entries as RosterEntry[]);
-      setShowTeamTable(true);
+      setStage(body.stage as '01' | '02' | '03');
       // 새로 배정된 팀 번호 기준으로 다시 시작 — 이전 배정을 향한 리롤 되돌리기
       // 스냅샷은 더 이상 의미가 없다.
       setRerollHistory([]);
@@ -318,6 +321,29 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       setAssignError(err instanceof Error ? err.message : '팀 구성에 실패했습니다.');
     } finally {
       setAssigning(false);
+    }
+  }
+
+  // "내전 드가자~" 버튼 — 02→03 전환. 01→02와 달리 조건 없이 언제든 누를 수
+  // 있다.
+  async function handleEnterRoundSheet() {
+    setEnteringRoundSheet(true);
+    setEnterRoundSheetError(null);
+
+    try {
+      const response = await fetch(`/api/scrim-roster/${rosterId}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage: '03' }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? '내전 시트를 열지 못했습니다.');
+
+      setStage(body.stage as '01' | '02' | '03');
+    } catch (err) {
+      setEnterRoundSheetError(err instanceof Error ? err.message : '내전 시트를 열지 못했습니다.');
+    } finally {
+      setEnteringRoundSheet(false);
     }
   }
 
@@ -760,7 +786,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         </button>
       </div>
 
-      {showTeamTable && (
+      {stage !== '01' && (
         <div className="mt-10 border-t border-white/10 pt-10">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
             <span className="mr-3" style={{ color: '#322F36' }}>02</span> 팀 구성 테이블
@@ -898,6 +924,31 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
               {rerollError && <p className="text-xs text-red-400">{rerollError}</p>}
             </div>
           </div>
+
+          <div className="mt-8 flex flex-col items-end gap-2">
+            {enterRoundSheetError && <p className="text-sm text-red-400">{enterRoundSheetError}</p>}
+            {stage === '02' && (
+              <button
+                type="button"
+                onClick={() => void handleEnterRoundSheet()}
+                disabled={enteringRoundSheet}
+                className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {enteringRoundSheet ? '여는 중…' : '내전 드가자~'}
+              </button>
+            )}
+          </div>
+
+          {stage === '03' && (
+            <div className="mt-10 border-t border-white/10 pt-10">
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                <span className="mr-3" style={{ color: '#322F36' }}>03</span> 내전 시트
+              </h2>
+              <div className="mt-10">
+                <RoundSheet rosterId={rosterId} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

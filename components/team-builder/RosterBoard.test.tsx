@@ -47,7 +47,7 @@ describe('RosterBoard - 팀 구성', () => {
 
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ entries: assigned }) }),
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ stage: '02', entries: assigned }) }),
     );
 
     render(<RosterBoard roster={roster} />);
@@ -81,6 +81,66 @@ describe('RosterBoard - 팀 구성', () => {
 
     expect(await screen.findByText('팀 구성에 실패했습니다.')).toBeInTheDocument();
     expect(screen.queryByText('02')).not.toBeInTheDocument();
+  });
+
+  it('team_number 가 이미 있는 로스터(stage 02)는 새로고침해도 02 표가 바로 보인다', () => {
+    const entries = [
+      makeEntry({ id: 'a', tierSlot: 1, tier: 0, teamNumber: 1 }),
+      makeEntry({ id: 'b', tierSlot: 2, tier: 2, teamNumber: 1 }),
+      makeEntry({ id: 'c', tierSlot: 3, tier: 3, teamNumber: 1 }),
+      makeEntry({ id: 'd', tierSlot: 4, tier: 4, teamNumber: 1 }),
+    ];
+    const roster = makeRoster(entries, '02');
+    vi.stubGlobal('fetch', vi.fn());
+
+    render(<RosterBoard roster={roster} />);
+
+    expect(screen.getByText('02')).toBeInTheDocument();
+  });
+
+  it('stage 03 이면 "내전 드가자~" 없이 바로 03 시트가 보인다', async () => {
+    const entries = [
+      makeEntry({ id: 'a', tierSlot: 1, tier: 0, teamNumber: 1 }),
+      makeEntry({ id: 'b', tierSlot: 2, tier: 2, teamNumber: 1 }),
+      makeEntry({ id: 'c', tierSlot: 3, tier: 3, teamNumber: 1 }),
+      makeEntry({ id: 'd', tierSlot: 4, tier: 4, teamNumber: 1 }),
+    ];
+    const roster = makeRoster(entries, '03');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ roundCount: 0, teams: [] }) }),
+    );
+
+    render(<RosterBoard roster={roster} />);
+
+    expect(await screen.findByText('경기 0개 기록됨')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '내전 드가자~' })).not.toBeInTheDocument();
+  });
+
+  it('stage 02 에서 "내전 드가자~" 를 누르면 stage API를 호출하고 03 시트를 연다', async () => {
+    const entries = [
+      makeEntry({ id: 'a', tierSlot: 1, tier: 0, teamNumber: 1 }),
+      makeEntry({ id: 'b', tierSlot: 2, tier: 2, teamNumber: 1 }),
+      makeEntry({ id: 'c', tierSlot: 3, tier: 3, teamNumber: 1 }),
+      makeEntry({ id: 'd', tierSlot: 4, tier: 4, teamNumber: 1 }),
+    ];
+    const roster = makeRoster(entries, '02');
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === `/api/scrim-roster/${roster.id}/stage`) {
+        return { ok: true, json: async () => ({ stage: '03' }) };
+      }
+      return { ok: true, json: async () => ({ roundCount: 0, teams: [] }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '내전 드가자~' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/scrim-roster/${roster.id}/stage`,
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ stage: '03' }) }),
+    );
+    await screen.findByText('경기 0개 기록됨');
   });
 });
 
@@ -206,7 +266,7 @@ describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
   function stubFetchForTeamAssignmentsThen(entries: RosterEntry[], otherResponse: unknown) {
     const fetchMock = vi.fn(async (url: string) => {
       if (url === '/api/scrim-roster/team-assignments') {
-        return { ok: true, json: async () => ({ entries }) };
+        return { ok: true, json: async () => ({ stage: '02', entries }) };
       }
       return { ok: true, json: async () => otherResponse };
     });
