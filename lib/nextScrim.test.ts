@@ -1,38 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import { countdownParts, formatCountdown, nextScrimDate } from './nextScrim';
 
-// 2026-08-17 은 월요일. 그 주의 목요일은 20일, 금요일은 21일.
+// 2026-08-17(월) 그 주 목요일은 20일, 일요일은 23일, 다음 목요일은 27일.
+// UTC ISO(...Z)로 명시해서 테스트 실행 환경의 로컬 시간대와 무관하게 만든다 —
+// KST 19:30 = UTC 10:30.
 describe('nextScrimDate', () => {
-  it('월요일이면 그 주 목요일 19:30 을 반환한다', () => {
-    const result = nextScrimDate(new Date('2026-08-17T10:00:00'));
-    expect(result.getDay()).toBe(4);
-    expect(result.getDate()).toBe(20);
-    expect(result.getHours()).toBe(19);
-    expect(result.getMinutes()).toBe(30);
+  it('월요일이면 그 주 목요일 19:30 KST 를 반환한다', () => {
+    const result = nextScrimDate(new Date('2026-08-17T01:00:00Z'));
+    expect(result.toISOString()).toBe('2026-08-20T10:30:00.000Z');
   });
 
-  it('목요일 시작 전이면 당일 19:30 을 반환한다', () => {
-    const result = nextScrimDate(new Date('2026-08-20T12:00:00'));
-    expect(result.getDate()).toBe(20);
-    expect(result.getHours()).toBe(19);
+  it('목요일 시작 전이면 당일 19:30 KST 를 반환한다', () => {
+    const result = nextScrimDate(new Date('2026-08-20T03:00:00Z')); // KST 정오
+    expect(result.toISOString()).toBe('2026-08-20T10:30:00.000Z');
   });
 
-  it('목요일 시작 후면 다음 날 금요일로 넘어간다', () => {
-    const result = nextScrimDate(new Date('2026-08-20T20:00:00'));
-    expect(result.getDay()).toBe(5);
-    expect(result.getDate()).toBe(21);
+  it('목요일 시작 후면 그 주 일요일로 넘어간다', () => {
+    const result = nextScrimDate(new Date('2026-08-20T12:00:00Z')); // KST 21시
+    expect(result.toISOString()).toBe('2026-08-23T10:30:00.000Z');
   });
 
-  it('금요일 시작 후면 다음 주 목요일로 넘어간다', () => {
-    const result = nextScrimDate(new Date('2026-08-21T20:00:00'));
-    expect(result.getDay()).toBe(4);
-    expect(result.getDate()).toBe(27);
+  it('일요일 시작 후면 다음 주 목요일로 넘어간다', () => {
+    const result = nextScrimDate(new Date('2026-08-23T12:00:00Z')); // KST 21시
+    expect(result.toISOString()).toBe('2026-08-27T10:30:00.000Z');
   });
 
-  it('주말·초반 평일에는 그 주 목요일을 가리킨다', () => {
-    const saturday = nextScrimDate(new Date('2026-08-22T09:00:00'));
-    expect(saturday.getDay()).toBe(4);
-    expect(saturday.getDate()).toBe(27);
+  it('목·일 사이 평일(금·토)에는 그 주 일요일을 가리킨다', () => {
+    const friday = nextScrimDate(new Date('2026-08-21T09:00:00Z'));
+    expect(friday.toISOString()).toBe('2026-08-23T10:30:00.000Z');
+
+    const saturday = nextScrimDate(new Date('2026-08-22T09:00:00Z'));
+    expect(saturday.toISOString()).toBe('2026-08-23T10:30:00.000Z');
+  });
+
+  it('KST 자정 근처(UTC 로는 전날)라도 KST 요일 기준으로 계산한다', () => {
+    // UTC 2026-08-19T16:00:00Z = KST 2026-08-20T01:00(목요일 새벽).
+    const result = nextScrimDate(new Date('2026-08-19T16:00:00Z'));
+    expect(result.toISOString()).toBe('2026-08-20T10:30:00.000Z');
   });
 });
 

@@ -40,7 +40,7 @@ export const siteConfig = {
 
   footer: {
     // 마지막 문장만 포인트 컬러로 강조한다.
-    description: '매주 목·금 열리는 클랜 내전 기록을 자동으로 모아 클랜원별 지표로 보여주는 대시보드.',
+    description: '매주 목·일 열리는 클랜 내전 기록을 자동으로 모아 클랜원별 지표로 보여주는 대시보드.',
     descriptionAccent: '감이 아니라 기록입니다.',
     credit: 'Data based on KAKAO PUBG Open API',
     links: [
@@ -158,7 +158,7 @@ export const siteConfig = {
         },
         {
           title: '내전 자동 수집',
-          body: '매주 목·금 밤 7시 30분 내전이 끝나면, 서버가 등록된 닉네임의 최근 전적을 PUBG 공식 API로 조회해서 내전만 골라 저장합니다.',
+          body: '매주 목·일 밤 7시 30분 내전이 끝나면, 서버가 등록된 닉네임의 최근 전적을 PUBG 공식 API로 조회해서 내전만 골라 저장합니다.',
         },
         {
           title: '점수 계산',
