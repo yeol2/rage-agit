@@ -8,6 +8,7 @@ declare module '@/supabase/functions/_shared/polling.mjs' {
     maxMatches?: number;
     playerRetries?: number;
     log?: (message: string) => void;
+    knownAccountId?: string | null;
   }): Promise<{
     matchesExamined: number;
     scrimsFound: number;

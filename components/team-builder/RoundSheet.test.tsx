@@ -24,7 +24,7 @@ function mockSheetResponse(roundCount: number) {
           kills: 5,
           teamRank: 1,
           rankScore: 10,
-          cumulativeTotal: (i + 1) * 15,
+          roundTotal: 15,
         })),
       },
     ],
@@ -70,7 +70,7 @@ describe('RoundSheet', () => {
     );
   });
 
-  it('폴링했는데 새 경기가 없으면 안내 메시지를 보여준다', async () => {
+  it('폴링했는데 새 경기가 없으면 시도 횟수를 보여주며 계속 재시도한다', async () => {
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === 'POST') return { ok: true, json: async () => ({ found: false }) };
       return { ok: true, json: async () => mockSheetResponse(0) };
@@ -82,6 +82,26 @@ describe('RoundSheet', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '폴링' }));
 
-    expect(await screen.findByText('아직 새 경기가 없습니다.')).toBeInTheDocument();
+    // 손으로 다시 누를 필요 없이 알아서 계속 두드린다 — 첫 시도는 즉시 끝난다.
+    expect(await screen.findByRole('button', { name: '폴링 중… (1번째 시도)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '중단' })).toBeInTheDocument();
+  });
+
+  it('"중단"을 누르면 다음 시도까지 기다리지 않고 바로 멈춘다', async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return { ok: true, json: async () => ({ found: false }) };
+      return { ok: true, json: async () => mockSheetResponse(0) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RoundSheet rosterId="roster-1" />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByRole('button', { name: '폴링' }));
+    await screen.findByRole('button', { name: '중단' });
+    await userEvent.click(screen.getByRole('button', { name: '중단' }));
+
+    expect(await screen.findByText('중단했습니다.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '폴링' })).toBeInTheDocument();
   });
 });

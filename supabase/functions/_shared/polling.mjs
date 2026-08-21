@@ -113,6 +113,11 @@ export async function runPolling({
   maxMatches = 200,
   playerRetries = 1,
   log = () => {},
+  // 오늘 뛴 참가자가 이미 확정된 경우(예: 03 내전 시트의 "폴링" 버튼 — rosterId로
+  // 64명이 이미 정해져 있다) 이 계정 하나만 씨앗으로 쓴다. 없으면(예: 정기
+  // 캐치업 스크립트처럼 특정 세션에 묶이지 않은 호출) 아래 "후보 30명 중 가벼운
+  // 순" 방식으로 되짚어 찾는다 — 이쪽은 누가 뛰었는지 미리 알 수 없을 때만 쓴다.
+  knownAccountId = null,
 }) {
   const cutoff = new Date(Date.now() - sinceHours * 3600 * 1000);
 
@@ -129,47 +134,53 @@ export async function runPolling({
   if (clans.length !== 1) throw new Error(`clans 가 ${clans.length}개다 — 정확히 1개여야 한다`);
   const clanId = clans[0].id;
 
-  // --- 씨앗 후보: 최근 내전 참가 상위 30명 ---
-  const windowStart = new Date(Date.now() - SEED_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
-  const recentMatches = await selectAll(
-    supabase,
-    'matches',
-    'pubg_match_id, match_participants(pubg_account_id, member_id)',
-    (q) => q.gte('played_at', windowStart),
-  );
+  let seeds;
+  if (knownAccountId) {
+    seeds = await fetchPlayers(apiKey, [knownAccountId], playerRetries, log);
+    log(`고정 씨앗 1명: ${seeds[0]?.attributes?.name ?? knownAccountId}`);
+  } else {
+    // --- 씨앗 후보: 최근 내전 참가 상위 30명 ---
+    const windowStart = new Date(Date.now() - SEED_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
+    const recentMatches = await selectAll(
+      supabase,
+      'matches',
+      'pubg_match_id, match_participants(pubg_account_id, member_id)',
+      (q) => q.gte('played_at', windowStart),
+    );
 
-  const attendance = new Map();
-  for (const match of recentMatches) {
-    for (const p of match.match_participants ?? []) {
-      if (!p.member_id) continue; // 미등록 참가자는 씨앗으로 쓰지 않는다
-      attendance.set(p.pubg_account_id, (attendance.get(p.pubg_account_id) ?? 0) + 1);
+    const attendance = new Map();
+    for (const match of recentMatches) {
+      for (const p of match.match_participants ?? []) {
+        if (!p.member_id) continue; // 미등록 참가자는 씨앗으로 쓰지 않는다
+        attendance.set(p.pubg_account_id, (attendance.get(p.pubg_account_id) ?? 0) + 1);
+      }
     }
-  }
-  if (attendance.size === 0) {
-    throw new Error('내전 참가 기록이 없어 씨앗을 정할 수 없다 — 로컬에서 먼저 수집할 것');
-  }
+    if (attendance.size === 0) {
+      throw new Error('내전 참가 기록이 없어 씨앗을 정할 수 없다 — 로컬에서 먼저 수집할 것');
+    }
 
-  const candidates = [...attendance.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, SEED_CANDIDATES)
-    .map(([accountId]) => accountId);
+    const candidates = [...attendance.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, SEED_CANDIDATES)
+      .map(([accountId]) => accountId);
 
-  // --- 후보를 조회하고 가벼운 사람만 남긴다 ---
-  const players = [];
-  const candidateBatches = chunk(candidates, BATCH_SIZE);
-  for (const [i, batch] of candidateBatches.entries()) {
-    players.push(...(await fetchPlayers(apiKey, batch, playerRetries, log)));
-    if (i < candidateBatches.length - 1) await sleep(REQUEST_INTERVAL);
+    // --- 후보를 조회하고 가벼운 사람만 남긴다 ---
+    const players = [];
+    const candidateBatches = chunk(candidates, BATCH_SIZE);
+    for (const [i, batch] of candidateBatches.entries()) {
+      players.push(...(await fetchPlayers(apiKey, batch, playerRetries, log)));
+      if (i < candidateBatches.length - 1) await sleep(REQUEST_INTERVAL);
+    }
+
+    const seedAccountIds = new Set(pickLightSeeds(players, SEED_LIMIT));
+    seeds = players.filter((p) => seedAccountIds.has(p.id));
+    log(
+      `씨앗 ${seeds.length}명 (후보 ${players.length}명 중 경기 수가 적은 순): ` +
+        seeds
+          .map((p) => `${p.attributes.name}(${p.relationships?.matches?.data?.length ?? 0})`)
+          .join(', '),
+    );
   }
-
-  const seedAccountIds = new Set(pickLightSeeds(players, SEED_LIMIT));
-  const seeds = players.filter((p) => seedAccountIds.has(p.id));
-  log(
-    `씨앗 ${seeds.length}명 (후보 ${players.length}명 중 경기 수가 적은 순): ` +
-      seeds
-        .map((p) => `${p.attributes.name}(${p.relationships?.matches?.data?.length ?? 0})`)
-        .join(', '),
-  );
 
   // --- 이미 살펴본 매치 ---
   const polled = await selectAll(supabase, 'polled_matches', 'pubg_match_id');

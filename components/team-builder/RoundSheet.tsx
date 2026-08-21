@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { cleanDisplayName, stripTrailingKoreanTag } from '@/lib/memberStats';
 
 interface RoundSheetRound {
@@ -8,7 +8,7 @@ interface RoundSheetRound {
   kills: number | null;
   teamRank: number | null;
   rankScore: number | null;
-  cumulativeTotal: number;
+  roundTotal: number;
 }
 
 interface RoundSheetTeam {
@@ -88,11 +88,36 @@ const TABLE_WIDTH =
   3 * SUMMARY_COL_WIDTH +
   ROUND_COUNT * ROUND_WIDTH;
 
+// 씨앗 1명 고정 방식(team_number=1, tier_slot=1)이라 분당 10회 제한에 여유가
+// 크다(측정 스크립트와 같은 간격 — scripts/measure-match-availability.mjs 참고).
+// 최대 시도 횟수는 "포기하고 나중에 수동으로 다시 누르라"는 안전판일 뿐, 보통은
+// 몇 번 안에 끝난다(실측: 매치 종료 2분 뒤엔 이미 조회 가능했다).
+const AUTO_POLL_INTERVAL_MS = 7000;
+const AUTO_POLL_MAX_ATTEMPTS = 60; // 7초 * 60 = 7분
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// 중단 버튼이 다음 시도까지(최대 7초) 안 기다리고 바로 반응하도록, 짧은
+// 간격으로 나눠 자면서 매번 cancelRef를 확인한다.
+async function interruptibleSleep(ms: number, cancelRef: { current: boolean }) {
+  const stepMs = 200;
+  for (let waited = 0; waited < ms; waited += stepMs) {
+    if (cancelRef.current) return;
+    await sleep(Math.min(stepMs, ms - waited));
+  }
+}
+
 export function RoundSheet({ rosterId }: { rosterId: string }) {
   const [data, setData] = useState<RoundSheetResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
   const [pollMessage, setPollMessage] = useState<string | null>(null);
+  // state 는 리렌더돼야 최신값을 읽으므로, 반복문 안에서 "중단해야 하는지"를
+  // 즉시 확인하려면 ref 로 따로 들고 있어야 한다.
+  const cancelRef = useRef(false);
 
   async function loadSheet() {
     try {
@@ -111,24 +136,55 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rosterId]);
 
+  async function pollOnce(): Promise<boolean> {
+    const response = await fetch('/api/scrim-roster/round-sheet/poll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rosterId }),
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? '폴링에 실패했습니다.');
+    return Boolean(body.found);
+  }
+
+  // 한 번 눌러두면 새 경기가 잡힐 때까지(또는 중단/시간 초과할 때까지) 알아서
+  // 계속 두드린다 — 매번 손으로 다시 누를 필요가 없다.
   async function handlePoll() {
+    cancelRef.current = false;
     setPolling(true);
     setPollMessage(null);
-    try {
-      const response = await fetch('/api/scrim-roster/round-sheet/poll', { method: 'POST' });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? '폴링에 실패했습니다.');
 
-      if (body.found) {
-        await loadSheet();
-      } else {
-        setPollMessage('아직 새 경기가 없습니다.');
+    for (let attempt = 1; attempt <= AUTO_POLL_MAX_ATTEMPTS; attempt++) {
+      if (cancelRef.current) {
+        setPollMessage('중단했습니다.');
+        break;
       }
-    } catch (err) {
-      setPollMessage(err instanceof Error ? err.message : '폴링에 실패했습니다.');
-    } finally {
-      setPolling(false);
+      setPollAttempt(attempt);
+
+      try {
+        const found = await pollOnce();
+        if (found) {
+          await loadSheet();
+          setPollMessage(`폴링 성공 (${attempt}번째 시도)`);
+          break;
+        }
+      } catch (err) {
+        setPollMessage(err instanceof Error ? err.message : '폴링에 실패했습니다.');
+        break;
+      }
+
+      if (attempt === AUTO_POLL_MAX_ATTEMPTS) {
+        setPollMessage('시간 초과 — 새 경기를 찾지 못했습니다. 나중에 다시 눌러주세요.');
+        break;
+      }
+      await interruptibleSleep(AUTO_POLL_INTERVAL_MS, cancelRef);
     }
+
+    setPolling(false);
+  }
+
+  function handleCancelPoll() {
+    cancelRef.current = true;
   }
 
   if (loadError) return <p className="mt-4 text-sm text-red-400">{loadError}</p>;
@@ -140,20 +196,7 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between" style={{ width: TABLE_WIDTH, maxWidth: '100%' }}>
-        <h3 className="hud text-xs text-menu">경기 {data.roundCount}개 기록됨</h3>
-        <button
-          type="button"
-          onClick={() => void handlePoll()}
-          disabled={polling}
-          className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {polling ? '폴링 중…' : '폴링'}
-        </button>
-      </div>
-      {pollMessage && <p className="mt-2 text-xs text-menu">{pollMessage}</p>}
-
-      <div className="mt-4 overflow-x-auto">
+      <div className="overflow-x-auto">
         <table className="border-collapse text-xs" style={{ tableLayout: 'fixed', width: TABLE_WIDTH }}>
           <colgroup>
             <col style={{ width: SQUARE_CELL_SIZE }} />
@@ -274,7 +317,7 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
                         {round?.kills ?? '-'}
                       </td>
                       <td style={ROUND_TOTAL_CELL_STYLE} className={`${TINTED_CELL} ${color.bg} ${color.border}`}>
-                        {round?.cumulativeTotal ?? '-'}
+                        {round?.roundTotal ?? '-'}
                       </td>
                     </Fragment>
                   );
@@ -284,6 +327,30 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
           </tbody>
         </table>
       </div>
+
+      <div className="mt-4 flex items-center justify-between" style={{ width: TABLE_WIDTH, maxWidth: '100%' }}>
+        <h3 className="hud text-xs text-menu">경기 {data.roundCount}개 기록됨</h3>
+        <div className="flex items-center gap-2">
+          {polling && (
+            <button
+              type="button"
+              onClick={handleCancelPoll}
+              className="rounded-md border border-white/15 px-3 py-2 text-xs text-menu hover:border-accent"
+            >
+              중단
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void handlePoll()}
+            disabled={polling}
+            className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {polling ? `폴링 중… (${pollAttempt}번째 시도)` : '폴링'}
+          </button>
+        </div>
+      </div>
+      {pollMessage && <p className="mt-2 text-xs text-menu">{pollMessage}</p>}
     </div>
   );
 }
