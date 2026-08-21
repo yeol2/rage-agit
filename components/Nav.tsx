@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { siteConfig } from '@/lib/siteConfig';
 import { Logo } from './Logo';
+import { AdminLoginButton } from './admin/AdminLoginButton';
 
 export function Nav() {
   const pathname = usePathname();
@@ -52,7 +53,9 @@ export function Nav() {
           })}
         </nav>
 
-        <span aria-hidden="true" className="hidden justify-self-end sm:block" />
+        <div className="justify-self-end">
+          <AdminLoginButton />
+        </div>
       </div>
     </header>
   );

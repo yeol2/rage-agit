@@ -1,6 +1,7 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { cleanup, render, screen, fireEvent, within } from '@testing-library/react';
 import { TierRankingPodium } from './TierRankingPodium';
+import { useAdmin } from '@/components/admin/AdminProvider';
 import type { RankingStatsRow } from '@/lib/rankingStats';
 
 afterEach(cleanup);
@@ -99,5 +100,13 @@ describe('TierRankingPodium', () => {
     expect(within(slot1).getByText('4.5티어')).toBeInTheDocument();
     expect(within(slot2).getByText('—')).toBeInTheDocument();
     expect(within(slot3).getByText('—')).toBeInTheDocument();
+  });
+
+  it('관리자면 전체 탭 30명/티어별 10명 제한 없이 인원 전부를 랭킹에 넣는다', () => {
+    vi.mocked(useAdmin).mockReturnValueOnce({ isAdmin: true, login: vi.fn() });
+    render(<TierRankingPodium recent12={RECENT10} alltime={ALLTIME} />);
+
+    // RECENT10의 자격자는 A/B/D/E/F/G(6명) — C는 12경기 미만이라 관리자여도 빠진다.
+    expect(screen.getByText(/총 6명 중 6명/)).toBeInTheDocument();
   });
 });

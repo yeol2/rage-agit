@@ -12,6 +12,7 @@ import {
   type RankingStatsRow,
 } from '@/lib/rankingStats';
 import { siteConfig } from '@/lib/siteConfig';
+import { useAdmin } from '@/components/admin/AdminProvider';
 
 // 점수는 "자기 고정 티어 밴드" 안에서 계산한다 — TIER_GROUPS 탭과 같은 경계다.
 // "전체" 탭도 이 밴드별 점수를 그대로 모아 보여줄 뿐, 전체를 다시 묶어 계산하지 않는다.
@@ -251,6 +252,7 @@ function windowButtonClass(selected: boolean): string {
 }
 
 export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps) {
+  const { isAdmin } = useAdmin();
   const [activeMetric, setActiveMetric] = useState<Metric>('rageScore');
   const [activeWindow, setActiveWindow] = useState<Window>('recent12');
   const [activeGroupId, setActiveGroupId] = useState<TierGroup['id']>(TIER_GROUPS[0].id);
@@ -272,7 +274,8 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
       ? eligible
       : eligible.filter((row) => activeGroup.tiers!.includes(row.tier));
 
-  const RANKING_SIZE = activeGroup.tiers === null ? 30 : 10;
+  // 일반 사용자는 전체 탭 30명/티어별 탭 10명까지만 보여준다 — 관리자는 제한 없음.
+  const RANKING_SIZE = isAdmin ? groupRows.length : activeGroup.tiers === null ? 30 : 10;
   const topRanked =
     activeMetric === 'rageScore'
       ? topByRageScore(groupRows, TIER_BANDS, RAGE_SCORE_STEEPNESS, RANKING_SIZE)

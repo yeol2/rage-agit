@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
-import { AccessGate } from '@/components/members/AccessGate';
+import { AdminGate } from '@/components/admin/AdminGate';
 import { RosterUploadForm } from '@/components/team-builder/RosterUploadForm';
 import { RosterBoard } from '@/components/team-builder/RosterBoard';
 import { fetchLatestRoster } from '@/lib/scrimRoster';
@@ -20,7 +20,7 @@ export default async function TeamBuilderPage() {
   return (
     <main className="min-h-screen">
       <Nav />
-      <AccessGate>
+      <AdminGate>
         <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
           <div className="flex items-center gap-4">
             <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">TEAM BUILDER</p>
@@ -40,7 +40,7 @@ export default async function TeamBuilderPage() {
             <RosterBoard key={roster?.id ?? 'empty'} roster={roster} />
           </div>
         </section>
-      </AccessGate>
+      </AdminGate>
       <Footer />
     </main>
   );
