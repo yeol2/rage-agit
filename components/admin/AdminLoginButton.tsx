@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useAdmin } from './AdminProvider';
+import { KeyIcon } from './KeyIcon';
 
 const CODE_LENGTH = 6;
 
@@ -68,11 +69,11 @@ export function AdminLoginButton() {
         }}
         title={isAdmin ? '관리자로 로그인됨' : '관리자 로그인'}
         aria-label={isAdmin ? '관리자로 로그인됨' : '관리자 로그인'}
-        className={`flex h-10 w-10 items-center justify-center rounded-lg text-lg transition-colors ${
-          isAdmin ? 'bg-accent/20 text-accent' : 'text-white/70 hover:bg-white/10 hover:text-white'
+        className={`flex h-10 w-10 items-center justify-center rounded-lg text-white transition-colors ${
+          isAdmin ? 'bg-accent/20' : 'hover:bg-white/10'
         }`}
       >
-        🔑
+        <KeyIcon />
       </button>
 
       {open && !isAdmin && (
