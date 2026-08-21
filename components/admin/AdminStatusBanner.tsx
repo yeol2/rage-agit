@@ -10,7 +10,10 @@ export function AdminStatusBanner() {
 
   return (
     <div className="mx-auto max-w-shell px-5 sm:px-8">
-      <div className="rounded-lg border border-lime-400/60 bg-lime-400/10 px-4 py-2.5 text-center text-sm font-bold text-lime-300 shadow-[0_0_16px_rgba(163,230,53,0.25)]">
+      <div
+        className="rounded-lg border px-4 py-2.5 text-center text-sm font-bold"
+        style={{ borderColor: '#0F4539', backgroundColor: '#0E1319', color: '#0F4539' }}
+      >
         🔑 관리자로 로그인되어 있습니다
       </div>
     </div>
