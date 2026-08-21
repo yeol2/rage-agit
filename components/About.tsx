@@ -82,6 +82,7 @@ export function About() {
               <span className="hud text-xs text-muted">{String(i + 1).padStart(2, '0')}</span>
               <p className="mt-2 text-lg font-bold text-foreground">{step.title}</p>
               <p className="mt-2 text-sm leading-relaxed text-white/45">{step.body}</p>
+              {step.note && <p className="mt-1.5 text-xs text-white/25">{step.note}</p>}
             </div>
           ))}
         </div>
@@ -151,6 +152,7 @@ export function About() {
         </div>
 
         <p className="mt-8 max-w-2xl text-sm leading-relaxed text-white/40">{about.data.closing}</p>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/40">{about.data.closingNote}</p>
       </section>
     </>
   );
