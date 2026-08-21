@@ -6,4 +6,5 @@ import { vi } from 'vitest';
 // 테스트에서 특정 경로를 확인해야 하면 이 목을 파일별로 다시 vi.mock 하면 된다.
 vi.mock('next/navigation', () => ({
   usePathname: () => '/',
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }));

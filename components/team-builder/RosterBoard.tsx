@@ -2,6 +2,7 @@
 
 import { useState, type DragEvent, type FormEvent, type MouseEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   sortEntriesByTier,
   moveEntryToSlot,
@@ -205,6 +206,7 @@ interface LastMove {
 }
 
 export function RosterBoard({ roster }: { roster: Roster | null }) {
+  const router = useRouter();
   const [entries, setEntries] = useState<RosterEntry[]>(roster?.entries ?? []);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<DropTarget | null>(null);
@@ -239,6 +241,12 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   // 여러 번 눌러 여러 단계를 거슬러 올라갈 수 있다).
   const [rerollHistory, setRerollHistory] = useState<Array<Map<string, number | null>>>([]);
   const [undoingReroll, setUndoingReroll] = useState(false);
+
+  // "초기화" 버튼 — 실수로 누르면 이번 내전 전체 계획(01/02/03)이 날아가므로
+  // 바로 실행하지 않고, 경고 문구가 딸린 확인 버튼을 한 번 더 눌러야 진행된다.
+  const [resetConfirming, setResetConfirming] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   if (!roster) {
     return <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>;
@@ -339,6 +347,27 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       setEnterRoundSheetError(err instanceof Error ? err.message : '내전 시트를 열지 못했습니다.');
     } finally {
       setEnteringRoundSheet(false);
+    }
+  }
+
+  // "초기화" 버튼 — 이번 내전(01/02/03) 전체를 지우고 01 명단 업로드 이전
+  // 상태로 되돌린다. 성공하면 서버 컴포넌트를 다시 불러 roster=null 화면으로
+  // 돌아간다(fetchLatestRoster가 더 이상 아무 행도 못 찾으므로).
+  async function handleReset() {
+    setResetting(true);
+    setResetError(null);
+
+    try {
+      const response = await fetch('/api/scrim-roster/reset', { method: 'DELETE' });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? '초기화에 실패했습니다.');
+
+      setResetConfirming(false);
+      router.refresh();
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : '초기화에 실패했습니다.');
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -943,6 +972,48 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
               </h2>
               <div className="mt-10">
                 <RoundSheet rosterId={rosterId} />
+              </div>
+
+              <div aria-hidden="true" className="mt-16 border-t border-white/10" />
+
+              <div className="mt-10 flex flex-col items-center gap-3">
+                {!resetConfirming ? (
+                  <button
+                    type="button"
+                    onClick={() => setResetConfirming(true)}
+                    className="rounded-md border border-red-500 bg-red-600 px-6 py-2 text-sm font-bold text-white hover:bg-red-500"
+                  >
+                    전체 초기화
+                  </button>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/10 px-6 py-4 text-center">
+                    <p className="text-sm font-bold text-red-300">
+                      정말 초기화할까요? 01/02/03 전체 진행 상태가 지워지고 되돌릴 수 없습니다.
+                    </p>
+                    <p className="text-xs text-red-300/80">
+                      (실제 PUBG 경기 기록·리더보드 데이터는 지워지지 않습니다)
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setResetConfirming(false)}
+                        disabled={resetting}
+                        className="rounded-md border border-white/15 px-4 py-2 text-sm text-menu hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleReset()}
+                        disabled={resetting}
+                        className="rounded-md border border-red-500 bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {resetting ? '초기화 중…' : '네, 초기화합니다'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {resetError && <p className="text-sm text-red-400">{resetError}</p>}
               </div>
             </div>
           )}
