@@ -124,9 +124,10 @@ export const siteConfig = {
     ctaHref: '/dashboard',
   },
 
-  // 매주 갱신. weeklyDelta 는 이번 주 순증가분.
+  // 정확한 인원을 매번 맞추지 않고 500명 근처로 뭉뚱그린 근사치다 — 실제
+  // 인원수는 계속 바뀌므로 딱 떨어지는 숫자를 자랑하는 것보다 이게 낫다.
   members: {
-    total: 469,
+    total: 500,
     weeklyDelta: 12,
   },
 
@@ -187,7 +188,7 @@ export const siteConfig = {
       plainHighlight: '숫자',
       plainTail: '로 나옵니다',
     },
-    body: '클랜원 469명, 내전 100번 넘게 쌓인 기록을 모아서 등수·킬·활동량을 점수 하나로 정리했어요. 감이 아니라 기록으로 확인하는 거예요.',
+    body: '클랜원 500명 가까이, 총 내전 100회 이상·총 상금 1,000만원 이상 쌓인 기록을 모아서 등수·킬·활동량을 점수 하나로 정리했어요. 감이 아니라 기록으로 확인하는 거예요.',
 
     why: {
       eyebrow: '01 · WHY',

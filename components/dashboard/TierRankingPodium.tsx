@@ -13,6 +13,7 @@ import {
   type RankingStatsRow,
 } from '@/lib/rankingStats';
 import { computeRankChange, type RankingSnapshotRow } from '@/lib/rankingSnapshot';
+import { tierNameplateStyle } from '@/lib/memberStats';
 import { siteConfig } from '@/lib/siteConfig';
 import { useAdmin } from '@/components/admin/AdminProvider';
 
@@ -81,6 +82,26 @@ const HEADER_TRAILING_SPACE = String.fromCharCode(160); // U+00A0
  */
 function badgeLabel(row: RankingStatsRow & { badge?: string | null }): string {
   return row.badge ?? '-';
+}
+
+// 티어를 맨 글자가 아니라 둥근 배지로 보여준다 — team-builder 네임플레이트와
+// 같은 배색 함수(tierNameplateStyle)를 그대로 가져다 쓴다(새 색을 만들지
+// 않는다, lib/memberStats.ts 가 티어 색의 유일한 출처).
+function TierBadge({ tier, className = '' }: { tier: number; className?: string }) {
+  const style = tierNameplateStyle(tier);
+  return (
+    <span
+      className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-bold ${className}`}
+      style={{
+        background: style.background,
+        borderColor: style.borderColor,
+        boxShadow: style.boxShadow,
+        color: style.color,
+      }}
+    >
+      {tier}티어
+    </span>
+  );
 }
 
 // 직전 등수 스냅샷 대비 상승/하락/신규를 보여준다. 종합점수 탭에서만 쓴다.
@@ -532,7 +553,7 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                   <div className="relative flex h-full w-full flex-col items-center px-2 pt-8 sm:px-4 sm:pt-10">
                     {member && (
                       <>
-                        <p className="text-sm text-menu">{member.tier}티어</p>
+                        <TierBadge tier={member.tier} />
 
                         {/* 원본 Vector 2 — 시상대 안쪽 가로 구분선(흰색 7%) */}
                         <span aria-hidden="true" className="mt-4 h-px w-[89%] bg-white/[0.07]" />
@@ -665,7 +686,7 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                       <span className="min-w-0 truncate text-sm font-bold text-foreground">
                         {member.discordNickname}
                       </span>
-                      <span className="text-sm text-menu">{member.tier}티어</span>
+                      <TierBadge tier={member.tier} className="justify-self-start" />
                       <span className="text-sm text-menu">{badgeLabel(member)}</span>
                       <span className="text-right tabular-nums">
                         <MetricValue
