@@ -224,17 +224,17 @@ export const siteConfig = {
         {
           tag: 'LIVE',
           name: 'PUBG Open API (카카오)',
-          detail: '매주 자동으로 최근 전적을 가져옵니다 (2026-06-07 이후).',
+          detail: '매주 자동으로 최근 전적을 가져옵니다 (2026-08-01 이후).',
         },
         {
           tag: 'BACKFILL',
           name: 'dak.gg',
-          detail: 'API가 못 가는 예전 기록을 웹에서 긁어왔습니다 (~2026-06-07).',
+          detail: 'API가 못 가는 예전 기록을 웹에서 긁어왔습니다 (2026-06-07 ~ 2026-07-31).',
         },
         {
           tag: 'MANUAL',
           name: '디스코드 결과 스크린샷',
-          detail: '그보다 더 예전(2026-02~05) 내전은 디스코드에 올라온 결과 사진을 사람이 직접 옮겼습니다.',
+          detail: '그보다 더 예전(2026-02-05 이후) 내전은 디스코드에 올라온 결과 사진을 사람이 직접 옮겼습니다.',
         },
       ],
       endpointsLabel: 'PUBG OPEN API ENDPOINTS WE CALL',
