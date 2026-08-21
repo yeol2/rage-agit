@@ -519,6 +519,22 @@ check(
   'scrim_rosters.ranking_snapshot_captured_at 컬럼이 있다',
 );
 
+console.log('\n0023 — 합 킬 30 이하 매치를 랭킹 집계에서 제외');
+
+check(
+  (await client.query(`select pg_get_viewdef('member_ranking_games'::regclass) as def`)).rows[0].def
+    .includes('sum(mp.kills) > 30'),
+  '뷰가 합 킬 30 이하 매치를 걸러낸다',
+);
+
+console.log('\n0024 — 세션 참여 인원을 계정이 아니라 사람 기준으로');
+
+check(
+  (await client.query(`select pg_get_viewdef('scrim_session_summary'::regclass) as def`)).rows[0].def
+    .includes('p.member_id'),
+  '뷰가 participant_count 에서 member_id 를 우선 쓴다',
+);
+
 await client.end();
 
 console.log('');

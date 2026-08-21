@@ -6,6 +6,7 @@ import {
   fetchSessionMatches,
   formatDistance,
   formatSurvival,
+  groupParticipantsByTeam,
   sortByTeamRank,
   type ScrimMatch,
   type ScrimParticipant,
@@ -31,6 +32,13 @@ function toKstTime(iso: string): string {
   const d = new Date(new Date(iso).getTime() + KST_OFFSET_MS);
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
+
+// 매치 상세: 팀 하나를 박스 하나로 묶어서 보여준다 — 앞으로 이 페이지에
+// "내전 인원"을 보여줄 땐 항상 이 규칙(팀별 박스 + 등수순 정렬)을 따른다.
+// 순위/팀은 팀당 한 번(박스 헤더)만 적으면 되므로, 안쪽 그리드에는 넣지
+// 않는다(4명 내내 같은 값이 반복되던 걸 없앴다).
+const TEAM_PLAYER_GRID =
+  'grid grid-cols-[1fr_2.5rem_2.5rem_3.5rem_3.5rem_2.5rem_3.5rem_3.5rem] items-center gap-x-2';
 
 export function ScrimSessionRow({
   session,
@@ -142,43 +150,51 @@ export function ScrimSessionRow({
                     <p className="text-sm text-menu">불러오는 중…</p>
                   )}
                   {participants[match.pubgMatchId] && (
-                    <table className="w-full min-w-[42rem] text-left text-sm">
-                      <thead className="text-menu">
-                        <tr>
-                          <th className="py-1 pr-3 font-normal">순위</th>
-                          <th className="py-1 pr-3 font-normal">팀</th>
-                          <th className="py-1 pr-3 font-normal">닉네임</th>
-                          <th className="py-1 pr-3 font-normal">킬</th>
-                          <th className="py-1 pr-3 font-normal">어시</th>
-                          <th className="py-1 pr-3 font-normal">딜량</th>
-                          <th className="py-1 pr-3 font-normal">DBNO</th>
-                          <th className="py-1 pr-3 font-normal">헤드</th>
-                          <th className="py-1 pr-3 font-normal">생존</th>
-                          <th className="py-1 font-normal">이동</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortByTeamRank(participants[match.pubgMatchId]).map((p) => (
-                          <tr key={p.pubgIgn} className="border-t border-white/[0.06]">
-                            <td className="py-1 pr-3">{p.teamRank}</td>
-                            <td className="py-1 pr-3 text-menu">{p.teamId}</td>
-                            <td className="py-1 pr-3">
-                              <span className="font-bold">{p.pubgIgn}</span>
-                              {p.discordNickname && (
-                                <span className="ml-2 text-xs text-menu">{p.discordNickname}</span>
-                              )}
-                            </td>
-                            <td className="py-1 pr-3">{p.kills}</td>
-                            <td className="py-1 pr-3">{p.assists}</td>
-                            <td className="py-1 pr-3">{Math.round(p.damageDealt)}</td>
-                            <td className="py-1 pr-3">{p.dbnos}</td>
-                            <td className="py-1 pr-3">{p.headshotKills}</td>
-                            <td className="py-1 pr-3">{formatSurvival(p.timeSurvived)}</td>
-                            <td className="py-1">{formatDistance(p.distance)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="min-w-[36rem] space-y-2">
+                      <div className={`${TEAM_PLAYER_GRID} px-3 text-xs text-menu`}>
+                        <span>닉네임</span>
+                        <span>킬</span>
+                        <span>어시</span>
+                        <span>딜량</span>
+                        <span>DBNO</span>
+                        <span>헤드</span>
+                        <span>생존</span>
+                        <span>이동</span>
+                      </div>
+
+                      {groupParticipantsByTeam(sortByTeamRank(participants[match.pubgMatchId])).map(
+                        (team) => (
+                          <div
+                            key={team.teamId}
+                            className="overflow-hidden rounded-lg border border-white/10"
+                          >
+                            <div className="flex items-center gap-2 bg-white/[0.04] px-3 py-1.5 text-xs">
+                              <span className="font-bold text-foreground">{team.teamRank}위</span>
+                              <span className="text-menu">팀 {team.teamId}</span>
+                            </div>
+                            <div className="divide-y divide-white/[0.06]">
+                              {team.players.map((p) => (
+                                <div key={p.pubgIgn} className={`${TEAM_PLAYER_GRID} px-3 py-1.5 text-sm`}>
+                                  <span>
+                                    <span className="font-bold">{p.pubgIgn}</span>
+                                    {p.discordNickname && (
+                                      <span className="ml-2 text-xs text-menu">{p.discordNickname}</span>
+                                    )}
+                                  </span>
+                                  <span>{p.kills}</span>
+                                  <span>{p.assists}</span>
+                                  <span>{Math.round(p.damageDealt)}</span>
+                                  <span>{p.dbnos}</span>
+                                  <span>{p.headshotKills}</span>
+                                  <span>{formatSurvival(p.timeSurvived)}</span>
+                                  <span>{formatDistance(p.distance)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
                   )}
                 </div>
               )}

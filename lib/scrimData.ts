@@ -33,12 +33,17 @@ export interface ScrimParticipant {
   distance: number | null;
 }
 
-export async function fetchScrimSessions(limit = 10): Promise<ScrimSessionSummary[]> {
-  const { data, error } = await getSupabase()
+export async function fetchScrimSessions(limit = 10, since?: string): Promise<ScrimSessionSummary[]> {
+  let query = getSupabase()
     .from('scrim_session_summary')
     .select('id, scrim_date, title, session_number, replay_url, match_count, participant_count')
     .order('scrim_date', { ascending: false })
     .limit(limit);
+  // dak.gg 백필(~2026-07-25)은 등수·팀 번호가 실제 경기와 안 맞는 경우가 있어
+  // "매치 기록" 화면에서만 가린다 — DB는 그대로 두고(랭킹 집계는 안 건드림),
+  // 이 목록 조회에서만 잘라낸다.
+  if (since) query = query.gte('scrim_date', since);
+  const { data, error } = await query;
   if (error) throw new Error(`내전 목록을 불러오지 못했습니다: ${error.message}`);
 
   return (data ?? []).map((row) => ({
@@ -122,6 +127,28 @@ export function sortByTeamRank(participants: ScrimParticipant[]): ScrimParticipa
   return [...participants].sort(
     (a, b) => a.teamRank - b.teamRank || b.kills - a.kills || b.damageDealt - a.damageDealt,
   );
+}
+
+export interface ScrimTeamGroup {
+  teamId: number;
+  teamRank: number;
+  players: ScrimParticipant[];
+}
+
+// 매치 상세 화면(팀별 박스)이 쓴다 — sortByTeamRank로 이미 등수순 + 팀 안
+// 킬 내림차순으로 정렬된 배열을 받아, 같은 팀(teamId)끼리 묶는다. 입력이
+// 이미 등수순이므로 결과 배열도 그대로 등수순이다(1위 팀부터).
+export function groupParticipantsByTeam(sorted: ScrimParticipant[]): ScrimTeamGroup[] {
+  const groups: ScrimTeamGroup[] = [];
+  for (const player of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && last.teamId === player.teamId) {
+      last.players.push(player);
+    } else {
+      groups.push({ teamId: player.teamId, teamRank: player.teamRank, players: [player] });
+    }
+  }
+  return groups;
 }
 
 export function formatDistance(meters: number | null): string {

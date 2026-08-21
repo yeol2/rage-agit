@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatDistance, formatSurvival, sortByTeamRank, type ScrimParticipant } from './scrimData';
+import {
+  formatDistance,
+  formatSurvival,
+  groupParticipantsByTeam,
+  sortByTeamRank,
+  type ScrimParticipant,
+} from './scrimData';
 
 function participant(overrides: Partial<ScrimParticipant>): ScrimParticipant {
   return {
@@ -45,6 +51,26 @@ describe('sortByTeamRank', () => {
     ];
     sortByTeamRank(rows);
     expect(rows.map((r) => r.pubgIgn)).toEqual(['B', 'A']);
+  });
+});
+
+describe('groupParticipantsByTeam', () => {
+  it('등수순으로 이미 정렬된 배열을 팀별로 묶는다', () => {
+    const sorted = sortByTeamRank([
+      participant({ pubgIgn: 'B1', teamRank: 2, teamId: 20 }),
+      participant({ pubgIgn: 'A1', teamRank: 1, teamId: 10 }),
+      participant({ pubgIgn: 'A2', teamRank: 1, teamId: 10 }),
+      participant({ pubgIgn: 'B2', teamRank: 2, teamId: 20 }),
+    ]);
+    const groups = groupParticipantsByTeam(sorted);
+    expect(groups.map((g) => g.teamId)).toEqual([10, 20]);
+    expect(groups.map((g) => g.teamRank)).toEqual([1, 2]);
+    expect(groups[0].players.map((p) => p.pubgIgn)).toEqual(['A1', 'A2']);
+    expect(groups[1].players.map((p) => p.pubgIgn)).toEqual(['B1', 'B2']);
+  });
+
+  it('빈 배열이면 빈 배열을 낸다', () => {
+    expect(groupParticipantsByTeam([])).toEqual([]);
   });
 });
 

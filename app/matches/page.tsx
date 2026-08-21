@@ -12,8 +12,12 @@ export const metadata: Metadata = {
 // 내전은 주 2회 들어오므로 매 요청마다 새로 읽을 이유가 없다.
 export const revalidate = 300;
 
+// dak.gg 백필(~2026-07-25) 등수·팀 번호가 실제 경기와 안 맞는 경우가 있어
+// 2026-07-26부터만 매치 기록에 보여준다 — DB 데이터 자체는 안 지운다.
+const VISIBLE_SINCE = '2026-07-26';
+
 export default async function MatchesPage() {
-  const sessions = await fetchScrimSessions();
+  const sessions = await fetchScrimSessions(10, VISIBLE_SINCE);
 
   return (
     <main className="min-h-screen">
