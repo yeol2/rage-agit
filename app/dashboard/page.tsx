@@ -10,8 +10,15 @@ export const metadata: Metadata = {
   title: `${siteConfig.dashboard.pageHeading} | ${siteConfig.siteName}`,
 };
 
-// 랭킹 집계가 자주 안 바뀌므로 매 요청마다 새로 읽을 이유가 없다.
-export const revalidate = 300;
+// 시간 기반(예: 5분마다) 캐시를 쓰지 않는다 — 그러면 내전 도중 1~3매치만
+// 폴링된 상태로 5분 창이 열려 있는 동안 리더보드가 그 부분 데이터로 계산된
+// 순위를 잠깐 보여줄 수 있다(등수 변동 스냅샷은 4매치 확인 후에만 찍는데
+// 리더보드 본문은 그보다 먼저 바뀌는 셈이라 서로 어긋난다). 대신 캐시를
+// 무기한 유지하다가, 03 폴링이 그 세션의 4번째 라운드 도달을 확인하는
+// 순간(app/api/scrim-roster/round-sheet/poll/route.ts)에만
+// revalidatePath('/dashboard')로 명시적으로 갱신한다 — 등수 변동 스냅샷
+// 캡처와 정확히 같은 트리거다.
+export const revalidate = false;
 
 export default async function DashboardPage() {
   const [recent16, alltime, snapshots] = await Promise.all([

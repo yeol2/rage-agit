@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { runPolling } from '@/supabase/functions/_shared/polling.mjs';
@@ -85,14 +86,20 @@ export async function POST(request: Request) {
       knownAccountId,
     });
 
-    // 등수 스냅샷 캡처는 폴링의 본 목적(매치 기록)에 딸린 부수 효과다 —
-    // 실패해도 폴링 응답 자체는 정상으로 돌려준다(사용자는 "폴링 성공"만
-    // 신경 쓴다). 이미 캡처됐으면 captureRankingSnapshotForRoster가 알아서
-    // 아무것도 안 하므로, 여러 번 폴링해도 안전하다.
+    // 등수 스냅샷 캡처·리더보드 갱신은 폴링의 본 목적(매치 기록)에 딸린 부수
+    // 효과다 — 실패해도 폴링 응답 자체는 정상으로 돌려준다(사용자는 "폴링
+    // 성공"만 신경 쓴다). 이미 캡처됐으면 captureRankingSnapshotForRoster가
+    // 알아서 아무것도 안 하므로, 여러 번 폴링해도 안전하다.
+    //
+    // 리더보드(app/dashboard/page.tsx)는 revalidate:false 라 시간이 지나도
+    // 저절로 안 바뀐다 — 딱 여기, 이 세션의 라운드 4개가 처음 확인된 순간에만
+    // revalidatePath 로 갱신한다. 1~3매치만 폴링된 상태로는 리더보드 화면이
+    // 전혀 안 바뀌어야 등수 변동(4매치 확인 후 스냅샷)과 타이밍이 맞는다.
     if (rosterId) {
       const roundCount = await countRoundsForRoster(supabase, rosterId);
       if (roundCount >= 4) {
         await captureRankingSnapshotForRoster(supabase, rosterId).catch(() => {});
+        revalidatePath('/dashboard');
       }
     }
 
