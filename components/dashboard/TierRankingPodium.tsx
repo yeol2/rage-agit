@@ -184,7 +184,7 @@ const WINDOW_HELP: Array<{ term: string; desc: string }> = [
 
 // "종합점수" 탭 옆 물음표 아이콘에 띄울 설명. 문구만 고치면 말풍선에 그대로 반영된다.
 const RAGE_SCORE_HELP =
-  '같은 티어 그룹 안에서만 비교하는 상대 점수예요. 고등학교 수학 시험에서 "반 평균이 50점"이라고 생각하면 쉬워요 — 그 그룹 평균이면 50점, 잘할수록 100에 가깝고 못할수록 0에 가까워집니다.';
+  '같은 티어 그룹 안에서 비교해요 — 예를 들어 2티어는 2~2.5티어 그룹 안에서만 비교돼요. 고등학교 수학 시험에서 "반 평균이 50점"이라고 생각하면 쉬워요 — 그 그룹 평균이면 50점, 잘할수록 100에 가깝고 못할수록 0에 가까워집니다.';
 
 export interface TierRankingPodiumProps {
   recent12: RankingStatsRow[];
@@ -363,6 +363,25 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
       <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
         {METRIC_OPTIONS.map((option) => (
           <Fragment key={option.id}>
+            {/* "종합점수"는 사람들이 제일 헷갈려해서 물음표 설명을 왼쪽에 둔다 —
+                집계 창 물음표와 같은 hover 말풍선 패턴. 말풍선은 아래로 펼치면
+                바로 밑의 티어 탭 줄을 가려서, 이번엔 물음표 기준 왼쪽 위로 띄운다. */}
+            {option.id === 'rageScore' && (
+              <span className="group relative">
+                <span
+                  aria-hidden="true"
+                  className="flex h-5 w-5 cursor-default select-none items-center justify-center rounded-full border border-white/25 text-[11px] font-bold leading-none text-white/50 transition-colors group-hover:border-white/60 group-hover:text-white"
+                >
+                  ?
+                </span>
+                <span
+                  className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-max max-w-[16rem] rounded-lg border border-white/10 px-3 py-2 text-left text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+                  style={{ background: RANKING_ROW_BG }}
+                >
+                  {RAGE_SCORE_HELP}
+                </span>
+              </span>
+            )}
             <button
               type="button"
               aria-pressed={option.id === activeMetric}
@@ -371,23 +390,10 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
             >
               {option.label}
             </button>
-            {/* "종합점수"는 사람들이 제일 헷갈려해서 물음표 설명을 바로 옆에 둔다 —
-                집계 창 물음표와 같은 hover 말풍선 패턴, gap이 좁아서 -ml로 당겨 붙인다. */}
+            {/* 종합점수(관계형 상대점수)와 평균등수/평균킬(그냥 평균) 사이만
+                구분선을 둔다 — 성격이 다른 지표라는 걸 시각적으로 나눈다. */}
             {option.id === 'rageScore' && (
-              <span className="group relative -ml-1">
-                <span
-                  aria-hidden="true"
-                  className="flex h-5 w-5 cursor-default select-none items-center justify-center rounded-full border border-white/25 text-[11px] font-bold leading-none text-white/50 transition-colors group-hover:border-white/60 group-hover:text-white"
-                >
-                  ?
-                </span>
-                <span
-                  className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-max max-w-[16rem] -translate-x-1/2 rounded-lg border border-white/10 px-3 py-2 text-left text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
-                  style={{ background: RANKING_ROW_BG }}
-                >
-                  {RAGE_SCORE_HELP}
-                </span>
-              </span>
+              <span aria-hidden="true" className="mx-1 h-5 w-px bg-white/15" />
             )}
           </Fragment>
         ))}

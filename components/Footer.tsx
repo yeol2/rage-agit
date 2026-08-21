@@ -14,8 +14,8 @@ export function Footer() {
           <div className="max-w-md sm:max-w-none">
             <p className="text-[15px] font-bold text-foreground">{siteName}</p>
             <p className="mt-4 text-sm leading-relaxed text-white/40">
-              <span className="sm:whitespace-nowrap">{footer.description}</span>{' '}
-              <span className="text-accent-secondary">{footer.descriptionAccent}</span>
+              <span className="block sm:whitespace-nowrap">{footer.description}</span>
+              <span className="block text-accent-secondary">{footer.descriptionAccent}</span>
             </p>
             <p className="mt-4 text-[13px] text-white/25">{footer.credit}</p>
           </div>
