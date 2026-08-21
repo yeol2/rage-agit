@@ -44,7 +44,7 @@ describe('AdminLoginButton', () => {
     }
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('true');
     expect(screen.queryByLabelText(/관리자 암구호/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '관리자로 로그인됨' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '관리자 로그아웃' })).toBeInTheDocument();
   });
 
   it('틀린 암구호면 오류를 보이고 다시 입력하게 비운다', async () => {
@@ -58,10 +58,12 @@ describe('AdminLoginButton', () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).not.toBe('true');
   });
 
-  it('이미 관리자면 버튼을 눌러도 입력칸이 안 뜬다', async () => {
+  it('이미 관리자일 때 버튼을 누르면 로그아웃되고(입력칸은 안 뜸) 로컬스토리지도 지운다', async () => {
     window.localStorage.setItem(STORAGE_KEY, 'true');
     renderButton();
-    await userEvent.click(screen.getByRole('button', { name: '관리자로 로그인됨' }));
+    await userEvent.click(screen.getByRole('button', { name: '관리자 로그아웃' }));
     expect(screen.queryByLabelText(/관리자 암구호/)).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(screen.getByRole('button', { name: '관리자 로그인' })).toBeInTheDocument();
   });
 });

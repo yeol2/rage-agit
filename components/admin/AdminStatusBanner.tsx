@@ -12,9 +12,9 @@ export function AdminStatusBanner() {
   if (!isAdmin) return null;
 
   return (
-    <div className="mx-auto max-w-shell px-5 sm:px-8">
+    <div className="mx-auto flex max-w-shell justify-center px-5 sm:px-8">
       <div
-        className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-center text-sm font-bold"
+        className="flex w-fit items-center justify-center gap-2 rounded-lg border px-6 py-4 text-center text-sm font-bold"
         style={{ borderColor: '#1FA37A', backgroundColor: '#132A24', color: '#EFFFFA' }}
       >
         <KeyIcon size={16} />

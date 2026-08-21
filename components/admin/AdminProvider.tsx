@@ -9,6 +9,7 @@ interface AdminContextValue {
   // AccessGate와 같은 이유로 하이드레이션 경고를 피한다.
   isAdmin: boolean;
   login: (code: string) => boolean;
+  logout: () => void;
 }
 
 const AdminContext = createContext<AdminContextValue | null>(null);
@@ -28,7 +29,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     return true;
   }
 
-  return <AdminContext.Provider value={{ isAdmin, login }}>{children}</AdminContext.Provider>;
+  function logout() {
+    window.localStorage.removeItem(STORAGE_KEY);
+    setIsAdmin(false);
+  }
+
+  return <AdminContext.Provider value={{ isAdmin, login, logout }}>{children}</AdminContext.Provider>;
 }
 
 export function useAdmin(): AdminContextValue {

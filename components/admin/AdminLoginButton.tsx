@@ -7,7 +7,7 @@ import { KeyIcon } from './KeyIcon';
 const CODE_LENGTH = 6;
 
 export function AdminLoginButton() {
-  const { isAdmin, login } = useAdmin();
+  const { isAdmin, login, logout } = useAdmin();
   const [open, setOpen] = useState(false);
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [error, setError] = useState<string | null>(null);
@@ -64,16 +64,22 @@ export function AdminLoginButton() {
       <button
         type="button"
         onClick={() => {
-          if (isAdmin) return;
+          if (isAdmin) {
+            logout();
+            return;
+          }
           setOpen((current) => !current);
         }}
-        title={isAdmin ? '관리자로 로그인됨' : '관리자 로그인'}
-        aria-label={isAdmin ? '관리자로 로그인됨' : '관리자 로그인'}
-        className={`flex h-10 w-10 items-center justify-center rounded-lg text-white transition-colors ${
-          isAdmin ? 'bg-accent/20' : 'hover:bg-white/10'
-        }`}
+        title={isAdmin ? '관리자 로그아웃' : '관리자 로그인'}
+        aria-label={isAdmin ? '관리자 로그아웃' : '관리자 로그인'}
+        className="flex h-10 w-10 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/10"
       >
-        <KeyIcon />
+        {/* 눌린 버튼처럼 배경을 채우는 대신, 관리자일 때는 아이콘 자체가
+            빛나는 느낌을 준다 — drop-shadow 는 배경색과 무관하게 아이콘
+            윤곽을 따라 은은하게 퍼진다. */}
+        <span className={isAdmin ? 'drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]' : undefined}>
+          <KeyIcon />
+        </span>
       </button>
 
       {open && !isAdmin && (

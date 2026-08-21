@@ -8,11 +8,12 @@ vi.mock('@/components/admin/AdminProvider', async (importOriginal) => importOrig
 const STORAGE_KEY = 'rage-admin-unlocked';
 
 function Probe() {
-  const { isAdmin, login } = useAdmin();
+  const { isAdmin, login, logout } = useAdmin();
   return (
     <div>
       <p>{isAdmin ? '관리자' : '일반'}</p>
       <button onClick={() => login('RAGE01')}>로그인 시도</button>
+      <button onClick={logout}>로그아웃</button>
     </div>
   );
 }
@@ -55,6 +56,22 @@ describe('AdminProvider', () => {
       </AdminProvider>,
     );
     expect(screen.getByText('관리자')).toBeInTheDocument();
+  });
+
+  it('logout()하면 관리자에서 빠지고 로컬스토리지에서도 지운다', async () => {
+    window.localStorage.setItem(STORAGE_KEY, 'true');
+    render(
+      <AdminProvider>
+        <Probe />
+      </AdminProvider>,
+    );
+    expect(screen.getByText('관리자')).toBeInTheDocument();
+
+    await act(async () => {
+      screen.getByText('로그아웃').click();
+    });
+    expect(screen.getByText('일반')).toBeInTheDocument();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
   it('useAdmin을 Provider 밖에서 쓰면 에러를 던진다', () => {
