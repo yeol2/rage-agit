@@ -22,10 +22,9 @@ describe('AdminGate', () => {
     );
     expect(screen.getByText('삭제')).toBeInTheDocument();
     expect(screen.getByText('삭제').parentElement).toHaveClass('pointer-events-none');
-    expect(screen.getByText(/보기 전용입니다/)).toBeInTheDocument();
   });
 
-  it('관리자면 pointer-events-none이 없고 안내 문구도 없다', () => {
+  it('관리자면 pointer-events-none이 없다', () => {
     window.localStorage.setItem('rage-admin-unlocked', 'true');
     render(
       <AdminProvider>
@@ -35,6 +34,5 @@ describe('AdminGate', () => {
       </AdminProvider>,
     );
     expect(screen.getByText('삭제').parentElement).not.toHaveClass('pointer-events-none');
-    expect(screen.queryByText(/보기 전용입니다/)).not.toBeInTheDocument();
   });
 });

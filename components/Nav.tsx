@@ -5,12 +5,13 @@ import { usePathname } from 'next/navigation';
 import { siteConfig } from '@/lib/siteConfig';
 import { Logo } from './Logo';
 import { AdminLoginButton } from './admin/AdminLoginButton';
+import { AdminStatusBanner } from './admin/AdminStatusBanner';
 
 export function Nav() {
   const pathname = usePathname();
 
   return (
-    <header className="w-full">
+    <header className="w-full space-y-3">
       {/* 좌우 패딩은 본문 섹션(max-w-shell px-5 sm:px-8)과 반드시 맞춘다 — 로고/메뉴가
           아래 본문 텍스트와 세로로 일직선이 되어야 한다. 높이는 본문보다 눈에 띄게
           크게 잡아 메뉴바를 더 존재감 있게 만든다. */}
@@ -57,6 +58,8 @@ export function Nav() {
           <AdminLoginButton />
         </div>
       </div>
+
+      <AdminStatusBanner />
     </header>
   );
 }

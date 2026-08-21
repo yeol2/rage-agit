@@ -10,14 +10,5 @@ import { useAdmin } from './AdminProvider';
 export function AdminGate({ children }: { children: ReactNode }) {
   const { isAdmin } = useAdmin();
 
-  return (
-    <div>
-      {!isAdmin && (
-        <p className="mb-4 text-xs text-menu">
-          보기 전용입니다 — 편집하려면 우측 상단 🔑로 관리자 로그인하세요.
-        </p>
-      )}
-      <div className={isAdmin ? undefined : 'pointer-events-none select-none'}>{children}</div>
-    </div>
-  );
+  return <div className={isAdmin ? undefined : 'pointer-events-none select-none'}>{children}</div>;
 }
