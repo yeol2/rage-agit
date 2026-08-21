@@ -787,7 +787,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
             <span className="mr-3" style={{ color: '#322F36' }}>02</span> 팀 구성 테이블
           </h2>
 
-          <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] border-collapse text-sm">
                 <thead>
@@ -917,20 +917,23 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                 {undoingReroll ? '되돌리는 중…' : '리롤 되돌리기'}
               </button>
               {rerollError && <p className="text-xs text-red-400">{rerollError}</p>}
-            </div>
-          </div>
 
-          <div className="mt-8 flex flex-col items-end gap-2">
-            {enterRoundSheetError && <p className="text-sm text-red-400">{enterRoundSheetError}</p>}
-            <button
-              type="button"
-              onClick={() => void handleEnterRoundSheet()}
-              disabled={stage === '03' || enteringRoundSheet}
-              title={stage === '03' ? '이미 내전 시트가 열려 있습니다' : '내전 드가자~'}
-              className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-menu disabled:opacity-40"
-            >
-              {enteringRoundSheet ? '여는 중…' : '내전 드가자~'}
-            </button>
+              {/* 16번팀(마지막 행)과 같은 높이에 오도록, 위 버튼들과는 별개로
+                  이 칸 맨 아래에 붙인다 — 부모 행이 items-stretch 라 이 칸의
+                  높이가 표와 같아져서 mt-auto 가 표 맨 아래 행 위치까지 밀어준다. */}
+              <div className="mt-auto flex flex-col items-end gap-2">
+                {enterRoundSheetError && <p className="text-xs text-red-400">{enterRoundSheetError}</p>}
+                <button
+                  type="button"
+                  onClick={() => void handleEnterRoundSheet()}
+                  disabled={stage === '03' || enteringRoundSheet}
+                  title={stage === '03' ? '이미 내전 시트가 열려 있습니다' : '자 드가자'}
+                  className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-menu disabled:opacity-40"
+                >
+                  {enteringRoundSheet ? '여는 중…' : '자 드가자'}
+                </button>
+              </div>
+            </div>
           </div>
 
           {stage === '03' && (
