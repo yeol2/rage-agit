@@ -676,7 +676,10 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                         />
                       </span>
                       {showRankChange && (
-                        <span className="flex items-center justify-center">
+                        // 작은 폰트(10~12px) 배지를 큰 폰트(14px) 점수와 그리드로 세로
+                        // 중앙정렬하면, 글자 자체의 시각적 무게중심이 서로 달라 배지가
+                        // 살짝 위에 떠 보인다 — self-end 로 행 바닥선에 맞춘다.
+                        <span className="flex items-end justify-center self-end">
                           <RankChangeBadge
                             current={originalRank}
                             previous={snapshotRankByMember.get(member.memberId)}
