@@ -11,10 +11,10 @@ export function Footer() {
     <footer className="border-t border-white/[0.07]">
       <div className="mx-auto max-w-shell px-5 py-16 sm:px-8">
         <div className="flex flex-col gap-12 md:flex-row md:justify-between md:gap-16">
-          <div className="max-w-md">
+          <div className="max-w-md sm:max-w-none">
             <p className="text-[15px] font-bold text-foreground">{siteName}</p>
             <p className="mt-4 text-sm leading-relaxed text-white/40">
-              {footer.description}{' '}
+              <span className="sm:whitespace-nowrap">{footer.description}</span>{' '}
               <span className="text-accent-secondary">{footer.descriptionAccent}</span>
             </p>
             <p className="mt-4 text-[13px] text-white/25">{footer.credit}</p>

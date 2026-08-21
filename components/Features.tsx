@@ -32,7 +32,7 @@ export function Features() {
 
             {!item.ready && (
               <span className="hud mt-1 shrink-0 self-start border border-accent-secondary/50 px-4 py-2 text-[10px] text-accent-secondary">
-                COMING SOON
+                {item.badgeLabel ?? 'COMING SOON'}
               </span>
             )}
           </li>

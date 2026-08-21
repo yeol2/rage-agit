@@ -1,3 +1,60 @@
+// item.badgeLabel 이 일부 항목에만 있으면 TS가 유니언 타입에서 접근을 막는다 —
+// 명시적으로 타입을 줘서 모든 항목에 선택 필드로 존재하게 만든다.
+interface FeatureItem {
+  title: string;
+  body: string;
+  ready: boolean;
+  badgeLabel?: string;
+}
+
+// 실제로 만든 순서대로: 자동 집계 → 랭킹 → 매치 기록 → 내전 팀 구성이 이미 돌아가고
+// 있다. 클랜원 페이지는 절반쯤 만들어져 있어 COMING SOON과 구분되는
+// badgeLabel("제작중")을 따로 준다. 그 아래 COMING SOON 셋은 사용자가 정한
+// 우선순위(디스코드 연동 → 실시간 리더보드 → 방송 오버레이) 그대로다.
+const FEATURE_ITEMS: FeatureItem[] = [
+  {
+    title: '자동 매치 집계',
+    body: '클랜원 카카오 계정을 등록해두면 내전이 끝나는 대로 전적이 자동으로 쌓입니다.',
+    ready: true,
+  },
+  {
+    title: '랭킹 시스템',
+    body: '킬 점수와 순위 점수를 합친 종합 점수로, 같은 티어끼리만 비교해 순위를 매깁니다.',
+    ready: true,
+  },
+  {
+    title: '매치 기록',
+    body: '내전 세션별로 각 경기의 팀 순위·킬·생존시간을 한눈에 들여다볼 수 있어요.',
+    ready: true,
+  },
+  {
+    title: '내전 팀 구성',
+    body: '명단만 올리면 티어 배치, 팀 구성, 실시간 스코어시트까지 한 화면에서 끝납니다.',
+    ready: true,
+  },
+  {
+    title: '클랜원 페이지',
+    body: '클랜원 개인별 전적과 6각형 지표를 보여주는 프로필 페이지예요.',
+    ready: false,
+    badgeLabel: '제작중',
+  },
+  {
+    title: '디스코드 연동',
+    body: '내전 결과와 랭킹 변동을 디스코드 채널로 바로 전달합니다.',
+    ready: false,
+  },
+  {
+    title: '실시간 리더보드',
+    body: '내전이 진행되는 동안 점수가 실시간으로 갱신되는 리더보드를 제공합니다.',
+    ready: false,
+  },
+  {
+    title: '방송 오버레이',
+    body: 'OBS 브라우저 소스로 리더보드를 방송 화면에 그대로 띄울 수 있습니다.',
+    ready: false,
+  },
+];
+
 export const siteConfig = {
   siteName: 'RAGE AGIT',
 
@@ -23,11 +80,18 @@ export const siteConfig = {
     statusLabel: 'LIVE · CLAN SCRIM',
     headline: {
       lead: '내 ',
-      highlight: '우승확률,',
+      highlightWhite: '우승',
+      highlightAccent: '확률',
+      highlightComma: ',',
       tailHighlight: '직접',
       tailRest: ' 확인하자.',
     },
-    body: '카카오 계정 하나만 등록하면 클랜 내전 전적을 바로 볼 수 있어요. 최근 10경기 동안 얼마나 잘했는지, 킬·데미지·순위·생존율로 쪼개서 확인합니다.',
+    // 문장 두 개를 줄바꿈 없이 한 줄씩 보여주고 싶어서 나눠뒀다 — 이어붙여
+    // 한 문단으로 두면 화면 폭에 따라 아무 데서나(단어 중간에도) 줄바꿈된다.
+    bodyLines: [
+      '카카오 계정 하나만 등록하면 클랜 내전 전적을 바로 볼 수 있어요.',
+      '최근 10경기 동안 얼마나 잘했는지, 킬·데미지·순위·생존율로 쪼개서 확인합니다.',
+    ],
     ctaLabel: '리더보드 보기',
     ctaHref: '/dashboard',
   },
@@ -84,38 +148,7 @@ export const siteConfig = {
   features: {
     eyebrow: 'PLATFORM FEATURES',
     heading: '클랜 운영에 필요한 모든 것',
-    items: [
-      {
-        title: '자동 매치 집계',
-        body: '클랜원 카카오 계정을 등록해두면 내전이 끝나는 대로 전적이 자동으로 쌓입니다.',
-        ready: true,
-      },
-      {
-        title: '클랜원 대시보드',
-        body: '최근 10경기 기준 평균 킬·데미지·어시스트, 평균 순위, 생존율을 한 화면에서 확인하세요.',
-        ready: true,
-      },
-      {
-        title: '랭킹 시스템',
-        body: '킬 점수와 순위 점수를 합산한 종합 점수로 클랜원 순위를 자동 집계합니다.',
-        ready: true,
-      },
-      {
-        title: '실시간 리더보드',
-        body: '내전이 진행되는 동안 점수가 실시간으로 갱신되는 리더보드를 제공합니다.',
-        ready: false,
-      },
-      {
-        title: '방송 오버레이',
-        body: 'OBS 브라우저 소스로 리더보드를 방송 화면에 그대로 띄울 수 있습니다.',
-        ready: false,
-      },
-      {
-        title: '디스코드 연동',
-        body: '내전 결과와 랭킹 변동을 디스코드 채널로 바로 전달합니다.',
-        ready: false,
-      },
-    ],
+    items: FEATURE_ITEMS,
   },
 
   about: {

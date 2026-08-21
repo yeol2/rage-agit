@@ -18,7 +18,9 @@ export function Hero() {
       <h1 className="mt-7 text-5xl font-bold leading-[1.12] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
         <span className="block">
           <span className="text-subtext">{hero.headline.lead}</span>
-          <span className="text-accent">{hero.headline.highlight}</span>
+          <span className="text-foreground">{hero.headline.highlightWhite}</span>
+          <span className="text-accent">{hero.headline.highlightAccent}</span>
+          <span className="text-foreground">{hero.headline.highlightComma}</span>
         </span>
         <span className="mt-1 block text-subtext">
           <span className="text-foreground">{hero.headline.tailHighlight}</span>
@@ -26,7 +28,13 @@ export function Hero() {
         </span>
       </h1>
 
-      <p className="mt-10 max-w-xl text-[15px] leading-relaxed text-white/55">{hero.body}</p>
+      <p className="mt-10 max-w-xl text-[15px] leading-relaxed text-white/55 sm:max-w-none">
+        {hero.bodyLines.map((line) => (
+          <span key={line} className="block sm:whitespace-nowrap">
+            {line}
+          </span>
+        ))}
+      </p>
 
       <div className="mt-6 flex items-baseline gap-3">
         <span className="text-xs font-medium uppercase tracking-widest text-white/35">
