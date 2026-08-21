@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 import { AdminProvider } from '@/components/admin/AdminProvider';
 
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AdminProvider>
           <div className="relative">{children}</div>
         </AdminProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
