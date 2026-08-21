@@ -70,7 +70,9 @@ export interface RoundSheetRound {
   // 그 라운드의 team_rank에 해당하는 배치점수(placementPoints) — 매칭 안
   // 됐으면(teamRank null) 이것도 null.
   rankScore: number | null;
-  cumulativeTotal: number;
+  // 그 라운드만의 합계(kills + rankScore) — 누적이 아니다. 누적 순위는
+  // RoundSheetRow.totalScore 가 따로 낸다.
+  roundTotal: number;
 }
 
 export interface RoundSheetRow {
@@ -82,6 +84,88 @@ export interface RoundSheetRow {
   totalPlacementPoints: number;
   totalScore: number;
   rounds: RoundSheetRound[];
+}
+
+export interface MatchParticipantForSquads {
+  memberId: string | null;
+  teamId: number;
+}
+
+// PUBG 의 team_id 는 매치마다 새로 매겨져서, 같은 4명이라도 라운드마다 다른
+// 번호를 받는다. "02 팀 구성 테이블"대로 안 하고 즉석에서 스쿼드를 짠 채로
+// 내전을 치른 경우 team_number 로는 실제로 누가 누구랑 뛰었는지 알 수 없다.
+// 그래서 라운드 전체에서 "누구랑 누가 몇 번이나 같은 팀이었는지"를 세어
+// 스쿼드를 되짚는다 — union-find로 합치되 PUBG 스쿼드 상한(4명)을 넘기면
+// 합치지 않는다. 자주 겹친 짝부터 먼저 합쳐야 안정적으로 뭉친다.
+export function deriveSquadsFromMatches(matches: MatchParticipantForSquads[][]): Map<string, number> {
+  const parent = new Map<string, string>();
+  const clusterSize = new Map<string, number>();
+
+  function find(x: string): string {
+    let root = x;
+    while (parent.get(root) !== root) root = parent.get(root)!;
+    let cur = x;
+    while (parent.get(cur) !== root) {
+      const next = parent.get(cur)!;
+      parent.set(cur, root);
+      cur = next;
+    }
+    return root;
+  }
+
+  function union(a: string, b: string) {
+    const rootA = find(a);
+    const rootB = find(b);
+    if (rootA === rootB) return;
+    const combinedSize = (clusterSize.get(rootA) ?? 1) + (clusterSize.get(rootB) ?? 1);
+    if (combinedSize > 4) return; // PUBG 스쿼드는 최대 4명
+    parent.set(rootA, rootB);
+    clusterSize.set(rootB, combinedSize);
+  }
+
+  const firstSeenOrder: string[] = [];
+  const coOccurrence = new Map<string, number>();
+
+  for (const participants of matches) {
+    const byTeamId = new Map<number, string[]>();
+    for (const p of participants) {
+      if (p.memberId === null) continue;
+      if (!parent.has(p.memberId)) {
+        parent.set(p.memberId, p.memberId);
+        clusterSize.set(p.memberId, 1);
+        firstSeenOrder.push(p.memberId);
+      }
+      const list = byTeamId.get(p.teamId) ?? [];
+      list.push(p.memberId);
+      byTeamId.set(p.teamId, list);
+    }
+    for (const members of byTeamId.values()) {
+      for (let i = 0; i < members.length; i++) {
+        for (let j = i + 1; j < members.length; j++) {
+          const key = [members[i], members[j]].sort().join('|');
+          coOccurrence.set(key, (coOccurrence.get(key) ?? 0) + 1);
+        }
+      }
+    }
+  }
+
+  const pairsByFrequency = [...coOccurrence.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [key] of pairsByFrequency) {
+    const [a, b] = key.split('|');
+    union(a, b);
+  }
+
+  const squadNumberByRoot = new Map<string, number>();
+  const squadByMemberId = new Map<string, number>();
+  for (const memberId of firstSeenOrder) {
+    const root = find(memberId);
+    if (!squadNumberByRoot.has(root)) {
+      squadNumberByRoot.set(root, squadNumberByRoot.size + 1);
+    }
+    squadByMemberId.set(memberId, squadNumberByRoot.get(root)!);
+  }
+
+  return squadByMemberId;
 }
 
 // 라운드별(매치 순서대로) 팀 결과를 받아 누적 킬/배치점수/Total과 최종 순위
@@ -112,7 +196,7 @@ export function computeRoundSheet(
         kills,
         teamRank,
         rankScore: teamRank !== null ? roundPlacementPoints : null,
-        cumulativeTotal: cumulativeScore.get(teamNumber) ?? 0,
+        roundTotal: roundScore,
       });
     }
   });

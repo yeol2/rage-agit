@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   computeRoundSheet,
   computeTeamRoundResults,
+  deriveSquadsFromMatches,
   placementPoints,
+  type MatchParticipantForSquads,
   type RosterMemberForScoring,
   type RoundParticipant,
   type TeamRoundResult,
@@ -87,8 +89,8 @@ describe('computeRoundSheet', () => {
         totalPlacementPoints: 13,
         totalScore: 26,
         rounds: [
-          { roundNo: 1, kills: 5, teamRank: 5, rankScore: 3, cumulativeTotal: 8 },
-          { roundNo: 2, kills: 8, teamRank: 1, rankScore: 10, cumulativeTotal: 26 },
+          { roundNo: 1, kills: 5, teamRank: 5, rankScore: 3, roundTotal: 8 },
+          { roundNo: 2, kills: 8, teamRank: 1, rankScore: 10, roundTotal: 18 },
         ],
       },
       {
@@ -98,8 +100,8 @@ describe('computeRoundSheet', () => {
         totalPlacementPoints: 10,
         totalScore: 22,
         rounds: [
-          { roundNo: 1, kills: 10, teamRank: 1, rankScore: 10, cumulativeTotal: 20 },
-          { roundNo: 2, kills: 2, teamRank: 10, rankScore: 0, cumulativeTotal: 22 },
+          { roundNo: 1, kills: 10, teamRank: 1, rankScore: 10, roundTotal: 20 },
+          { roundNo: 2, kills: 2, teamRank: 10, rankScore: 0, roundTotal: 2 },
         ],
       },
     ]);
@@ -122,7 +124,62 @@ describe('computeRoundSheet', () => {
       kills: null,
       teamRank: null,
       rankScore: null,
-      cumulativeTotal: 0,
+      roundTotal: 0,
     });
+  });
+});
+
+describe('deriveSquadsFromMatches', () => {
+  it('라운드마다 team_id 가 달라도 같이 뛴 4명을 한 스쿼드로 묶는다', () => {
+    const matches: MatchParticipantForSquads[][] = [
+      [
+        { memberId: 'a', teamId: 5 },
+        { memberId: 'b', teamId: 5 },
+        { memberId: 'c', teamId: 9 },
+        { memberId: 'd', teamId: 9 },
+      ],
+      [
+        { memberId: 'a', teamId: 2 },
+        { memberId: 'b', teamId: 2 },
+        { memberId: 'c', teamId: 7 },
+        { memberId: 'd', teamId: 7 },
+      ],
+    ];
+    const squads = deriveSquadsFromMatches(matches);
+    expect(squads.get('a')).toBe(squads.get('b'));
+    expect(squads.get('c')).toBe(squads.get('d'));
+    expect(squads.get('a')).not.toBe(squads.get('c'));
+  });
+
+  it('한 스쿼드는 4명을 넘지 못한다', () => {
+    const matches: MatchParticipantForSquads[][] = [
+      [
+        { memberId: 'a', teamId: 1 },
+        { memberId: 'b', teamId: 1 },
+        { memberId: 'c', teamId: 1 },
+        { memberId: 'd', teamId: 1 },
+        { memberId: 'e', teamId: 1 }, // 5명(비정상 데이터) — 그래도 4명 상한은 지킨다
+      ],
+    ];
+    const squads = deriveSquadsFromMatches(matches);
+    const counts = new Map<number, number>();
+    for (const squadNumber of squads.values()) {
+      counts.set(squadNumber, (counts.get(squadNumber) ?? 0) + 1);
+    }
+    for (const count of counts.values()) {
+      expect(count).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it('member_id 가 null 인 참가자는 무시한다', () => {
+    const matches: MatchParticipantForSquads[][] = [
+      [
+        { memberId: null, teamId: 1 },
+        { memberId: 'a', teamId: 1 },
+      ],
+    ];
+    const squads = deriveSquadsFromMatches(matches);
+    expect(squads.size).toBe(1);
+    expect(squads.get('a')).toBe(1);
   });
 });
