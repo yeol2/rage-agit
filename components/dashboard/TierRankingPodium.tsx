@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -182,6 +182,10 @@ const WINDOW_HELP: Array<{ term: string; desc: string }> = [
   { term: '최근 12매치', desc: '최근 내전 3회 (본인이 참여한)' },
 ];
 
+// "종합점수" 탭 옆 물음표 아이콘에 띄울 설명. 문구만 고치면 말풍선에 그대로 반영된다.
+const RAGE_SCORE_HELP =
+  '같은 티어 그룹 안에서만 비교하는 상대 점수예요. 고등학교 수학 시험에서 "반 평균이 50점"이라고 생각하면 쉬워요 — 그 그룹 평균이면 50점, 잘할수록 100에 가깝고 못할수록 0에 가까워집니다.';
+
 export interface TierRankingPodiumProps {
   recent12: RankingStatsRow[];
   alltime: RankingStatsRow[];
@@ -356,17 +360,36 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
         </div>
       </div>
 
-      <div className="mt-8 flex flex-wrap justify-center gap-2">
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
         {METRIC_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            aria-pressed={option.id === activeMetric}
-            onClick={() => setActiveMetric(option.id)}
-            className={toggleButtonClass(option.id === activeMetric)}
-          >
-            {option.label}
-          </button>
+          <Fragment key={option.id}>
+            <button
+              type="button"
+              aria-pressed={option.id === activeMetric}
+              onClick={() => setActiveMetric(option.id)}
+              className={toggleButtonClass(option.id === activeMetric)}
+            >
+              {option.label}
+            </button>
+            {/* "종합점수"는 사람들이 제일 헷갈려해서 물음표 설명을 바로 옆에 둔다 —
+                집계 창 물음표와 같은 hover 말풍선 패턴, gap이 좁아서 -ml로 당겨 붙인다. */}
+            {option.id === 'rageScore' && (
+              <span className="group relative -ml-1">
+                <span
+                  aria-hidden="true"
+                  className="flex h-5 w-5 cursor-default select-none items-center justify-center rounded-full border border-white/25 text-[11px] font-bold leading-none text-white/50 transition-colors group-hover:border-white/60 group-hover:text-white"
+                >
+                  ?
+                </span>
+                <span
+                  className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-max max-w-[16rem] -translate-x-1/2 rounded-lg border border-white/10 px-3 py-2 text-left text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+                  style={{ background: RANKING_ROW_BG }}
+                >
+                  {RAGE_SCORE_HELP}
+                </span>
+              </span>
+            )}
+          </Fragment>
         ))}
       </div>
 
@@ -469,7 +492,7 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
 
       {/* 다음 내전까지 카운트다운 — 참고 이미지의 "Ends in" 블록 구조 그대로
           시계 아이콘 / 라벨 / 남은 시간 세 덩어리를 세로로 쌓는다.
-          내전 일정은 매주 목·금 19:30 (lib/nextScrim.ts).
+          내전 일정은 매주 목·일 19:30 KST (lib/nextScrim.ts).
           `now` 는 1초마다 갱신되므로 초 단위가 실제로 흐른다. */}
       {now && (
         <div className="mx-auto mt-10 flex w-fit max-w-full flex-col items-center gap-3 text-center">
