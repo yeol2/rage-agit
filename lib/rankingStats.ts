@@ -3,10 +3,11 @@
 
 import { getSupabase } from './supabaseBrowser';
 import { cleanDisplayName, fetchAllMembers } from './memberStats';
+import { TIER_GROUPS } from './dashboardData';
 
-// 내전 3회(하루 4경기 기준 12경기) 미만이면 랭킹에서 뺀다.
+// 내전 4회(하루 4경기 기준 16경기) 미만이면 랭킹에서 뺀다.
 // 1~2경기짜리 우연을 실력처럼 보여주는 걸 막는다.
-export const MIN_GAMES_FOR_RANKING = 12;
+export const MIN_GAMES_FOR_RANKING = 16;
 
 // 최근 이 개월 수 안에 참가한 적이 없으면 랭킹에서 뺀다.
 // 통산 경기 수 자격만으로는 예전에 많이 뛰고 지금은 접은 사람이 계속
@@ -71,6 +72,12 @@ function tierBandIndexOf(tier: number, tierBands: number[][]): number {
   return tierBands.findIndex((band) => band.includes(tier));
 }
 
+// 점수는 "자기 고정 티어 밴드" 안에서 계산한다 — 대시보드 티어 탭과 같은 경계다.
+// TierRankingPodium·01 네임플레이트 배지·등수 스냅샷 캡처가 전부 이 상수를 공유한다.
+export const TIER_SCORE_BANDS: number[][] = TIER_GROUPS.filter((group) => group.tiers !== null).map(
+  (group) => group.tiers!,
+);
+
 // 각자 자기 고정 티어 밴드 안에서 z-score를 낸 뒤, 로지스틱으로 0~100 점수화한다.
 // z=0(밴드 평균)이면 항상 50점 — 밴드 인원수와 무관하다.
 // 표준편차가 0(밴드 전원 동점, 또는 1명)이면 z=0으로 두어 50점을 준다.
@@ -113,7 +120,7 @@ export function topByRageScore(
     .slice(0, limit);
 }
 
-export type RankingWindow = 'recent12' | 'alltime';
+export type RankingWindow = 'recent16' | 'alltime';
 
 interface RankingViewRow {
   member_id: string;
@@ -139,9 +146,9 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
   const alltimeData = alltimeResult.data ?? [];
 
   let windowData: RankingViewRow[] = alltimeData;
-  if (window === 'recent12') {
+  if (window === 'recent16') {
     // 6각형이 쓰는 member_recent_stats 가 아니라 랭킹 전용 뷰다 —
-    // 이쪽만 스크린샷 백필까지 합쳐서 최근 12경기(내전 3회)를 센다 (0013).
+    // 이쪽만 스크린샷 백필까지 합쳐서 최근 16경기(내전 4회)를 센다 (0013/0021).
     const { data, error } = await getSupabase()
       .from('member_recent_ranking_stats')
       .select('member_id, tier, game_count, avg_kills, avg_placement_points, avg_rank');

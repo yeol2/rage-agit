@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RosterBoard } from './RosterBoard';
+import { useAdmin } from '@/components/admin/AdminProvider';
 import type { Roster, RosterEntry } from '@/lib/scrimRoster';
 
 afterEach(() => {
@@ -529,5 +530,27 @@ describe('RosterBoard - 02 표 스왑 / VIP 정렬', () => {
         body: JSON.stringify({ rosterId: 'roster-1', changes: [{ id: 'a', teamNumber: 3 }] }),
       }),
     );
+  });
+});
+
+describe('RosterBoard - 01 종합점수 배지(관리자 전용)', () => {
+  it('일반 사용자에게는 점수가 안 보인다', () => {
+    const roster = makeRoster([makeEntry({ id: 'a', tierSlot: 1, memberId: 'mem-a' })]);
+    render(<RosterBoard roster={roster} />);
+    expect(screen.queryByText(/^\d+\.\d$/)).not.toBeInTheDocument();
+  });
+
+  it('관리자에게는 매칭된 멤버의 종합점수가 보인다', async () => {
+    vi.mocked(useAdmin).mockReturnValue({ isAdmin: true, login: vi.fn(), logout: vi.fn() });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ scores: { 'mem-a': 82.3 } }) }),
+    );
+
+    const roster = makeRoster([makeEntry({ id: 'a', tierSlot: 1, memberId: 'mem-a' })]);
+    render(<RosterBoard roster={roster} />);
+
+    await waitFor(() => expect(screen.getByText('82.3')).toBeInTheDocument());
+    expect(fetch).toHaveBeenCalledWith('/api/rage-scores?window=recent16');
   });
 });

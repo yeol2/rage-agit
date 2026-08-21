@@ -3,6 +3,7 @@ import {
   ACTIVE_WITHIN_MONTHS,
   MIN_GAMES_FOR_RANKING,
   RAGE_SCORE_STEEPNESS,
+  TIER_SCORE_BANDS,
   eligibleForRanking,
   rageScores,
   topByAvgKills,
@@ -30,16 +31,22 @@ function row(overrides: Partial<RankingStatsRow> = {}): RankingStatsRow {
 }
 
 describe('MIN_GAMES_FOR_RANKING', () => {
-  it('12경기(내전 3회)다', () => {
-    expect(MIN_GAMES_FOR_RANKING).toBe(12);
+  it('16경기(내전 4회)다', () => {
+    expect(MIN_GAMES_FOR_RANKING).toBe(16);
+  });
+});
+
+describe('TIER_SCORE_BANDS', () => {
+  it('전체 탭을 뺀 티어 그룹 4개와 같은 개수다', () => {
+    expect(TIER_SCORE_BANDS.length).toBe(4);
   });
 });
 
 describe('eligibleForRanking', () => {
   it('기준 이상만 남기고 미만은 뺀다', () => {
     const rows = [
-      row({ memberId: 'a', totalGameCount: 12 }),
-      row({ memberId: 'b', totalGameCount: 11 }),
+      row({ memberId: 'a', totalGameCount: 16 }),
+      row({ memberId: 'b', totalGameCount: 15 }),
       row({ memberId: 'c', totalGameCount: 100 }),
     ];
     expect(eligibleForRanking(rows).map((r) => r.memberId)).toEqual(['a', 'c']);

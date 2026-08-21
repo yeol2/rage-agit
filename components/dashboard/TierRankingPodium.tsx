@@ -1,30 +1,28 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
   RAGE_SCORE_STEEPNESS,
+  TIER_SCORE_BANDS,
   eligibleForRanking,
   topByAvgKills,
   topByAvgRank,
   topByRageScore,
   type RankingStatsRow,
 } from '@/lib/rankingStats';
+import { computeRankChange, type RankingSnapshotRow } from '@/lib/rankingSnapshot';
 import { siteConfig } from '@/lib/siteConfig';
 import { useAdmin } from '@/components/admin/AdminProvider';
 
-// 점수는 "자기 고정 티어 밴드" 안에서 계산한다 — TIER_GROUPS 탭과 같은 경계다.
-// "전체" 탭도 이 밴드별 점수를 그대로 모아 보여줄 뿐, 전체를 다시 묶어 계산하지 않는다.
-const TIER_BANDS = TIER_GROUPS.filter((group) => group.tiers !== null).map((group) => group.tiers!);
-
 // 사용자에게 보여줄 집계 기준 — 소프트맥스/z-score 같은 계산 방식은 여기 안 적는다.
 const AGGREGATION_RULES = [
-  '통산 12경기(내전 3회) 이상 참가한 클랜원만 집계',
+  '통산 16경기(내전 4회) 이상 참가한 클랜원만 집계',
   '최근 3개월 이내 내전 참가 기록이 없으면 제외',
   '종합점수: 매치당 등수점수+킬 합산 성적을 같은 티어 그룹 안에서 상대평가 (그룹 평균 = 50점)',
   '평균킬·평균등수: 매치당 평균 (부계정 포함)',
-  '최근 12매치 = 본인이 참여한 가장 최근 내전 3회, 역대 전체 = 40시즌부터 통산 전체 경기',
+  '최근 16매치 = 본인이 참여한 가장 최근 내전 4회, 역대 전체 = 40시즌부터 통산 전체 경기',
 ];
 
 // 시상대 3개는 크기가 완전히 같고, 1위만 통째로 위로 올라가 있다 —
@@ -49,18 +47,30 @@ const PEDESTAL_GRADIENT = 'linear-gradient(180deg, #21212A 0%, #17171E 55%, #0E0
 // 윗면으로 읽힌다.
 const PEDESTAL_TOP_COLOR = '#2B2B33';
 
-// 4위 이하 표의 열 정의 — 등수 / 닉네임 / 티어 / 뱃지 / 점수.
+// 4위 이하 표의 열 정의 — 등수 / 닉네임 / 티어 / 뱃지 / 점수 / 변동.
 // 헤더와 각 행이 **같은 문자열**을 쓰기 때문에 열이 서로 어긋날 수 없다.
 // 예전엔 flex + 개별 w- 값이라 티어가 닉네임 옆에 붙어 다니고 열이 안 맞았다.
 //
-// 뱃지 열이 12.5rem 으로 넓은 건 **티어 열을 표 정중앙에 놓기 위한 계산값**이다.
-// 표 안쪽 폭 54rem(max-w-4xl 56 − 좌우 패딩 2) 기준으로,
-//   왼쪽 = 등수3 + gap1 + 닉네임(1fr) + gap1,  오른쪽 = gap1 + 뱃지B + gap1 + 점수10
-// 이 같아지려면 닉네임 = B + 7 이어야 하고, 고정폭 합이 54 가 되게 풀면 B = 12.5 다.
-// (닉네임이 1fr 이라 남는 폭을 다 먹으므로 결과적으로 19.5rem 이 된다.)
-// 그래서 뱃지 폭을 바꾸면 티어가 중앙에서 벗어난다 — 셋을 같이 계산할 것.
+// 앞 네 칸(등수/닉네임/티어/뱃지)은 **지표를 바꿔도 자리가 그대로**여야 한다.
+// 그래서 점수 칸은 가장 긴 지표(평균킬 `2.50킬 (210킬/20경기)` = 130px)에 맞춘
+// 고정폭이고, 짧은 지표에서 칸이 남는 문제는 폭을 줄이는 대신 **콘텐츠를 우측
+// 정렬**해서 푼다 — 값이 항상 칸 오른쪽 끝(= 변동 칸 바로 옆)에 붙으므로 남는
+// 공간이 왼쪽으로 가고, 칸 폭은 건드릴 필요가 없다.
 const RANKING_GRID =
-  'grid grid-cols-[2rem_1fr_3.5rem_5rem_6rem] items-center gap-2 sm:grid-cols-[3rem_1fr_5rem_12.5rem_10rem] sm:gap-4';
+  'grid grid-cols-[2rem_1fr_3.5rem_5rem_5rem_1.75rem] items-center gap-2 sm:grid-cols-[3rem_1fr_5rem_10rem_8.25rem_1.75rem] sm:gap-3';
+
+// 변동은 종합점수에서만 계산한다. 평균등수/평균킬 탭에서는 변동 칸을 아예 만들지
+// 않고 **마지막 두 칸을 하나로 합쳐** 점수가 박스 오른쪽 끝까지 쓰게 한다.
+// 합친 폭 = 점수 + 칸사이간격 + 변동 이라 고정폭 총합이 위와 똑같고, 그래서
+// 남는 폭을 먹는 닉네임(1fr) 도 그대로다 — 앞 네 칸 위치가 탭을 바꿔도 안 흔들린다.
+//   데스크탑: 8.25rem + 12px + 1.75rem = 10.75rem
+//   모바일  : 5rem    +  8px + 1.75rem =  7.25rem
+const RANKING_GRID_NO_CHANGE =
+  'grid grid-cols-[2rem_1fr_3.5rem_5rem_7.25rem] items-center gap-2 sm:grid-cols-[3rem_1fr_5rem_10rem_10.75rem] sm:gap-3';
+
+// 점수 헤더를 칸 오른쪽 끝에서 살짝 띄우는 공백. 일반 공백은 HTML 이 줄 끝에서
+// 지워버리므로 non-breaking space 를 쓴다.
+const HEADER_TRAILING_SPACE = String.fromCharCode(160); // U+00A0
 
 /**
  * 뱃지 열에 찍을 값.
@@ -71,6 +81,39 @@ const RANKING_GRID =
  */
 function badgeLabel(row: RankingStatsRow & { badge?: string | null }): string {
   return row.badge ?? '-';
+}
+
+// 직전 등수 스냅샷 대비 상승/하락/신규를 보여준다. 종합점수 탭에서만 쓴다.
+// 상승=초록, 하락=빨강(사용자 지정). 신규(NEW)는 그 둘과 안 겹치는 네온
+// 시안으로 — 상승 색(초록)과 같이 쓰면 "새로 올라온 건지 오른 건지" 헷갈린다.
+function RankChangeBadge({
+  current,
+  previous,
+  className = '',
+}: {
+  current: number;
+  previous: number | undefined;
+  className?: string;
+}) {
+  const change = computeRankChange(current, previous);
+  if (!change) return null;
+  if (change.type === 'new') {
+    return (
+      <span
+        className={`text-[10px] font-bold ${className}`}
+        style={{ color: '#39E5FF', textShadow: '0 0 6px rgba(57,229,255,0.8)' }}
+      >
+        NEW
+      </span>
+    );
+  }
+  const isUp = change.type === 'up';
+  return (
+    <span className={`text-xs font-bold ${isUp ? 'text-green-400' : 'text-red-400'} ${className}`}>
+      {isUp ? '▲' : '▼'}
+      {change.delta}
+    </span>
+  );
 }
 
 // 표 한 줄의 배경. 시상대 박스(PEDESTAL_GRADIENT)와 같은 그래파이트 계열로 맞췄다.
@@ -163,7 +206,7 @@ function ClockIcon() {
 }
 
 type Metric = 'rageScore' | 'avgRank' | 'avgKills';
-type Window = 'recent12' | 'alltime';
+type Window = 'recent16' | 'alltime';
 
 const METRIC_OPTIONS: Array<{ id: Metric; label: string }> = [
   { id: 'rageScore', label: '종합점수' },
@@ -173,13 +216,13 @@ const METRIC_OPTIONS: Array<{ id: Metric; label: string }> = [
 
 const WINDOW_OPTIONS: Array<{ id: Window; label: string }> = [
   { id: 'alltime', label: '역대 전체' },
-  { id: 'recent12', label: '최근 12매치' },
+  { id: 'recent16', label: '최근 16매치' },
 ];
 
 // 집계 창 토글 옆 물음표 아이콘에 띄울 설명. 문구만 고치면 말풍선에 그대로 반영된다.
 const WINDOW_HELP: Array<{ term: string; desc: string }> = [
   { term: '역대 전체', desc: '40시즌부터 현재까지' },
-  { term: '최근 12매치', desc: '최근 내전 3회 (본인이 참여한)' },
+  { term: '최근 16매치', desc: '최근 내전 4회 (본인이 참여한)' },
 ];
 
 // "종합점수" 탭 옆 물음표 아이콘에 띄울 설명. 문구만 고치면 말풍선에 그대로 반영된다.
@@ -187,8 +230,9 @@ const RAGE_SCORE_HELP =
   '같은 티어 그룹 안에서 비교해요 — 예를 들어 2티어는 2~2.5티어 그룹 안에서만 비교돼요. 고등학교 수학 시험에서 "반 평균이 50점"이라고 생각하면 쉬워요 — 그 그룹 평균이면 50점, 잘할수록 100에 가깝고 못할수록 0에 가까워집니다.';
 
 export interface TierRankingPodiumProps {
-  recent12: RankingStatsRow[];
+  recent16: RankingStatsRow[];
   alltime: RankingStatsRow[];
+  snapshots: RankingSnapshotRow[];
 }
 
 function formatMetricValue(
@@ -255,11 +299,27 @@ function windowButtonClass(selected: boolean): string {
     : 'rounded-lg px-6 py-2 text-sm text-menu transition-colors hover:text-foreground';
 }
 
-export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps) {
+export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingPodiumProps) {
   const { isAdmin } = useAdmin();
   const [activeMetric, setActiveMetric] = useState<Metric>('rageScore');
-  const [activeWindow, setActiveWindow] = useState<Window>('recent12');
+  const [activeWindow, setActiveWindow] = useState<Window>('recent16');
   const [activeGroupId, setActiveGroupId] = useState<TierGroup['id']>(TIER_GROUPS[0].id);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // 변동 칸은 종합점수 탭에만 있다 — 표 전체(헤더+행)가 같은 판단을 써야 열이
+  // 어긋나지 않으므로 여기 한 곳에서만 정한다.
+  const showRankChange = activeMetric === 'rageScore';
+  const rankingGrid = showRankChange ? RANKING_GRID : RANKING_GRID_NO_CHANGE;
+
+  const snapshotRankByMember = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const snapshot of snapshots) {
+      if (snapshot.window === activeWindow && snapshot.groupId === activeGroupId) {
+        map.set(snapshot.memberId, snapshot.rankPosition);
+      }
+    }
+    return map;
+  }, [snapshots, activeWindow, activeGroupId]);
 
   // 서버/클라이언트 시각이 어긋나 하이드레이션 경고가 나지 않도록, 마운트 후에만 채운다.
   // 이후 1초마다 갱신해서 카운트다운의 초 단위가 실제로 흐르게 한다.
@@ -271,7 +331,7 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
   }, []);
 
   const activeGroup = TIER_GROUPS.find((group) => group.id === activeGroupId) ?? TIER_GROUPS[0];
-  const rows = activeWindow === 'recent12' ? recent12 : alltime;
+  const rows = activeWindow === 'recent16' ? recent16 : alltime;
   const eligible = eligibleForRanking(rows);
   const groupRows =
     activeGroup.tiers === null
@@ -282,7 +342,7 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
   const RANKING_SIZE = isAdmin ? groupRows.length : activeGroup.tiers === null ? 30 : 10;
   const topRanked =
     activeMetric === 'rageScore'
-      ? topByRageScore(groupRows, TIER_BANDS, RAGE_SCORE_STEEPNESS, RANKING_SIZE)
+      ? topByRageScore(groupRows, TIER_SCORE_BANDS, RAGE_SCORE_STEEPNESS, RANKING_SIZE)
       : activeMetric === 'avgRank'
         ? topByAvgRank(groupRows, RANKING_SIZE)
         : topByAvgKills(groupRows, RANKING_SIZE);
@@ -486,6 +546,13 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
                             stacked
                           />
                         </p>
+                        {activeMetric === 'rageScore' && (
+                          <RankChangeBadge
+                            current={slot.rank}
+                            previous={snapshotRankByMember.get(member.memberId)}
+                            className="mt-1 block"
+                          />
+                        )}
                       </>
                     )}
                   </div>
@@ -523,44 +590,105 @@ export function TierRankingPodium({ recent12, alltime }: TierRankingPodiumProps)
       />
 
       {restRanked.length > 0 && (
-        <div className="mx-auto mt-10 max-w-4xl">
-          <div className={`${RANKING_GRID} px-4 pb-2 text-xs text-white/60`}>
+        <div className="mx-auto mt-8 max-w-4xl">
+          {isAdmin && (
+            // px-4 를 주지 않는다 — 검색창도 등수 카드와 같은 "박스"라서, 카드
+            // 안쪽 글자(px-4 만큼 들어와 있다)가 아니라 **카드 바깥 테두리**와
+            // 오른쪽 끝을 맞춰야 세로로 일자가 된다.
+            // mb-6 은 위 구분선과 아래 등수 카드들 "사이"에 떠 있는 자기 영역처럼
+            // 보이게 하는 여백이다(전엔 mb-2라 헤더 줄에 거의 붙어 보였다).
+            <div className="mb-6 flex justify-end">
+              <div className="relative w-40">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="닉네임 검색"
+                  className="w-full rounded-md border border-white/15 bg-white/[0.03] py-1.5 pl-7 pr-3 text-right text-sm text-foreground placeholder:text-menu focus:border-accent focus:outline-none"
+                />
+                {/* 돋보기 아이콘 — 클릭 동작은 없다(입력창이 이미 자동으로 필터링한다),
+                    검색창이라는 걸 한눈에 알아보게 하는 표시일 뿐. */}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-menu"
+                >
+                  <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="M16 16L13 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </div>
+            </div>
+          )}
+
+          {/* 목차(헤더)와 그 아래 실제 데이터 모두 왼쪽 정렬로 통일한다 — 칸마다
+              정렬 방식이 다르면(가운데/오른쪽 섞임) 위아래로 훑을 때 눈이
+              흔들린다. */}
+          <div className={`${rankingGrid} px-4 pb-2 text-xs text-white/60`}>
             <span>등수</span>
             <span>닉네임</span>
             <span>티어</span>
-            {/* 열이 넓어서 왼쪽 정렬하면 티어 바로 옆에 붙어 보인다 — 가운데로 둔다. */}
-            <span className="text-center">뱃지</span>
+            <span>뱃지</span>
+            {/* 변동 칸이 있을 때만 라벨 뒤에 공백 한 칸을 붙여 오른쪽 끝에서 살짝 띄운다.
+                변동이 없는 지표는 박스 끝까지 다 써야 하므로 공백을 안 붙인다. */}
             <span className="text-right">
               {METRIC_OPTIONS.find((o) => o.id === activeMetric)?.label}
+              {showRankChange ? HEADER_TRAILING_SPACE : ''}
             </span>
+            {showRankChange && <span className="text-center">변동</span>}
           </div>
 
-          {/* 줄마다 배경이 깔린 알약 모양이고, 구분선은 쓰지 않는다. */}
-          <div className="space-y-1">
-            {restRanked.map((member, index) => (
-              <div
-                key={member.memberId}
-                data-testid={`ranking-row-${index + 4}`}
-                className={`${RANKING_GRID} rounded-xl px-4 py-2.5`}
-                style={{ background: RANKING_ROW_BG }}
-              >
-                <span className="text-sm font-bold text-menu">{index + 4}</span>
-                <span className="min-w-0 truncate text-sm font-bold text-foreground">
-                  {member.discordNickname}
-                </span>
-                <span className="text-sm text-menu">{member.tier}티어</span>
-                <span className="text-center text-sm text-menu">{badgeLabel(member)}</span>
-                <span className="text-right tabular-nums">
-                  <MetricValue
-                    metric={activeMetric}
-                    row={member}
-                    className="text-sm font-bold text-foreground"
-                    detailClassName="text-xs font-normal text-menu"
-                  />
-                </span>
+          {(() => {
+            const query = searchQuery.trim().toLowerCase();
+            const displayedRanked =
+              isAdmin && query
+                ? restRanked.filter((member) => member.discordNickname.toLowerCase().includes(query))
+                : restRanked;
+
+            if (displayedRanked.length === 0) {
+              return <p className="mt-4 text-center text-sm text-menu">검색 결과가 없습니다</p>;
+            }
+
+            return (
+              /* 줄마다 배경이 깔린 알약 모양이고, 구분선은 쓰지 않는다. */
+              <div className="space-y-1">
+                {displayedRanked.map((member) => {
+                  const originalRank = restRanked.indexOf(member) + 4;
+                  return (
+                    <div
+                      key={member.memberId}
+                      data-testid={`ranking-row-${originalRank}`}
+                      className={`${rankingGrid} rounded-xl px-4 py-2.5`}
+                      style={{ background: RANKING_ROW_BG }}
+                    >
+                      <span className="text-sm font-bold text-menu">{originalRank}</span>
+                      <span className="min-w-0 truncate text-sm font-bold text-foreground">
+                        {member.discordNickname}
+                      </span>
+                      <span className="text-sm text-menu">{member.tier}티어</span>
+                      <span className="text-sm text-menu">{badgeLabel(member)}</span>
+                      <span className="text-right tabular-nums">
+                        <MetricValue
+                          metric={activeMetric}
+                          row={member}
+                          className="text-sm font-bold text-foreground"
+                          detailClassName="text-xs font-normal text-menu"
+                        />
+                      </span>
+                      {showRankChange && (
+                        <span className="flex items-center justify-center">
+                          <RankChangeBadge
+                            current={originalRank}
+                            previous={snapshotRankByMember.get(member.memberId)}
+                          />
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            );
+          })()}
 
           <p className="mt-3 text-right text-xs text-menu">
             총 {groupRows.length}명 중 {topRanked.length}명

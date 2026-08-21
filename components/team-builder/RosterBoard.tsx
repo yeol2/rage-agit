@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type DragEvent, type FormEvent, type MouseEvent } from 'react';
+import { useEffect, useState, type DragEvent, type FormEvent, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -21,6 +21,7 @@ import {
 import { VipCrown } from '@/components/VipCrown';
 import { RoundSheet } from '@/components/team-builder/RoundSheet';
 import { NAMEPLATE_HEIGHT, NAMEPLATE_WIDTH } from '@/lib/teamBuilderLayout';
+import { useAdmin } from '@/components/admin/AdminProvider';
 
 const TIER_SLOT_LABELS: Record<1 | 2 | 3 | 4, string> = {
   1: '1티어 (0~1.5)',
@@ -66,6 +67,7 @@ function Nameplate({
   draggable = true,
   fixed = false,
   width,
+  score,
   onDragStart,
   onDragEnd,
   onClick,
@@ -83,6 +85,9 @@ function Nameplate({
   // 02 표의 <table> 칸은 auto-layout이라 내용에 따라 칸 너비가 제멋대로
   // 정해진다 — 01의 실측 너비(px)를 그대로 박아서 두 표의 카드 폭을 맞춘다.
   width?: number;
+  // 관리자에게만, 01 티어 칸/보류 칸에서만 넘긴다(최근 16매치 종합점수) —
+  // 02 표는 이미 고정 배색 등으로 정보가 많아서 이 배지를 안 더한다.
+  score?: number;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onDragEnd?: () => void;
   onClick?: () => void;
@@ -182,6 +187,11 @@ function Nameplate({
     <div className="relative">
       {plate}
       {entry.vipRank !== null && <VipCrown />}
+      {score !== undefined && (
+        <span className="pointer-events-none absolute -bottom-1.5 -left-1.5 rounded bg-black/70 px-1 text-[10px] font-bold text-accent">
+          {score.toFixed(1)}
+        </span>
+      )}
       {onDelete && (
         <button
           type="button"
@@ -207,6 +217,9 @@ interface LastMove {
 
 export function RosterBoard({ roster }: { roster: Roster | null }) {
   const router = useRouter();
+  const { isAdmin } = useAdmin();
+  // 01 네임플레이트에 보여줄 관리자 전용 최근 16매치 종합점수 — memberId 기준.
+  const [scoreByMemberId, setScoreByMemberId] = useState<Record<string, number>>({});
   const [entries, setEntries] = useState<RosterEntry[]>(roster?.entries ?? []);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<DropTarget | null>(null);
@@ -247,6 +260,23 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [resetConfirming, setResetConfirming] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setScoreByMemberId({});
+      return;
+    }
+    let cancelled = false;
+    fetch('/api/rage-scores?window=recent16')
+      .then((res) => res.json())
+      .then((body) => {
+        if (!cancelled) setScoreByMemberId(body.scores ?? {});
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
 
   if (!roster) {
     return <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>;
@@ -729,6 +759,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                           <Nameplate
                             entry={entry}
                             dragging={entry.id === draggingId}
+                            score={entry.memberId ? scoreByMemberId[entry.memberId] : undefined}
                             onDragStart={(event) => {
                               event.dataTransfer.effectAllowed = 'move';
                               setDraggingId(entry.id);
@@ -779,6 +810,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                   entry={entry}
                   dragging={entry.id === draggingId}
                   width={NAMEPLATE_WIDTH}
+                  score={entry.memberId ? scoreByMemberId[entry.memberId] : undefined}
                   onDragStart={(event) => {
                     event.dataTransfer.effectAllowed = 'move';
                     setDraggingId(entry.id);

@@ -21,13 +21,13 @@ function row(overrides: Partial<RankingStatsRow>): RankingStatsRow {
   };
 }
 
-const RECENT10: RankingStatsRow[] = [
+const RECENT16: RankingStatsRow[] = [
   row({ memberId: 'a', discordNickname: 'A', tier: 0, totalGameCount: 20, avgKills: 3, avgPlacementPoints: 8 }),
   row({ memberId: 'b', discordNickname: 'B', tier: 0, totalGameCount: 20, avgKills: 5, avgPlacementPoints: 5 }),
   row({ memberId: 'c', discordNickname: 'C', tier: 0, totalGameCount: 8, avgKills: 10, avgPlacementPoints: 10 }),
-  row({ memberId: 'd', discordNickname: 'D', tier: 2, totalGameCount: 15, avgKills: 2, avgPlacementPoints: 6 }),
-  row({ memberId: 'e', discordNickname: 'E', tier: 2, totalGameCount: 15, avgKills: 2.5, avgPlacementPoints: 4 }),
-  row({ memberId: 'f', discordNickname: 'F', tier: 2, totalGameCount: 15, avgKills: 1, avgPlacementPoints: 3 }),
+  row({ memberId: 'd', discordNickname: 'D', tier: 2, totalGameCount: 20, avgKills: 2, avgPlacementPoints: 6 }),
+  row({ memberId: 'e', discordNickname: 'E', tier: 2, totalGameCount: 20, avgKills: 2.5, avgPlacementPoints: 4 }),
+  row({ memberId: 'f', discordNickname: 'F', tier: 2, totalGameCount: 20, avgKills: 1, avgPlacementPoints: 3 }),
   row({ memberId: 'g', discordNickname: 'G', tier: 4.5, totalGameCount: 20, avgKills: 1, avgPlacementPoints: 2 }),
 ];
 
@@ -42,8 +42,8 @@ const ALLTIME: RankingStatsRow[] = [
 ];
 
 describe('TierRankingPodium', () => {
-  it('기본값(전체/종합점수/최근12매치)으로 점수 내림차순 top3를 채우고 티어 배지를 보여준다', () => {
-    render(<TierRankingPodium recent12={RECENT10} alltime={ALLTIME} />);
+  it('기본값(전체/종합점수/최근16매치)으로 점수 내림차순 top3를 채우고 티어 배지를 보여준다', () => {
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
     const slot1 = screen.getByTestId('podium-slot-1');
     const slot2 = screen.getByTestId('podium-slot-2');
     const slot3 = screen.getByTestId('podium-slot-3');
@@ -54,8 +54,8 @@ describe('TierRankingPodium', () => {
     expect(within(slot3).getByText('E')).toBeInTheDocument();
   });
 
-  it('자격 미달(통산 12경기 미만) 인원은 최고 스탯이어도 랭킹에서 빠진다', () => {
-    render(<TierRankingPodium recent12={RECENT10} alltime={ALLTIME} />);
+  it('자격 미달(통산 16경기 미만) 인원은 최고 스탯이어도 랭킹에서 빠진다', () => {
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
     expect(screen.queryByText('C')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '평균킬' }));
@@ -63,7 +63,7 @@ describe('TierRankingPodium', () => {
   });
 
   it('평균킬 탭으로 바꾸면 평균킬 기준 순서로 다시 채운다', () => {
-    render(<TierRankingPodium recent12={RECENT10} alltime={ALLTIME} />);
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
     fireEvent.click(screen.getByRole('button', { name: '평균킬' }));
 
     const slot1 = screen.getByTestId('podium-slot-1');
@@ -76,7 +76,7 @@ describe('TierRankingPodium', () => {
   });
 
   it('역대 전체 탭으로 바꾸면 통산 데이터로 다시 채운다', () => {
-    render(<TierRankingPodium recent12={RECENT10} alltime={ALLTIME} />);
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
     fireEvent.click(screen.getByRole('tab', { name: '역대 전체' }));
 
     const slot1 = screen.getByTestId('podium-slot-1');
@@ -89,7 +89,7 @@ describe('TierRankingPodium', () => {
   });
 
   it('티어 탭을 고르면 그 그룹만 보여준다. 인원이 모자라면 빈 슬롯', () => {
-    render(<TierRankingPodium recent12={RECENT10} alltime={ALLTIME} />);
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
     fireEvent.click(screen.getByRole('tab', { name: '4~5티어' }));
 
     const slot1 = screen.getByTestId('podium-slot-1');
@@ -104,9 +104,67 @@ describe('TierRankingPodium', () => {
 
   it('관리자면 전체 탭 30명/티어별 10명 제한 없이 인원 전부를 랭킹에 넣는다', () => {
     vi.mocked(useAdmin).mockReturnValueOnce({ isAdmin: true, login: vi.fn(), logout: vi.fn() });
-    render(<TierRankingPodium recent12={RECENT10} alltime={ALLTIME} />);
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
 
-    // RECENT10의 자격자는 A/B/D/E/F/G(6명) — C는 12경기 미만이라 관리자여도 빠진다.
+    // RECENT16의 자격자는 A/B/D/E/F/G(6명) — C는 16경기 미만이라 관리자여도 빠진다.
     expect(screen.getByText(/총 6명 중 6명/)).toBeInTheDocument();
+  });
+});
+
+describe('TierRankingPodium — 관리자 검색', () => {
+  it('일반 사용자에게는 검색창이 안 보인다', () => {
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
+    expect(screen.queryByPlaceholderText('닉네임 검색')).not.toBeInTheDocument();
+  });
+
+  it('관리자는 검색창으로 4위 이하 표를 닉네임 부분일치로 필터링할 수 있다', () => {
+    // 기본값(전체/종합점수) 기준 top3는 D/A/E — 4위 이하 표에 B/F/G가 남는다.
+    vi.mocked(useAdmin).mockReturnValue({ isAdmin: true, login: vi.fn(), logout: vi.fn() });
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
+
+    const input = screen.getByPlaceholderText('닉네임 검색');
+    fireEvent.change(input, { target: { value: 'f' } });
+
+    expect(screen.getByText('F')).toBeInTheDocument();
+    expect(screen.queryByText('B')).not.toBeInTheDocument();
+    expect(screen.queryByText('G')).not.toBeInTheDocument();
+  });
+
+  it('검색 결과가 없으면 안내 문구를 보여준다', () => {
+    vi.mocked(useAdmin).mockReturnValue({ isAdmin: true, login: vi.fn(), logout: vi.fn() });
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
+
+    fireEvent.change(screen.getByPlaceholderText('닉네임 검색'), { target: { value: '없는이름' } });
+    expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
+  });
+
+  it('검색 중에도 시상대(top3)는 그대로 남는다', () => {
+    vi.mocked(useAdmin).mockReturnValue({ isAdmin: true, login: vi.fn(), logout: vi.fn() });
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
+
+    fireEvent.change(screen.getByPlaceholderText('닉네임 검색'), { target: { value: '없는이름' } });
+    expect(within(screen.getByTestId('podium-slot-1')).getByText('D')).toBeInTheDocument();
+  });
+});
+
+describe('TierRankingPodium — 등수 변화', () => {
+  it('종합점수 탭에서 이전보다 등수가 오르면 빨간 상승 표시를 낸다', () => {
+    // recent16/전체 기준 D가 1위 — 스냅샷에서 D가 3위였다면 2계단 상승.
+    const snapshots = [{ window: 'recent16' as const, groupId: 'all', memberId: 'd', rankPosition: 3 }];
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={snapshots} />);
+    expect(screen.getByText('▲2')).toBeInTheDocument();
+  });
+
+  it('스냅샷에 없던 사람은 NEW를 보여준다', () => {
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
+    expect(within(screen.getByTestId('podium-slot-1')).getByText('NEW')).toBeInTheDocument();
+  });
+
+  it('평균킬 탭에서는 스냅샷이 있어도 변화 표시를 안 한다', () => {
+    const snapshots = [{ window: 'recent16' as const, groupId: 'all', memberId: 'd', rankPosition: 3 }];
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={snapshots} />);
+    fireEvent.click(screen.getByRole('button', { name: '평균킬' }));
+    expect(screen.queryByText('▲2')).not.toBeInTheDocument();
+    expect(screen.queryByText('NEW')).not.toBeInTheDocument();
   });
 });

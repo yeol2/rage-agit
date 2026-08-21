@@ -478,6 +478,47 @@ for (const role of ['anon', 'authenticated']) {
   );
 }
 
+console.log('\n0021 — 최근 랭킹 창 12매치 → 16매치');
+
+check(
+  (await client.query(`select pg_get_viewdef('member_recent_ranking_stats'::regclass) as def`)).rows[0].def
+    .includes('<= 16'),
+  '뷰가 최근 16경기로 제한한다',
+);
+
+console.log('\n0022 — 등수 스냅샷');
+
+check(
+  (await one(`select count(*) from information_schema.tables
+    where table_name = 'ranking_snapshots'`)) === 1,
+  'ranking_snapshots 테이블이 있다',
+);
+
+check(
+  (await one(`select count(*) from pg_constraint
+    where conrelid = 'ranking_snapshots'::regclass and contype = 'u'
+      and pg_get_constraintdef(oid) like '%ranking_window%group_id%member_id%'`)) === 1,
+  '(ranking_window, group_id, member_id) 유일 제약이 있다',
+);
+
+const snapshotGrants = await client.query(`
+  select grantee from information_schema.role_table_grants
+  where table_name = 'ranking_snapshots' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    snapshotGrants.rows.some((r) => r.grantee === role),
+    `${role} 은 ranking_snapshots 를 읽을 수 있다`,
+  );
+}
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'scrim_rosters' and column_name = 'ranking_snapshot_captured_at'`)) === 1,
+  'scrim_rosters.ranking_snapshot_captured_at 컬럼이 있다',
+);
+
 await client.end();
 
 console.log('');

@@ -6,6 +6,11 @@ vi.mock('@/lib/rankingStats', async (importOriginal) => ({
   fetchRankingStats: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('@/lib/rankingSnapshot', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/rankingSnapshot')>()),
+  fetchRankingSnapshots: vi.fn().mockResolvedValue([]),
+}));
+
 // eslint-disable-next-line import/first
 import DashboardPage from './page';
 
