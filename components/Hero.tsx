@@ -15,7 +15,11 @@ export function Hero() {
         </p>
       </div>
 
-      <h1 className="mt-7 text-5xl font-bold leading-[1.12] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
+      {/* about 페이지 헤드라인과 크기를 맞췄다 — 둘 다 이 사이트에서 가장 큰
+          글자라 크기가 다르면 "어느 게 더 중요한 문구인지" 헷갈린다.
+          원래 이 쪽(5xl~8xl)이 about(4xl~6xl)보다 한 단계씩 더 컸는데,
+          그 중간값(4xl~7xl)으로 둘 다 맞췄다. */}
+      <h1 className="mt-7 text-4xl font-bold leading-[1.12] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
         <span className="block">
           <span className="text-subtext">{hero.headline.lead}</span>
           <span className="text-foreground">{hero.headline.highlightWhite}</span>

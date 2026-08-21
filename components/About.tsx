@@ -25,7 +25,8 @@ export function About() {
             <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
           </div>
 
-          <h1 className="mt-7 max-w-3xl text-4xl font-bold leading-[1.25] tracking-tight sm:text-5xl md:text-6xl">
+          {/* Hero(랜딩) 헤드라인과 크기를 맞췄다 — components/Hero.tsx 의 h1 주석 참고. */}
+          <h1 className="mt-7 max-w-3xl text-4xl font-bold leading-[1.25] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
             <span className="block text-accent">{about.headline.emphasis}</span>
             <span className="mt-1 block text-subtext">
               {about.headline.plainLead}
