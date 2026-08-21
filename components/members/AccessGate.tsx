@@ -77,6 +77,7 @@ export function AccessGate({ children }: { children: ReactNode }) {
                   ref={(el) => {
                     inputRefs.current[index] = el;
                   }}
+                  type="password"
                   value={digit}
                   onChange={(event) => handleChange(index, event.target.value)}
                   onKeyDown={(event) => handleKeyDown(index, event)}
