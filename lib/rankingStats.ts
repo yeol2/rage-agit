@@ -59,10 +59,19 @@ function stddev(values: number[], avg: number): number {
   return Math.sqrt(mean(values.map((v) => (v - avg) ** 2)));
 }
 
-// 매치당 종합점수 = 배치점수 + 킬. 클랜이 실제로 쓰는 "합계"(점수+킬=합계) 규칙과
-// 같은 기준이다 — scripts/read-screenshot-guide.md 의 시트 검산식 참고.
-function totalScore(row: Pick<RankingStatsRow, 'avgPlacementPoints' | 'avgKills'>): number {
-  return row.avgPlacementPoints + row.avgKills;
+// 시트 검산 기준 "합계"(점수+킬)는 그대로 두고, 종합점수(z-score) 계산에서만
+// 킬에 티어별 가중치를 곱한다. 고티어(0~1.5)일수록 오더를 직접 짜는 쪽이라
+// 등수가 실력을 더 잘 반영하고, 저티어로 갈수록 등수가 오더 따라가기에 좌우돼
+// 개인 실력 반영도가 떨어지므로 킬 비중을 더 준다.
+// TIER_SCORE_BANDS와 같은 순서(0~1.5 / 2~2.5 / 3~3.5 / 4~5)로 대응한다.
+export const TIER_KILL_WEIGHTS: number[] = [1, 1.75, 2.5, 3.25];
+
+// 매치당 종합점수 = 배치점수 + 킬*가중치.
+function totalScore(
+  row: Pick<RankingStatsRow, 'avgPlacementPoints' | 'avgKills'>,
+  killWeight: number,
+): number {
+  return row.avgPlacementPoints + row.avgKills * killWeight;
 }
 
 // row.tier 가 속하는 밴드(0~1.5, 2~2.5 같은 고정 티어 그룹)의 인덱스를 찾는다.
@@ -95,8 +104,9 @@ export function rageScores(
   }
 
   const result: RankingStatsRowWithScore[] = [];
-  for (const bandRows of byBand.values()) {
-    const points = bandRows.map(totalScore);
+  for (const [idx, bandRows] of byBand.entries()) {
+    const killWeight = TIER_KILL_WEIGHTS[idx] ?? 1;
+    const points = bandRows.map((row) => totalScore(row, killWeight));
     const avg = mean(points);
     const sd = stddev(points, avg);
 

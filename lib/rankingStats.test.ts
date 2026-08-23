@@ -3,6 +3,7 @@ import {
   ACTIVE_WITHIN_MONTHS,
   MIN_GAMES_FOR_RANKING,
   RAGE_SCORE_STEEPNESS,
+  TIER_KILL_WEIGHTS,
   TIER_SCORE_BANDS,
   eligibleForRanking,
   rageScores,
@@ -182,6 +183,35 @@ describe('rageScores', () => {
   it('어느 밴드에도 안 속하는 사람은 결과에서 빠진다', () => {
     const rows = [row({ memberId: 'a', tier: 9 })];
     expect(rageScores(rows, BANDS, 1.5)).toEqual([]);
+  });
+
+  it('배치점수 우위인 사람과 킬 우위인 사람의 순위가 티어 밴드별 킬 가중치에 따라 뒤바뀐다', () => {
+    // A: 배치점수 높고 킬 적음(등수형) / B: 배치점수 낮고 킬 많음(교전형).
+    // 같은 두 스탯 조합이라도 0~1.5티어(가중치 1)에서는 A가 앞서고,
+    // 4~5티어(가중치 3.25)에서는 킬 비중이 커져 B가 앞선다.
+    const a = { avgPlacementPoints: 6, avgKills: 1 };
+    const b = { avgPlacementPoints: 2, avgKills: 3 };
+
+    const highTierResult = rageScores(
+      [row({ memberId: 'a', tier: 1, ...a }), row({ memberId: 'b', tier: 1, ...b })],
+      TIER_SCORE_BANDS,
+      RAGE_SCORE_STEEPNESS,
+    );
+    const lowTierResult = rageScores(
+      [row({ memberId: 'a', tier: 4.5, ...a }), row({ memberId: 'b', tier: 4.5, ...b })],
+      TIER_SCORE_BANDS,
+      RAGE_SCORE_STEEPNESS,
+    );
+
+    const highById = Object.fromEntries(highTierResult.map((r) => [r.memberId, r.score]));
+    const lowById = Object.fromEntries(lowTierResult.map((r) => [r.memberId, r.score]));
+    expect(highById.a).toBeGreaterThan(highById.b);
+    expect(lowById.b).toBeGreaterThan(lowById.a);
+  });
+
+  it('TIER_KILL_WEIGHTS는 TIER_SCORE_BANDS와 같은 개수, 오름차순(1, 1.75, 2.5, 3.25)이다', () => {
+    expect(TIER_KILL_WEIGHTS.length).toBe(TIER_SCORE_BANDS.length);
+    expect(TIER_KILL_WEIGHTS).toEqual([1, 1.75, 2.5, 3.25]);
   });
 });
 

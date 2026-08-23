@@ -359,8 +359,8 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
       ? eligible
       : eligible.filter((row) => activeGroup.tiers!.includes(row.tier));
 
-  // 일반 사용자는 전체 탭 30명/티어별 탭 10명까지만 보여준다 — 관리자는 제한 없음.
-  const RANKING_SIZE = isAdmin ? groupRows.length : activeGroup.tiers === null ? 30 : 10;
+  // 일반 사용자는 전체 탭 40명/티어별 탭 10명까지만 보여준다 — 관리자는 제한 없음.
+  const RANKING_SIZE = isAdmin ? groupRows.length : activeGroup.tiers === null ? 40 : 10;
   const topRanked =
     activeMetric === 'rageScore'
       ? topByRageScore(groupRows, TIER_SCORE_BANDS, RAGE_SCORE_STEEPNESS, RANKING_SIZE)

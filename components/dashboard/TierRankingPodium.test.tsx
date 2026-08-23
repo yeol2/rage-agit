@@ -48,9 +48,10 @@ describe('TierRankingPodium', () => {
     const slot2 = screen.getByTestId('podium-slot-2');
     const slot3 = screen.getByTestId('podium-slot-3');
 
-    expect(within(slot1).getByText('D')).toBeInTheDocument();
-    expect(within(slot1).getByText('2티어')).toBeInTheDocument();
-    expect(within(slot2).getByText('A')).toBeInTheDocument();
+    // 티어별 킬 가중치(0티어=1) 적용 후: A 73.11 > D 72.44 > E 60.14.
+    expect(within(slot1).getByText('A')).toBeInTheDocument();
+    expect(within(slot1).getByText('0티어')).toBeInTheDocument();
+    expect(within(slot2).getByText('D')).toBeInTheDocument();
     expect(within(slot3).getByText('E')).toBeInTheDocument();
   });
 
@@ -83,8 +84,9 @@ describe('TierRankingPodium', () => {
     const slot2 = screen.getByTestId('podium-slot-2');
     const slot3 = screen.getByTestId('podium-slot-3');
 
-    expect(within(slot1).getByText('D')).toBeInTheDocument();
-    expect(within(slot2).getByText('B')).toBeInTheDocument();
+    // 티어별 킬 가중치 적용 후: B 73.11 > D 71.94 > E 60.90.
+    expect(within(slot1).getByText('B')).toBeInTheDocument();
+    expect(within(slot2).getByText('D')).toBeInTheDocument();
     expect(within(slot3).getByText('E')).toBeInTheDocument();
   });
 
@@ -102,7 +104,7 @@ describe('TierRankingPodium', () => {
     expect(within(slot3).getByText('—')).toBeInTheDocument();
   });
 
-  it('관리자면 전체 탭 30명/티어별 10명 제한 없이 인원 전부를 랭킹에 넣는다', () => {
+  it('관리자면 전체 탭 40명/티어별 10명 제한 없이 인원 전부를 랭킹에 넣는다', () => {
     vi.mocked(useAdmin).mockReturnValueOnce({ isAdmin: true, login: vi.fn(), logout: vi.fn() });
     render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
 
@@ -118,7 +120,7 @@ describe('TierRankingPodium — 관리자 검색', () => {
   });
 
   it('관리자는 검색창으로 4위 이하 표를 닉네임 부분일치로 필터링할 수 있다', () => {
-    // 기본값(전체/종합점수) 기준 top3는 D/A/E — 4위 이하 표에 B/F/G가 남는다.
+    // 기본값(전체/종합점수) 기준 top3는 A/D/E — 4위 이하 표에 B/F/G가 남는다.
     vi.mocked(useAdmin).mockReturnValue({ isAdmin: true, login: vi.fn(), logout: vi.fn() });
     render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
 
@@ -143,16 +145,16 @@ describe('TierRankingPodium — 관리자 검색', () => {
     render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
 
     fireEvent.change(screen.getByPlaceholderText('닉네임 검색'), { target: { value: '없는이름' } });
-    expect(within(screen.getByTestId('podium-slot-1')).getByText('D')).toBeInTheDocument();
+    expect(within(screen.getByTestId('podium-slot-1')).getByText('A')).toBeInTheDocument();
   });
 });
 
 describe('TierRankingPodium — 등수 변화', () => {
   it('종합점수 탭에서 이전보다 등수가 오르면 빨간 상승 표시를 낸다', () => {
-    // recent16/전체 기준 D가 1위 — 스냅샷에서 D가 3위였다면 2계단 상승.
+    // recent16/전체 기준 D가 2위 — 스냅샷에서 D가 3위였다면 1계단 상승.
     const snapshots = [{ window: 'recent16' as const, groupId: 'all', memberId: 'd', rankPosition: 3 }];
     render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={snapshots} />);
-    expect(screen.getByText('▲2')).toBeInTheDocument();
+    expect(screen.getByText('▲1')).toBeInTheDocument();
   });
 
   it('스냅샷에 없던 사람은 NEW를 보여준다', () => {
