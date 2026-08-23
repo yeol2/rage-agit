@@ -56,9 +56,12 @@ const EMOJI_PATTERN = /\p{Extended_Pictographic}/gu;
 
 export function cleanDisplayName(discordNickname: string): string {
   return discordNickname
+    .replace(/^본\s*[:：]\s*/, '') // "본:Ez_A /부: Ez_B" → "Ez_A /부: Ez_B"
     .replace(/\([^)]*\)/g, '')
     .replace(EMOJI_PATTERN, '')
     .split('/')[0]
+    .replace(/\s*부계.*$/, '') // "Ez_A 부계 Ez_B" → "Ez_A"
+    .replace(/\s+\d{2}$/, '') // "Ez_A 94" → "Ez_A" (괄호 없이 붙은 출생년도 표기)
     .replace(/\s+/g, ' ')
     .trim();
 }
