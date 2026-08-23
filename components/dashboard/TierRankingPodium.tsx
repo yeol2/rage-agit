@@ -117,7 +117,9 @@ function RankChangeBadge({
   className?: string;
 }) {
   const change = computeRankChange(current, previous);
-  if (!change) return null;
+  if (!change) {
+    return <span className={`text-xs text-menu ${className}`}>-</span>;
+  }
   if (change.type === 'new') {
     return (
       <span

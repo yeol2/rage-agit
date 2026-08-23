@@ -74,12 +74,12 @@ describe('tierSlot', () => {
 
 describe('buildRosterEntries', () => {
   const members = [
-    { id: 'm1', discordUsername: 'yeol2.', tier: 3.5 },
-    { id: 'm2', discordUsername: 'hong0551', tier: 2.5 },
+    { id: 'm1', discordUsername: 'yeol2.', discordNickname: 'Ez_Code(98)', tier: 3.5 },
+    { id: 'm2', discordUsername: 'hong0551', discordNickname: 'Ez_Sugar(97)', tier: 2.5 },
   ];
 
   it('discord_username으로 매칭해 티어 칸을 채운다', () => {
-    const rows = [{ username: 'yeol2.', nickname: 'Ez_Code(98)' }];
+    const rows = [{ username: 'yeol2.', nickname: '아무거나' }];
     expect(buildRosterEntries(rows, members)).toEqual([
       {
         discordUsername: 'yeol2.',
@@ -90,6 +90,11 @@ describe('buildRosterEntries', () => {
         matched: true,
       },
     ]);
+  });
+
+  it('매칭되면 업로드 파일의 Nickname 칸이 비어 있어도 클랜원 DB의 닉네임을 쓴다', () => {
+    const rows = [{ username: 'yeol2.', nickname: null }];
+    expect(buildRosterEntries(rows, members)[0].discordNickname).toBe('Ez_Code(98)');
   });
 
   it('매칭 안 되면 member/tier/tierSlot이 null이고 matched는 false다', () => {

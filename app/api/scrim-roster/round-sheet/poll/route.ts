@@ -34,7 +34,7 @@ async function countRoundsForRoster(supabase: SupabaseClient, rosterId: string):
 
   const { count } = await supabase
     .from('matches')
-    .select('id', { count: 'exact', head: true })
+    .select('pubg_match_id', { count: 'exact', head: true })
     .eq('scrim_session_id', session.id);
   return count ?? 0;
 }
