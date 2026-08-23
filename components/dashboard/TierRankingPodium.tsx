@@ -460,11 +460,13 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                   ?
                 </span>
                 <span
-                  className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 flex w-max max-w-[16rem] flex-col gap-1 rounded-lg border border-white/10 px-3 py-2 text-left text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+                  className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 flex w-max max-w-[28rem] flex-col gap-1 rounded-lg border border-white/10 px-3 py-2 text-left text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
                   style={{ background: RANKING_ROW_BG }}
                 >
-                  {RAGE_SCORE_HELP.map((line) => (
-                    <span key={line}>{line}</span>
+                  {RAGE_SCORE_HELP.map((line, i) => (
+                    <span key={line} className="whitespace-nowrap">
+                      {i + 1}. {line}
+                    </span>
                   ))}
                 </span>
               </span>
