@@ -104,7 +104,7 @@ describe('TierRankingPodium', () => {
     expect(within(slot3).getByText('—')).toBeInTheDocument();
   });
 
-  it('관리자면 전체 탭 30명/티어별 10명 제한 없이 인원 전부를 랭킹에 넣는다', () => {
+  it('관리자면 전체 탭 40명/티어별 10명 제한 없이 인원 전부를 랭킹에 넣는다', () => {
     vi.mocked(useAdmin).mockReturnValueOnce({ isAdmin: true, login: vi.fn(), logout: vi.fn() });
     render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
 
