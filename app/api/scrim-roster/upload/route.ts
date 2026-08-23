@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   const { data: membersData, error: membersError } = await supabase
     .from('members')
-    .select('id, discord_username, tier')
+    .select('id, discord_username, discord_nickname, tier')
     .not('discord_username', 'is', null);
   if (membersError) {
     return NextResponse.json({ error: '클랜원 명단을 불러오지 못했습니다.' }, { status: 500 });
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
   const members: MemberForMatching[] = (membersData ?? []).map((m) => ({
     id: m.id,
     discordUsername: m.discord_username as string,
+    discordNickname: m.discord_nickname as string | null,
     tier: m.tier as number,
   }));
   const entries = buildRosterEntries(rows, members);

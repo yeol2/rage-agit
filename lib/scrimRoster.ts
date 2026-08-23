@@ -97,6 +97,7 @@ export function tierSlot(tier: number): 1 | 2 | 3 | 4 {
 export interface MemberForMatching {
   id: string;
   discordUsername: string;
+  discordNickname: string | null;
   tier: number;
 }
 
@@ -127,9 +128,11 @@ export function buildRosterEntries(
         matched: false,
       };
     }
+    // 매칭된 사람은 클랜원 DB에 등록된 닉네임을 쓴다 — 업로드 파일의 Nickname 칸은
+    // 디스코드 서버 닉네임 설정 여부에 따라 비어 있을 수 있어 믿을 수 없다.
     return {
       discordUsername: row.username,
-      discordNickname: row.nickname,
+      discordNickname: member.discordNickname,
       memberId: member.id,
       tier: member.tier,
       tierSlot: tierSlot(member.tier),
