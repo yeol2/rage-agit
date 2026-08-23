@@ -2,7 +2,7 @@
 // 여기 있는 함수들은 Supabase 없이 테스트한다.
 
 import { getSupabase } from './supabaseBrowser';
-import { cleanDisplayName, fetchAllMembers } from './memberStats';
+import { cleanDisplayName, fetchAllMembers, stripTrailingKoreanTag } from './memberStats';
 import { TIER_GROUPS } from './dashboardData';
 
 // 내전 4회(하루 4경기 기준 16경기) 미만이면 랭킹에서 뺀다.
@@ -170,7 +170,9 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
   const lastPlayedByMember = new Map(
     alltimeData.map((r) => [r.member_id, r.last_played_at as string]),
   );
-  const nicknameByMember = new Map(members.map((m) => [m.id, cleanDisplayName(m.discordNickname)]));
+  const nicknameByMember = new Map(
+    members.map((m) => [m.id, stripTrailingKoreanTag(cleanDisplayName(m.discordNickname))]),
+  );
 
   return windowData
     .filter((row) => nicknameByMember.has(row.member_id))

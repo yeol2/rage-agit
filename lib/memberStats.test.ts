@@ -165,6 +165,22 @@ describe('cleanDisplayName', () => {
   it('슬래시 뒤 부계정 표기는 뗀다', () => {
     expect(cleanDisplayName('Ez_F/Ez_G')).toBe('Ez_F');
   });
+
+  it('앞에 붙은 "본:" 표기를 뗀다', () => {
+    expect(cleanDisplayName('본:Ez_SoluTion /부: Ez_Koala(93)')).toBe('Ez_SoluTion');
+  });
+
+  it('"부계" 뒤 표기를 뗀다', () => {
+    expect(cleanDisplayName('Ez_JONGHO(03) 부계 Ez_JungGO')).toBe('Ez_JONGHO');
+  });
+
+  it('공백 뒤 붙은 숫자만 있는 태그를 뗀다', () => {
+    expect(cleanDisplayName('Ez_vhtlrwk 94')).toBe('Ez_vhtlrwk');
+  });
+
+  it('괄호 안 숫자처럼 원래부터 붙어있던 숫자는 안 뗀다', () => {
+    expect(cleanDisplayName('Ez_yunsik98')).toBe('Ez_yunsik98');
+  });
 });
 
 describe('stripTrailingKoreanTag', () => {
