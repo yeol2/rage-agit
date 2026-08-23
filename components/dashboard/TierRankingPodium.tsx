@@ -246,9 +246,13 @@ const WINDOW_HELP: Array<{ term: string; desc: string }> = [
   { term: '최근 16매치', desc: '최근 내전 4회 (본인이 참여한)' },
 ];
 
-// "종합점수" 탭 옆 물음표 아이콘에 띄울 설명. 문구만 고치면 말풍선에 그대로 반영된다.
-const RAGE_SCORE_HELP =
-  '같은 티어 그룹 안에서 비교해요 — 예를 들어 2티어는 2~2.5티어 그룹 안에서만 비교돼요. 고등학교 수학 시험에서 "반 평균이 50점"이라고 생각하면 쉬워요 — 그 그룹 평균이면 50점, 잘할수록 100에 가깝고 못할수록 0에 가까워집니다.';
+// "종합점수" 탭 옆 물음표 아이콘에 띄울 설명. 한 줄에 한 문장 — 배열 순서대로
+// 줄바꿈되어 말풍선에 반영된다.
+const RAGE_SCORE_HELP = [
+  '같은 티어 그룹 안에서만 비교해요 (예: 2티어는 2~2.5티어 그룹 안에서)',
+  '그룹 평균이면 50점, 잘할수록 100점에 가까워져요',
+  '티어별로 킬 점수가 달라요 — 1티어 1킬 ≠ 4티어 1킬',
+];
 
 export interface TierRankingPodiumProps {
   recent16: RankingStatsRow[];
@@ -456,10 +460,12 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                   ?
                 </span>
                 <span
-                  className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-max max-w-[16rem] rounded-lg border border-white/10 px-3 py-2 text-left text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+                  className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 flex w-max max-w-[16rem] flex-col gap-1 rounded-lg border border-white/10 px-3 py-2 text-left text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
                   style={{ background: RANKING_ROW_BG }}
                 >
-                  {RAGE_SCORE_HELP}
+                  {RAGE_SCORE_HELP.map((line) => (
+                    <span key={line}>{line}</span>
+                  ))}
                 </span>
               </span>
             )}
