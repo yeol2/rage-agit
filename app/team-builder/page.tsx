@@ -26,11 +26,10 @@ export default async function TeamBuilderPage() {
             <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">TEAM BUILDER</p>
             <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
           </div>
-          <h1 className="mt-6 text-3xl font-bold tracking-tight md:text-4xl">
-            <span className="mr-3" style={{ color: '#322F36' }}>01</span> 티어 테이블
-          </h1>
 
-          <div className="mt-8">
+          {/* 명단 업로드는 01/02/03 어느 단계도 아니다 — 언제든 새 명단을 올려서
+              02(티어 테이블)를 다시 채우는 진입점이라 번호 없이 맨 위에 둔다. */}
+          <div className="mt-6">
             <RosterUploadForm />
           </div>
 

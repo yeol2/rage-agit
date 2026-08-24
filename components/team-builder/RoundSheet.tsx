@@ -197,7 +197,11 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="border-collapse text-xs" style={{ tableLayout: 'fixed', width: TABLE_WIDTH }}>
+        <table
+          aria-label="내전 시트"
+          className="border-collapse text-xs"
+          style={{ tableLayout: 'fixed', width: TABLE_WIDTH }}
+        >
           <colgroup>
             <col style={{ width: SQUARE_CELL_SIZE }} />
             <col style={{ width: TEAM_COL_WIDTH }} />

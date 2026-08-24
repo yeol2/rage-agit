@@ -11,9 +11,9 @@ function targetPerTierFor(totalCount: number): number {
   return totalCount > 0 ? Math.round(totalCount / 4) : 16;
 }
 
-// "팀 구성" 버튼을 누르면 호출된다 — 01 티어 테이블에 보이는 순서 그대로 팀
+// "팀 구성" 버튼을 누르면 호출된다 — 02 티어 테이블에 보이는 순서 그대로 팀
 // 번호를 계산해 저장하고, 갱신된 전체 명단을 돌려준다(클라이언트가 재조회 없이
-// 02 표를 바로 채울 수 있게).
+// 03 표를 바로 채울 수 있게).
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const rosterId = body?.rosterId;
@@ -61,14 +61,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '팀 번호 저장에 실패했습니다.' }, { status: 500 });
   }
 
-  const { error: stageError } = await supabase
-    .from('scrim_rosters')
-    .update({ stage: '02' })
-    .eq('id', rosterId);
-  if (stageError) {
-    return NextResponse.json({ error: '진행 상태 저장에 실패했습니다.' }, { status: 500 });
-  }
-
   const { data: updatedRows, error: refetchError } = await supabase
     .from('scrim_roster_entries')
     .select('id, discord_nickname, member_id, tier, tier_slot, matched, team_number, fixed, members(vip_rank)')
@@ -78,7 +70,6 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({
-    stage: '02',
     entries: updatedRows.map((row) => ({
       id: row.id,
       discordNickname: row.discord_nickname,
