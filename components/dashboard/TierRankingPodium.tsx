@@ -7,6 +7,7 @@ import {
   RAGE_SCORE_STEEPNESS,
   TIER_SCORE_BANDS,
   eligibleForRanking,
+  rageScores,
   topByAvgKills,
   topByAvgRank,
   topByRageScore,
@@ -279,6 +280,47 @@ function formatMetricValue(
   return { main: `${(row.score ?? 0).toFixed(1)}점`, detail: null };
 }
 
+function mean(values: number[]): number {
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+// topRanked 는 지표에 따라 score 가 있을 수도(rageScore) 없을 수도 있는 행이다 —
+// 지표별로 "비교에 쓸 숫자 하나"를 뽑아내는 공용 접근자.
+function metricValueOf(metric: Metric, row: RankingStatsRow & { score?: number }): number {
+  if (metric === 'rageScore') return row.score ?? 0;
+  if (metric === 'avgRank') return row.avgRank;
+  return row.avgKills;
+}
+
+// "평균 이상" 구분선에 쓸 라벨 — 단위는 formatMetricValue 와 맞춘다(소수 자리수까지).
+function formatAverageLabel(metric: Metric, value: number): string {
+  if (metric === 'avgKills') return `평균 ${value.toFixed(2)}킬`;
+  if (metric === 'avgRank') return `평균 ${value.toFixed(1)}등`;
+  return `평균 ${value.toFixed(1)}점`;
+}
+
+// 정렬된 목록(topRanked, 좋은 순서대로) 안에서 "평균보다 나쁜" 첫 사람의 인덱스를 찾는다 —
+// 그 인덱스 바로 앞에 구분선을 꽂으면 위쪽이 전부 평균 이상이 된다. 전원이 평균
+// 이상이면 목록 길이(맨 끝)를 반환한다.
+function findAverageInsertIndex(values: number[], average: number, higherIsBetter: boolean): number {
+  for (let i = 0; i < values.length; i++) {
+    const aboveAverage = higherIsBetter ? values[i] >= average : values[i] <= average;
+    if (!aboveAverage) return i;
+  }
+  return values.length;
+}
+
+// 점수 박스 사이에 꽂는 점선 구분선 — "여기부터 평균 이하" 를 한눈에 보여준다.
+function AverageDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 px-1 py-1" aria-hidden="true">
+      <span className="h-0 flex-1 border-t border-dashed border-white/25" />
+      <span className="shrink-0 text-[11px] font-semibold tracking-wide text-white/50">{label}</span>
+      <span className="h-0 flex-1 border-t border-dashed border-white/25" />
+    </div>
+  );
+}
+
 function MetricValue({
   metric,
   row,
@@ -366,7 +408,28 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
       : eligible.filter((row) => activeGroup.tiers!.includes(row.tier));
 
   // 일반 사용자는 전체 탭 40명/티어별 탭 10명까지만 보여준다 — 관리자는 제한 없음.
-  const RANKING_SIZE = isAdmin ? groupRows.length : activeGroup.tiers === null ? 40 : 10;
+  const baseRankingSize = isAdmin ? groupRows.length : activeGroup.tiers === null ? 40 : 10;
+
+  // 평균은 항상 groupRows(자격자 전체) 기준으로 낸다 — 화면에 보이는 상위권만으로
+  // 내면 실제 티어 평균보다 항상 높게 나온다. avgRank 는 숫자가 작을수록 좋아서
+  // higherIsBetter 가 반대다.
+  const higherIsBetter = activeMetric !== 'avgRank';
+  const groupMetricValues =
+    activeMetric === 'rageScore'
+      ? rageScores(groupRows, TIER_SCORE_BANDS, RAGE_SCORE_STEEPNESS).map((r) => r.score)
+      : activeMetric === 'avgRank'
+        ? groupRows.map((r) => r.avgRank)
+        : groupRows.map((r) => r.avgKills);
+  const groupAverage = groupMetricValues.length === 0 ? null : mean(groupMetricValues);
+  const countAboveAverage =
+    groupAverage === null
+      ? 0
+      : groupMetricValues.filter((v) => (higherIsBetter ? v >= groupAverage : v <= groupAverage)).length;
+
+  // 원래 인원 제한(10/40명)보다 평균 이상인 사람이 더 많으면, 그 사람들이 전부
+  // 보이도록 목록을 늘린다 — 0~1.5티어처럼 평균 이상이 7명뿐이면 원래 제한(10명)
+  // 그대로, 평균 이상이 40명을 넘는 큰 그룹이면 그만큼 더 보여준다.
+  const RANKING_SIZE = Math.max(baseRankingSize, countAboveAverage);
   const topRanked =
     activeMetric === 'rageScore'
       ? topByRageScore(groupRows, TIER_SCORE_BANDS, RAGE_SCORE_STEEPNESS, RANKING_SIZE)
@@ -375,6 +438,15 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
         : topByAvgKills(groupRows, RANKING_SIZE);
   const top = topRanked.slice(0, 3);
   const restRanked = topRanked.slice(3, RANKING_SIZE);
+
+  const averageInsertIndex =
+    groupAverage === null
+      ? null
+      : findAverageInsertIndex(
+          topRanked.map((r) => metricValueOf(activeMetric, r)),
+          groupAverage,
+          higherIsBetter,
+        );
 
   return (
     <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
@@ -680,43 +752,58 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
               return <p className="mt-4 text-center text-sm text-menu">검색 결과가 없습니다</p>;
             }
 
+            // 검색 중엔 목록이 필터링돼 원래 자리와 무관해지므로 구분선을 안 보여준다.
+            const showAverageDivider = !query && averageInsertIndex !== null && groupAverage !== null;
+            const averageLabel = groupAverage !== null ? formatAverageLabel(activeMetric, groupAverage) : '';
+            // averageInsertIndex 는 top(3) 다음부터 시작하는 restRanked 기준 인덱스로 옮겨 쓴다.
+            // 3 이하(=1~3위조차 평균 이하)면 표 맨 위에, restRanked.length 를 넘기면
+            // (=보이는 사람 전원이 평균 이상) 표 맨 아래에 꽂는다.
+            const dividerIndexInRest =
+              averageInsertIndex === null ? null : Math.max(0, averageInsertIndex - 3);
+
             return (
               /* 줄마다 배경이 깔린 알약 모양이고, 구분선은 쓰지 않는다. */
               <div className="space-y-1">
+                {showAverageDivider && dividerIndexInRest === 0 && <AverageDivider label={averageLabel} />}
                 {displayedRanked.map((member) => {
                   const originalRank = restRanked.indexOf(member) + 4;
+                  const indexInRest = originalRank - 4;
                   return (
-                    <div
-                      key={member.memberId}
-                      data-testid={`ranking-row-${originalRank}`}
-                      className={`${rankingGrid} rounded-xl px-4 py-2.5`}
-                      style={{ background: RANKING_ROW_BG }}
-                    >
-                      <span className="text-sm font-bold text-menu">{originalRank}</span>
-                      <span className="min-w-0 truncate text-sm font-bold text-foreground">
-                        {member.discordNickname}
-                      </span>
-                      <TierBadge tier={member.tier} className="justify-self-start" />
-                      <span className="text-sm text-menu">{badgeLabel(member)}</span>
-                      <span className="text-right tabular-nums">
-                        <MetricValue
-                          metric={activeMetric}
-                          row={member}
-                          className="text-sm font-bold text-foreground"
-                          detailClassName="text-xs font-normal text-menu"
-                        />
-                      </span>
-                      {showRankChange && (
-                        // 좌우는 칸 중앙, 상하는 등수 박스(행) 자체의 세로 중앙선에
-                        // 맞춘다 — 점수와 나란히 한 줄로 읽히게.
-                        <span className="flex items-center justify-center self-center">
-                          <RankChangeBadge
-                            current={originalRank}
-                            previous={snapshotRankByMember.get(member.memberId)}
+                    <Fragment key={member.memberId}>
+                      <div
+                        data-testid={`ranking-row-${originalRank}`}
+                        className={`${rankingGrid} rounded-xl px-4 py-2.5`}
+                        style={{ background: RANKING_ROW_BG }}
+                      >
+                        <span className="text-sm font-bold text-menu">{originalRank}</span>
+                        <span className="min-w-0 truncate text-sm font-bold text-foreground">
+                          {member.discordNickname}
+                        </span>
+                        <TierBadge tier={member.tier} className="justify-self-start" />
+                        <span className="text-sm text-menu">{badgeLabel(member)}</span>
+                        <span className="text-right tabular-nums">
+                          <MetricValue
+                            metric={activeMetric}
+                            row={member}
+                            className="text-sm font-bold text-foreground"
+                            detailClassName="text-xs font-normal text-menu"
                           />
                         </span>
+                        {showRankChange && (
+                          // 좌우는 칸 중앙, 상하는 등수 박스(행) 자체의 세로 중앙선에
+                          // 맞춘다 — 점수와 나란히 한 줄로 읽히게.
+                          <span className="flex items-center justify-center self-center">
+                            <RankChangeBadge
+                              current={originalRank}
+                              previous={snapshotRankByMember.get(member.memberId)}
+                            />
+                          </span>
+                        )}
+                      </div>
+                      {showAverageDivider && dividerIndexInRest === indexInRest + 1 && (
+                        <AverageDivider label={averageLabel} />
                       )}
-                    </div>
+                    </Fragment>
                   );
                 })}
               </div>
