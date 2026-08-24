@@ -235,14 +235,8 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [addError, setAddError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // 01/02/03 진행 상태 — roster.stage(DB)로 초기화해서 새로고침해도 유지된다.
-  // 한 번 넘어간 뒤 01 쪽 인원을 다시 옮겨서 조건이 깨져도 이미 시작한 팀 구성을
-  // 되돌리진 않는다(단방향 진행).
-  const [stage, setStage] = useState<'01' | '02' | '03'>(roster?.stage ?? '01');
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
-  const [enteringRoundSheet, setEnteringRoundSheet] = useState(false);
-  const [enterRoundSheetError, setEnterRoundSheetError] = useState<string | null>(null);
   const [draggingSwapId, setDraggingSwapId] = useState<string | null>(null);
   const [swapError, setSwapError] = useState<string | null>(null);
   const [vipSorting, setVipSorting] = useState(false);
@@ -346,7 +340,6 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       if (!response.ok) throw new Error(body.error ?? '팀 구성에 실패했습니다.');
 
       setEntries(body.entries as RosterEntry[]);
-      setStage(body.stage as '01' | '02' | '03');
       // 새로 배정된 팀 번호 기준으로 다시 시작 — 이전 배정을 향한 리롤 되돌리기
       // 스냅샷은 더 이상 의미가 없다.
       setRerollHistory([]);
@@ -354,29 +347,6 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       setAssignError(err instanceof Error ? err.message : '팀 구성에 실패했습니다.');
     } finally {
       setAssigning(false);
-    }
-  }
-
-  // "내전 드가자~" 버튼 — 02→03 전환. 01→02와 달리 조건 없이 언제든 누를 수
-  // 있다.
-  async function handleEnterRoundSheet() {
-    setEnteringRoundSheet(true);
-    setEnterRoundSheetError(null);
-
-    try {
-      const response = await fetch(`/api/scrim-roster/${rosterId}/stage`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage: '03' }),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? '내전 시트를 열지 못했습니다.');
-
-      setStage(body.stage as '01' | '02' | '03');
-    } catch (err) {
-      setEnterRoundSheetError(err instanceof Error ? err.message : '내전 시트를 열지 못했습니다.');
-    } finally {
-      setEnteringRoundSheet(false);
     }
   }
 
@@ -646,7 +616,29 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      {/* 01 내전 시트 — 실제 매치가 폴링되면 team_number(02/03) 진행 여부와
+          무관하게 PUBG API의 실제 팀(team_id) 기준으로 채워진다. 그래서 앞
+          단계를 마쳐야 열리는 버튼이 필요 없다 — 로스터만 있으면 항상 보인다. */}
+      <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+        <span className="mr-3" style={{ color: '#322F36' }}>
+          01
+        </span>{' '}
+        내전 시트
+      </h2>
+      <div className="mt-10">
+        <RoundSheet rosterId={rosterId} />
+      </div>
+
+      <div aria-hidden="true" className="mt-16 border-t border-white/10" />
+
+      {/* 02 티어 테이블 */}
+      <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
+        <span className="mr-3" style={{ color: '#322F36' }}>
+          02
+        </span>{' '}
+        티어 테이블
+      </h2>
+      <div className="mt-10 flex items-center justify-between">
         <p className="hud text-xs text-menu">
           마지막 갱신: {new Date(roster.fetchedAt).toLocaleString('ko-KR')}
         </p>
@@ -842,15 +834,19 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         </button>
       </div>
 
-      {stage !== '01' && (
-        <div className="mt-10 border-t border-white/10 pt-10">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            <span className="mr-3" style={{ color: '#322F36' }}>02</span> 팀 구성 테이블
-          </h2>
+      <div className="mt-16 border-t border-white/10 pt-10">
+        {/* 03 팀 구성 테이블 — 팀 구성 버튼을 누르기 전에도 항상 보인다. 아직
+            팀 번호가 없으면 자리마다 점선 빈 칸으로 표시된다(Nameplate 분기). */}
+        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+          <span className="mr-3" style={{ color: '#322F36' }}>
+            03
+          </span>{' '}
+          팀 구성 테이블
+        </h2>
 
-          <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between">
+        <div className="mt-10 flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] border-collapse text-sm">
+              <table aria-label="팀 구성 표" className="w-full min-w-[520px] border-collapse text-sm">
                 <thead>
                   <tr>
                     <th className="border-b border-white/10 py-1.5 pl-1.5 pr-4 text-left text-xs text-menu">팀</th>
@@ -978,79 +974,51 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                 {undoingReroll ? '되돌리는 중…' : '리롤 되돌리기'}
               </button>
               {rerollError && <p className="text-xs text-red-400">{rerollError}</p>}
-
-              {/* 16번팀(마지막 행)과 같은 높이에 오도록, 위 버튼들과는 별개로
-                  이 칸 맨 아래에 붙인다 — 부모 행이 items-stretch 라 이 칸의
-                  높이가 표와 같아져서 mt-auto 가 표 맨 아래 행 위치까지 밀어준다. */}
-              <div className="mt-auto flex flex-col items-end gap-2">
-                {enterRoundSheetError && <p className="text-xs text-red-400">{enterRoundSheetError}</p>}
-                <button
-                  type="button"
-                  onClick={() => void handleEnterRoundSheet()}
-                  disabled={stage === '03' || enteringRoundSheet}
-                  title={stage === '03' ? '이미 내전 시트가 열려 있습니다' : '자 드가자'}
-                  className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:border-white/15 disabled:bg-transparent disabled:text-menu disabled:opacity-40"
-                >
-                  {enteringRoundSheet ? '여는 중…' : '자 드가자'}
-                </button>
-              </div>
             </div>
           </div>
-
-          {stage === '03' && (
-            <div className="mt-10 border-t border-white/10 pt-10">
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                <span className="mr-3" style={{ color: '#322F36' }}>03</span> 내전 시트
-              </h2>
-              <div className="mt-10">
-                <RoundSheet rosterId={rosterId} />
-              </div>
-
-              <div aria-hidden="true" className="mt-16 border-t border-white/10" />
-
-              <div className="mt-10 flex flex-col items-center gap-3">
-                {!resetConfirming ? (
-                  <button
-                    type="button"
-                    onClick={() => setResetConfirming(true)}
-                    className="rounded-md border border-red-500 bg-red-600 px-6 py-2 text-sm font-bold text-white hover:bg-red-500"
-                  >
-                    전체 초기화
-                  </button>
-                ) : (
-                  <div className="flex flex-col items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/10 px-6 py-4 text-center">
-                    <p className="text-sm font-bold text-red-300">
-                      정말 초기화할까요? 01/02/03 전체 진행 상태가 지워지고 되돌릴 수 없습니다.
-                    </p>
-                    <p className="text-xs text-red-300/80">
-                      (실제 PUBG 경기 기록·리더보드 데이터는 지워지지 않습니다)
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setResetConfirming(false)}
-                        disabled={resetting}
-                        className="rounded-md border border-white/15 px-4 py-2 text-sm text-menu hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        취소
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleReset()}
-                        disabled={resetting}
-                        className="rounded-md border border-red-500 bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {resetting ? '초기화 중…' : '네, 초기화합니다'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {resetError && <p className="text-sm text-red-400">{resetError}</p>}
-              </div>
-            </div>
-          )}
         </div>
-      )}
+
+      <div aria-hidden="true" className="mt-16 border-t border-white/10" />
+
+      <div className="mt-10 flex flex-col items-center gap-3">
+        {!resetConfirming ? (
+          <button
+            type="button"
+            onClick={() => setResetConfirming(true)}
+            className="rounded-md border border-red-500 bg-red-600 px-6 py-2 text-sm font-bold text-white hover:bg-red-500"
+          >
+            전체 초기화
+          </button>
+        ) : (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/10 px-6 py-4 text-center">
+            <p className="text-sm font-bold text-red-300">
+              정말 초기화할까요? 01/02/03 전체 진행 상태가 지워지고 되돌릴 수 없습니다.
+            </p>
+            <p className="text-xs text-red-300/80">
+              (실제 PUBG 경기 기록·리더보드 데이터는 지워지지 않습니다)
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setResetConfirming(false)}
+                disabled={resetting}
+                className="rounded-md border border-white/15 px-4 py-2 text-sm text-menu hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleReset()}
+                disabled={resetting}
+                className="rounded-md border border-red-500 bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {resetting ? '초기화 중…' : '네, 초기화합니다'}
+              </button>
+            </div>
+          </div>
+        )}
+        {resetError && <p className="text-sm text-red-400">{resetError}</p>}
+      </div>
     </div>
   );
 }
