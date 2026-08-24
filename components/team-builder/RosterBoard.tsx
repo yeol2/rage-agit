@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, type DragEvent, type FormEvent, type MouseEvent } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   sortEntriesByTier,
@@ -20,6 +19,7 @@ import {
 } from '@/lib/memberStats';
 import { VipCrown } from '@/components/VipCrown';
 import { RoundSheet } from '@/components/team-builder/RoundSheet';
+import { RosterUploadForm } from '@/components/team-builder/RosterUploadForm';
 import { NAMEPLATE_HEIGHT, NAMEPLATE_WIDTH } from '@/lib/teamBuilderLayout';
 import { useAdmin } from '@/components/admin/AdminProvider';
 
@@ -97,7 +97,6 @@ function Nameplate({
 }) {
   const name = displayName(entry);
   const hasTier = entry.tier !== null;
-  const canLinkToProfile = entry.matched && entry.memberId;
 
   // 기본 드래그 고스트 이미지는 브라우저가 이 카드를 그대로 캡처하는데, hover 확대
   // 효과·블러·그라데이션이 섞인 채로 캡처되면 빠르게 움직일 때 지저분해 보인다.
@@ -113,8 +112,6 @@ function Nameplate({
     onDragStart?.(event);
   }
 
-  // Link 로 렌더링된 카드는 기본 동작이 프로필 페이지 이동이다 — 02 표에서는
-  // 클릭이 스왑 선택이어야 하므로 onClick이 있으면 이동을 막는다.
   function handleClick(event: MouseEvent<HTMLElement>) {
     if (!onClick) return;
     event.preventDefault();
@@ -150,20 +147,6 @@ function Nameplate({
         {name}
       </div>
     );
-  } else if (canLinkToProfile) {
-    plate = (
-      <Link
-        href={`/members/${entry.memberId}`}
-        draggable={draggable}
-        onDragStart={draggable ? handleDragStart : undefined}
-        onDragEnd={draggable ? onDragEnd : undefined}
-        onClick={handleClick}
-        className={sharedClassName}
-        style={style}
-      >
-        {name}
-      </Link>
-    );
   } else {
     plate = (
       <div
@@ -188,7 +171,7 @@ function Nameplate({
       {plate}
       {entry.vipRank !== null && <VipCrown />}
       {score !== undefined && (
-        <span className="pointer-events-none absolute -bottom-1.5 -left-1.5 rounded bg-black/70 px-1 text-[10px] font-bold text-accent">
+        <span className="pointer-events-none absolute -left-1.5 -top-1.5 rounded bg-black/70 px-1 text-[10px] font-bold text-accent">
           {score.toFixed(1)}
         </span>
       )}
@@ -238,6 +221,10 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [draggingSwapId, setDraggingSwapId] = useState<string | null>(null);
+  // 지금 드래그 중인 카드를 놓으면 실제로 자리가 바뀔 대상의 id — 유효한 칸
+  // 위에서만 채워져서, 그 칸을 강조 표시하는 데만 쓴다("여기랑 바뀐다"를
+  // 놓기 전에 미리 보여준다).
+  const [dragOverSwapTargetId, setDragOverSwapTargetId] = useState<string | null>(null);
   const [swapError, setSwapError] = useState<string | null>(null);
   const [vipSorting, setVipSorting] = useState(false);
   const [vipSortError, setVipSortError] = useState<string | null>(null);
@@ -273,7 +260,20 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   }, [isAdmin]);
 
   if (!roster) {
-    return <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>;
+    return (
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+          <span className="mr-3" style={{ color: '#322F36' }}>
+            02
+          </span>{' '}
+          티어 테이블
+        </h2>
+        <div className="mt-10">
+          <RosterUploadForm />
+        </div>
+        <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>
+      </div>
+    );
   }
 
   // roster.id를 별도 변수로 빼둔다 — TS가 중첩 함수(handleAddManualEntry) 안에서는
@@ -378,6 +378,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   async function handleSwapDrop(targetEntry: RosterEntry | undefined) {
     const sourceId = draggingSwapId;
     setDraggingSwapId(null);
+    setDragOverSwapTargetId(null);
     if (!targetEntry || !sourceId || sourceId === targetEntry.id || targetEntry.fixed) return;
 
     const source = entries.find((e) => e.id === sourceId);
@@ -638,7 +639,10 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         </span>{' '}
         티어 테이블
       </h2>
-      <div className="mt-10 flex items-center justify-between">
+      <div className="mt-10">
+        <RosterUploadForm />
+      </div>
+      <div className="mt-6 flex items-center justify-between">
         <p className="hud text-xs text-menu">
           마지막 갱신: {new Date(roster.fetchedAt).toLocaleString('ko-KR')}
         </p>
@@ -859,7 +863,9 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.from({ length: targetPerTier }, (_, i) => i + 1).map((teamNumber) => {
+                  {(() => {
+                    const draggingSwapSource = entries.find((e) => e.id === draggingSwapId);
+                    return Array.from({ length: targetPerTier }, (_, i) => i + 1).map((teamNumber) => {
                     const teamEntries = entries.filter(
                       (entry) => entry.teamNumber === teamNumber && entry.tierSlot !== null,
                     );
@@ -872,35 +878,62 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                           const member = entries.find(
                             (entry) => entry.tierSlot === slot && entry.teamNumber === teamNumber,
                           );
+                          // 실제로 스왑이 될 상대만 강조한다 — 같은 티어 칼럼이고, 고정된
+                          // 카드는 아니고, 자기 자신은 아닌 칸. handleSwapDrop이 조용히
+                          // 무시하는 조건과 정확히 같아야 "강조된 칸에 놨는데 아무 일도
+                          // 안 일어나는" 경우가 생기지 않는다.
+                          const isValidSwapTarget =
+                            !!member &&
+                            !!draggingSwapSource &&
+                            !draggingSwapSource.fixed &&
+                            !member.fixed &&
+                            member.id !== draggingSwapSource.id &&
+                            member.tierSlot === draggingSwapSource.tierSlot;
                           return (
                             <td
                               key={slot}
                               className="p-1.5"
                               onDragOver={(event) => {
-                                if (draggingSwapId) event.preventDefault();
+                                if (!isValidSwapTarget) return;
+                                event.preventDefault();
+                                setDragOverSwapTargetId(member!.id);
                               }}
+                              onDragLeave={() =>
+                                setDragOverSwapTargetId((current) => (current === member?.id ? null : current))
+                              }
                               onDrop={(event) => {
                                 event.preventDefault();
                                 void handleSwapDrop(member);
                               }}
                             >
                               {member ? (
-                                <Nameplate
-                                  entry={member}
-                                  draggable={!member.fixed}
-                                  fixed={member.fixed}
-                                  // 01 티어 칸의 실측 너비(px) — 표 auto-layout이
-                                  // 내용에 따라 칸 너비를 제멋대로 정해서 그냥 두면
-                                  // 01/02 카드 폭이 달라진다.
-                                  width={NAMEPLATE_WIDTH}
-                                  dragging={member.id === draggingSwapId}
-                                  onDragStart={(event) => {
-                                    event.dataTransfer.effectAllowed = 'move';
-                                    setDraggingSwapId(member.id);
-                                  }}
-                                  onDragEnd={() => setDraggingSwapId(null)}
-                                  onClick={() => void handleToggleFixed(member)}
-                                />
+                                <div
+                                  className={
+                                    dragOverSwapTargetId === member.id
+                                      ? 'rounded-md shadow-[0_0_0_2px_rgba(255,146,51,0.85)]'
+                                      : undefined
+                                  }
+                                >
+                                  <Nameplate
+                                    entry={member}
+                                    draggable={!member.fixed}
+                                    fixed={member.fixed}
+                                    // 01 티어 칸의 실측 너비(px) — 표 auto-layout이
+                                    // 내용에 따라 칸 너비를 제멋대로 정해서 그냥 두면
+                                    // 01/02 카드 폭이 달라진다.
+                                    width={NAMEPLATE_WIDTH}
+                                    dragging={member.id === draggingSwapId}
+                                    onDragStart={(event) => {
+                                      event.dataTransfer.effectAllowed = 'move';
+                                      setDraggingSwapId(member.id);
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggingSwapId(null);
+                                      setDragOverSwapTargetId(null);
+                                    }}
+                                    onClick={() => void handleToggleFixed(member)}
+                                  />
+                                </div>
                               ) : (
                                 <div
                                   style={{ width: NAMEPLATE_WIDTH, height: NAMEPLATE_HEIGHT }}
@@ -926,7 +959,8 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
                         </td>
                       </tr>
                     );
-                  })}
+                  });
+                })()}
                 </tbody>
               </table>
               {swapError && <p className="mt-2 text-sm text-red-400">{swapError}</p>}

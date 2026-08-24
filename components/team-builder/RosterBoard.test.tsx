@@ -296,6 +296,26 @@ describe('RosterBoard - 03 표 스왑 / VIP 정렬', () => {
     );
   });
 
+  it('드래그하면 실제로 바뀔 상대 칸에 강조 표시가 뜬다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    stubFetchForOtherCalls({ ok: true });
+
+    render(<RosterBoard roster={roster} />);
+
+    const table = within(teamTable());
+    const alpha = table.getByText('Ez_Alpha'); // 1티어, 1번팀
+    const echo = table.getByText('Ez_Echo'); // 1티어, 2번팀 — 같은 칼럼이라 유효한 상대
+    const bravo = table.getByText('Ez_Bravo'); // 2티어, 1번팀 — 다른 칼럼이라 무효한 상대
+
+    fireEvent.dragStart(alpha, dragEventInit());
+    fireEvent.dragOver(echo, dragEventInit());
+    expect(echo.closest('td')?.querySelector('[class*="shadow-"]')).toBeInTheDocument();
+
+    fireEvent.dragOver(bravo, dragEventInit());
+    expect(bravo.closest('td')?.querySelector('[class*="shadow-"]')).not.toBeInTheDocument();
+  });
+
   it('고정 안 된 카드를 고정된 칸으로 드롭해도 스왑 API를 호출하지 않는다', async () => {
     const entries = makeFullEntries().map((entry) =>
       entry.id === 'e' ? { ...entry, fixed: true } : entry,

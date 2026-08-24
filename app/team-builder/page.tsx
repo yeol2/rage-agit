@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { AdminGate } from '@/components/admin/AdminGate';
-import { RosterUploadForm } from '@/components/team-builder/RosterUploadForm';
 import { RosterBoard } from '@/components/team-builder/RosterBoard';
 import { fetchLatestRoster } from '@/lib/scrimRoster';
 import { siteConfig } from '@/lib/siteConfig';
@@ -25,12 +24,6 @@ export default async function TeamBuilderPage() {
           <div className="flex items-center gap-4">
             <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">TEAM BUILDER</p>
             <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
-          </div>
-
-          {/* 명단 업로드는 01/02/03 어느 단계도 아니다 — 언제든 새 명단을 올려서
-              02(티어 테이블)를 다시 채우는 진입점이라 번호 없이 맨 위에 둔다. */}
-          <div className="mt-6">
-            <RosterUploadForm />
           </div>
 
           <div className="mt-10">
