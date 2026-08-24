@@ -284,6 +284,15 @@ function mean(values: number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
+function stddev(values: number[], avg: number): number {
+  return Math.sqrt(mean(values.map((v) => (v - avg) ** 2)));
+}
+
+// "평균 이상" 표시를 평균에서 이만큼(표준편차 단위) 못 미친 사람까지 넓혀서
+// 보여준다 — 사용자가 실측 데이터(종합점수 기준 +13명/전체, +0~3명/작은 티어)를
+// 보고 고른 값이다. 0.5 는 너무 많이 보여주고(+28명), 1은 사실상 다 보여준다(+53명).
+const SHOW_BELOW_AVERAGE_SD = 0.25;
+
 // topRanked 는 지표에 따라 score 가 있을 수도(rageScore) 없을 수도 있는 행이다 —
 // 지표별로 "비교에 쓸 숫자 하나"를 뽑아내는 공용 접근자.
 function metricValueOf(metric: Metric, row: RankingStatsRow & { score?: number }): number {
@@ -421,15 +430,29 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
         ? groupRows.map((r) => r.avgRank)
         : groupRows.map((r) => r.avgKills);
   const groupAverage = groupMetricValues.length === 0 ? null : mean(groupMetricValues);
-  const countAboveAverage =
-    groupAverage === null
-      ? 0
-      : groupMetricValues.filter((v) => (higherIsBetter ? v >= groupAverage : v <= groupAverage)).length;
 
-  // 원래 인원 제한(10/40명)보다 평균 이상인 사람이 더 많으면, 그 사람들이 전부
-  // 보이도록 목록을 늘린다 — 0~1.5티어처럼 평균 이상이 7명뿐이면 원래 제한(10명)
-  // 그대로, 평균 이상이 40명을 넘는 큰 그룹이면 그만큼 더 보여준다.
-  const RANKING_SIZE = Math.max(baseRankingSize, countAboveAverage);
+  // 평균 위 전원 + 평균에서 살짝(-0.25 SD) 못 미친 사람까지 보여준다 — 인원이
+  // 많은 그룹일수록 평균 근처에 사람이 몰려있어, 딱 평균에서 끊으면 거의 다 된
+  // 사람이 안 보이는 게 어색해서다. 종합점수는 이미 밴드 안에서 z-score(SD=1)로
+  // 정규화돼 있어 -0.25 SD 지점의 점수가 스티프니스로 바로 계산된다(경기 데이터를
+  // 다시 볼 필요가 없다). 평균등수·평균킬은 원본 값 분포라 그룹 표준편차를 직접
+  // 구해서 뺀다/더한다.
+  const groupThreshold =
+    groupAverage === null
+      ? null
+      : activeMetric === 'rageScore'
+        ? 100 / (1 + Math.exp(RAGE_SCORE_STEEPNESS * SHOW_BELOW_AVERAGE_SD))
+        : groupAverage +
+          (higherIsBetter ? -1 : 1) * SHOW_BELOW_AVERAGE_SD * stddev(groupMetricValues, groupAverage);
+  const countToShow =
+    groupThreshold === null
+      ? 0
+      : groupMetricValues.filter((v) => (higherIsBetter ? v >= groupThreshold : v <= groupThreshold)).length;
+
+  // 원래 인원 제한(10/40명)보다 컷오프 이상인 사람이 더 많으면, 그 사람들이 전부
+  // 보이도록 목록을 늘린다 — 0~1.5티어처럼 대상이 7명뿐이면 원래 제한(10명)
+  // 그대로, 대상이 40명을 넘는 큰 그룹이면 그만큼 더 보여준다.
+  const RANKING_SIZE = Math.max(baseRankingSize, countToShow);
   const topRanked =
     activeMetric === 'rageScore'
       ? topByRageScore(groupRows, TIER_SCORE_BANDS, RAGE_SCORE_STEEPNESS, RANKING_SIZE)
