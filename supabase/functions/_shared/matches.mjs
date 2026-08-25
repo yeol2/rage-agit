@@ -24,6 +24,27 @@ export function isRestartMatch(participants) {
   );
 }
 
+// 리방과는 다른 종류의 사고가 있다. 방은 제대로 열렸고 다들 몇 분 돌아다녔는데
+// 뭔가 잘못돼서(설정 실수 등) 싸우지 않고 흐지부지 끝낸 뒤 곧바로 다시 치르는
+// 경우다. 2026-08-16 4번째 경기가 그랬다 — 63명이 13분을 보내고 합 킬 0,
+// 합 데미지 123 이었고, 6분 뒤 같은 맵에서 진짜 4라운드를 다시 했다.
+//
+// 이건 isRestartMatch 로 못 잡는다. 누군가 총을 몇 발 쏴서 데미지가 0 이
+// 아니고(그 함수 주석이 예견한 그대로다), 생존시간도 5초를 훌쩍 넘는다.
+// 경기 시간 검사도 779초라 통과한다.
+//
+// 대신 합 킬은 확실하다. 64명이 20분 가까이 실제로 싸웠다면 합 킬은 60 언저리가
+// 나온다 — 실측된 정상 내전의 최저값도 이 절반을 한참 웃돈다. 그래서 "합 킬이
+// 30 이하면 아무도 제대로 싸우지 않은 것"으로 본다.
+export const MIN_TOTAL_KILLS = 30;
+
+export function isAbandonedMatch(participants) {
+  return (
+    participants.length > 0 &&
+    participants.reduce((sum, p) => sum + (p.kills ?? 0), 0) <= MIN_TOTAL_KILLS
+  );
+}
+
 // "확실히 완결난 매치"인지 보는 두 번째, 더 확실한 판단 기준이다.
 // isRestartMatch 는 참가자 개개인의 스탯을 보는데, 이건 어쨌든 개개인의 행동에
 // 달려 있어서 이론상 흔들릴 여지가 있다(예: 한 명이 재시작 직전 짧게라도
@@ -76,6 +97,16 @@ export function classifyMatch({
     return {
       isScrim: false,
       reason: '전원 스탯이 0에 가깝다 — 시작 직후 리방(재시작)한 매치로 보인다',
+    };
+  }
+
+  // 리방은 아니지만 아무도 싸우지 않은 경기를 걸러낸다. 이 검사도 participants
+  // 가 있을 때만 돈다(dak.gg 백필은 안 넘긴다).
+  if (participants && isAbandonedMatch(participants)) {
+    const totalKills = participants.reduce((sum, p) => sum + (p.kills ?? 0), 0);
+    return {
+      isScrim: false,
+      reason: `합 킬이 ${totalKills}뿐이다 (${MIN_TOTAL_KILLS} 이하) — 중단하고 다시 치른 재경기로 보인다`,
     };
   }
 

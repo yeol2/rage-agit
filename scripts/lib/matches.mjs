@@ -6,8 +6,10 @@ export {
   MIN_CLAN_RATIO,
   MIN_MATCH_DURATION_SECONDS,
   MIN_PARTICIPANTS,
+  MIN_TOTAL_KILLS,
   classifyMatch,
   extractMatchSummary,
   extractParticipants,
+  isAbandonedMatch,
   isRestartMatch,
 } from '../../supabase/functions/_shared/matches.mjs';

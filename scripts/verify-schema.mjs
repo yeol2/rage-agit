@@ -535,6 +535,44 @@ check(
   '뷰가 participant_count 에서 member_id 를 우선 쓴다',
 );
 
+console.log('\n0026 — 재경기를 매치 단위로 표시하고 집계에서 뺀다');
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'matches' and column_name = 'excluded_reason'`)) === 1,
+  'matches.excluded_reason 컬럼이 있다',
+);
+
+const excludedGrants = await client.query(`
+  select grantee from information_schema.column_privileges
+  where table_name = 'matches' and column_name = 'excluded_reason'
+    and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    excludedGrants.rows.some((r) => r.grantee === role),
+    `${role} 은 matches.excluded_reason 을 읽을 수 있다`,
+  );
+}
+
+for (const view of ['member_ranking_games', 'scrim_session_summary']) {
+  check(
+    (await client.query(`select pg_get_viewdef($1::regclass) as def`, [view])).rows[0].def.includes(
+      'excluded_reason IS NULL',
+    ),
+    `${view} 가 제외 표시된 매치를 걸러낸다`,
+  );
+}
+
+// 2026-08-16 재경기가 실제로 표시돼 있는지 본다. 뷰만 고치고 데이터를
+// 안 건드리면 화면에는 그대로 5경기로 남는다.
+check(
+  (await one(`select count(*) from matches
+    where pubg_match_id = 'caa76fed-7219-4bd3-8077-075e02221197'
+      and excluded_reason is not null`)) === 1,
+  '2026-08-16 재경기가 제외 표시돼 있다',
+);
+
 await client.end();
 
 console.log('');
