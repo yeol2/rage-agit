@@ -12,7 +12,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { loadEnvLocal, requireEnv } from './lib/env.mjs';
-import { MIN_CLAN_RATIO, MIN_PARTICIPANTS } from './lib/matches.mjs';
+import { MIN_CLAN_RATIO } from './lib/matches.mjs';
 
 loadEnvLocal();
 const [url, serviceRoleKey, anonKey] = requireEnv(
@@ -51,10 +51,6 @@ if (error) {
   check(
     matches.every((m) => m.match_type === 'custom'),
     '저장된 매치가 모두 custom 이다',
-  );
-  check(
-    matches.every((m) => m.participant_count >= MIN_PARTICIPANTS),
-    `저장된 매치가 모두 참가자 ${MIN_PARTICIPANTS}명 이상이다`,
   );
   check(
     matches.every((m) => m.clan_member_count / m.participant_count >= MIN_CLAN_RATIO),

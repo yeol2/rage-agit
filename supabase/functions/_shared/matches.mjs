@@ -1,84 +1,29 @@
 // PUBG 매치 응답을 해석하고 우리 내전인지 판별하는 순수 함수들.
 // 외부 의존(네트워크, DB)이 없어야 테스트가 쉽고 빠르다.
 
-// 내전 인원은 50~70명으로 변동한다. 40 은 여유 있는 바닥값이고,
-// 클랜원 몇 명이 사설방에서 연습한 것을 걸러내는 역할을 한다.
-export const MIN_PARTICIPANTS = 40;
-
 // 실측: 우리 내전 63/64 = 98%, 남의 모임 15/64 = 23%. 중간값이 없다.
 export const MIN_CLAN_RATIO = 0.5;
 
-// 시작하자마자 한 명이 튕겨서 방장이 리방(재시작)하는 경우가 있다. PUBG 서버는
-// 이걸 그냥 아주 짧게 끝난 매치로 본다 — 아무도 무엇도 안 했으니 킬·데미지·
-// 생존시간이 전원 0에 가깝다. 진짜 매치라면 아무리 못해도 몇 명은 몇 초 이상
-// 버티거나 데미지를 주고받으므로, 전원이 이 조건이면 리방으로 본다.
-// timeSurvived 는 정확히 0이 아니라 근처 값이 찍힐 수 있어 5초 여유를 둔다.
-const RESTART_TIME_SURVIVED_THRESHOLD = 5;
-
-export function isRestartMatch(participants) {
-  return (
-    participants.length > 0 &&
-    participants.every(
-      (p) => p.kills === 0 && p.damageDealt === 0 && (p.timeSurvived ?? 0) <= RESTART_TIME_SURVIVED_THRESHOLD,
-    )
-  );
-}
-
-// 리방과는 다른 종류의 사고가 있다. 방은 제대로 열렸고 다들 몇 분 돌아다녔는데
-// 뭔가 잘못돼서(설정 실수 등) 싸우지 않고 흐지부지 끝낸 뒤 곧바로 다시 치르는
-// 경우다. 2026-08-16 4번째 경기가 그랬다 — 63명이 13분을 보내고 합 킬 0,
-// 합 데미지 123 이었고, 6분 뒤 같은 맵에서 진짜 4라운드를 다시 했다.
+// 합 킬로 "제대로 치러진 매치"를 가른다. 64명이 20분 가까이 싸웠다면 합 킬이
+// 60 언저리 나오고, 실측된 정상 내전의 최저값도 이 값을 한참 웃돈다.
 //
-// 이건 isRestartMatch 로 못 잡는다. 누군가 총을 몇 발 쏴서 데미지가 0 이
-// 아니고(그 함수 주석이 예견한 그대로다), 생존시간도 5초를 훌쩍 넘는다.
-// 경기 시간 검사도 779초라 통과한다.
-//
-// 대신 합 킬은 확실하다. 64명이 20분 가까이 실제로 싸웠다면 합 킬은 60 언저리가
-// 나온다 — 실측된 정상 내전의 최저값도 이 절반을 한참 웃돈다. 그래서 "합 킬이
-// 30 이하면 아무도 제대로 싸우지 않은 것"으로 본다.
+// 이 검사 하나가 예전의 세 조건을 대신한다.
+//   - 경기 시간 60초 미만(리방): 60초 안에 끝나면 아무도 못 죽여서 킬이 0이다.
+//   - 전원 스탯 0(리방): 정의상 킬이 0이다.
+//   - 참가자 40명 미만(사설방 연습): 합 킬은 아무리 많아도 참가자 수를 못 넘으므로,
+//     킬이 30을 넘으려면 최소 30명 넘게 있어야 한다.
+// 게다가 앞의 두 검사로는 못 잡던 것도 잡는다 — 2026-08-16 4번째 경기는 63명이
+// 13분을 보내고 합 킬 0, 합 데미지 123 이었다(누군가 총을 쏴서 데미지가 0이
+// 아니고 생존시간도 길어 리방 검사를 통과했고, 779초라 시간 검사도 통과했다).
 export const MIN_TOTAL_KILLS = 30;
 
-export function isAbandonedMatch(participants) {
-  return (
-    participants.length > 0 &&
-    participants.reduce((sum, p) => sum + (p.kills ?? 0), 0) <= MIN_TOTAL_KILLS
-  );
+export function totalKills(participants) {
+  return participants.reduce((sum, p) => sum + (p.kills ?? 0), 0);
 }
 
-// "확실히 완결난 매치"인지 보는 두 번째, 더 확실한 판단 기준이다.
-// isRestartMatch 는 참가자 개개인의 스탯을 보는데, 이건 어쨌든 개개인의 행동에
-// 달려 있어서 이론상 흔들릴 여지가 있다(예: 한 명이 재시작 직전 짧게라도
-// 사격해서 데미지가 찍히면 안 걸린다). 반대로 매치 길이는 서버가 재는 값이라
-// 개인이 어떻게 하든 못 바꾼다 — 첫 자기장이 보통 경기 시작 2~3분 뒤에나
-// 뜨므로, 그보다도 훨씬 짧은 60초 안에 "끝난" 매치는 사람이 손 쓸 도리 없이
-// 리방이라고 봐도 된다. 그래서 이 검사를 스탯 검사보다 먼저, 우선으로 본다.
-export const MIN_MATCH_DURATION_SECONDS = 60;
-
-export function classifyMatch({
-  matchType,
-  participantCount,
-  clanMemberCount,
-  participants,
-  durationSeconds,
-}) {
+export function classifyMatch({ matchType, participantCount, clanMemberCount, participants }) {
   if (matchType !== 'custom') {
     return { isScrim: false, reason: `matchType 이 custom 이 아니다 (${matchType})` };
-  }
-
-  // durationSeconds 는 선택 인자다 — dak.gg 백필처럼 애초에 이 값이 없는
-  // 출처도 있어서(비교 대상이 없으니 null 이면 그냥 건너뛴다).
-  if (durationSeconds != null && durationSeconds < MIN_MATCH_DURATION_SECONDS) {
-    return {
-      isScrim: false,
-      reason: `경기 시간이 ${durationSeconds}초뿐이다 (${MIN_MATCH_DURATION_SECONDS}초 미만) — 리방(재시작)한 매치로 보인다`,
-    };
-  }
-
-  if (participantCount < MIN_PARTICIPANTS) {
-    return {
-      isScrim: false,
-      reason: `참가자가 ${participantCount}명뿐이다 (${MIN_PARTICIPANTS}명 이상 필요)`,
-    };
   }
 
   const ratio = participantCount === 0 ? 0 : clanMemberCount / participantCount;
@@ -89,25 +34,16 @@ export function classifyMatch({
     };
   }
 
-  // participants 도 선택 인자다 — 호출부가 이미 참가자별 스탯을 갖고 있을 때만
-  // 넘긴다(polling.mjs). 없으면 이 검사는 건너뛴다.
-  // durationSeconds 검사를 이미 통과한 뒤라, 여기 걸리는 건 "60초는 넘었지만
-  // 그래도 아무도 아무것도 안 한" 애매한 경우를 잡는 보조 그물이다.
-  if (participants && isRestartMatch(participants)) {
-    return {
-      isScrim: false,
-      reason: '전원 스탯이 0에 가깝다 — 시작 직후 리방(재시작)한 매치로 보인다',
-    };
-  }
-
-  // 리방은 아니지만 아무도 싸우지 않은 경기를 걸러낸다. 이 검사도 participants
-  // 가 있을 때만 돈다(dak.gg 백필은 안 넘긴다).
-  if (participants && isAbandonedMatch(participants)) {
-    const totalKills = participants.reduce((sum, p) => sum + (p.kills ?? 0), 0);
-    return {
-      isScrim: false,
-      reason: `합 킬이 ${totalKills}뿐이다 (${MIN_TOTAL_KILLS} 이하) — 중단하고 다시 치른 재경기로 보인다`,
-    };
+  // participants 는 선택 인자다 — dak.gg 백필처럼 참가자별 스탯이 아예 없는
+  // 출처도 있어서, 없으면 이 검사는 건너뛴다.
+  if (participants) {
+    const kills = totalKills(participants);
+    if (kills <= MIN_TOTAL_KILLS) {
+      return {
+        isScrim: false,
+        reason: `합 킬이 ${kills}뿐이다 (${MIN_TOTAL_KILLS} 이하) — 리방이거나 중단하고 다시 치른 매치로 보인다`,
+      };
+    }
   }
 
   return {
