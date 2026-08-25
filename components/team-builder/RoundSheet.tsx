@@ -137,11 +137,14 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rosterId]);
 
-  async function pollOnce(): Promise<boolean> {
+  // 누른 시각과 몇 번째 시도인지는 여기서만 안다 — 한 번 눌러두면 매치가
+  // 잡힐 때까지 알아서 두드리므로, 서버는 매 요청을 따로 본다. 디스코드
+  // 알림이 "버튼 누르고 몇 초 만에 들어왔는지"를 적으려면 이 값이 필요하다.
+  async function pollOnce(pressedAt: string, attempt: number): Promise<boolean> {
     const response = await fetch('/api/scrim-roster/round-sheet/poll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rosterId }),
+      body: JSON.stringify({ rosterId, pressedAt, attempt }),
     });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error ?? '폴링에 실패했습니다.');
@@ -154,6 +157,7 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
     cancelRef.current = false;
     setPolling(true);
     setPollMessage(null);
+    const pressedAt = new Date().toISOString();
 
     for (let attempt = 1; attempt <= AUTO_POLL_MAX_ATTEMPTS; attempt++) {
       if (cancelRef.current) {
@@ -163,7 +167,7 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
       setPollAttempt(attempt);
 
       try {
-        const found = await pollOnce();
+        const found = await pollOnce(pressedAt, attempt);
         if (found) {
           await loadSheet();
           setPollMessage(`폴링 성공 (${attempt}번째 시도)`);

@@ -5,6 +5,31 @@ import { getSupabaseServer } from '@/lib/supabaseServer';
 import { runPolling } from '@/supabase/functions/_shared/polling.mjs';
 import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
 import { buildRoundSheet } from '@/lib/roundSheetData';
+import { formatManualPollMessage, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
+import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
+
+// 디스코드 알림은 폴링의 곁다리다 — 웹훅이 없거나 전송이 실패해도 폴링 응답
+// 자체는 정상으로 돌려준다. 알림 때문에 버튼이 실패로 보이면 안 된다.
+async function notifyPollDone(args: {
+  scrimDate: string;
+  roundCount: number;
+  attempt: number;
+  pressedAt: string;
+  pollingMs: number;
+  persistMs: number;
+}) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  try {
+    await sendDiscord(
+      webhookUrl,
+      formatManualPollMessage({ ...args, finishedAt: new Date().toISOString() }),
+    );
+  } catch {
+    // 알림 실패는 조용히 넘긴다.
+  }
+}
 
 // 등수 스냅샷 캡처는 이 로스터가 참여한 내전 세션의 라운드가 몇 개나 기록됐는지
 // 봐야 한다. 시트가 세는 것과 반드시 같아야 하므로(어긋나면 "폴링해서 라운드가
@@ -28,6 +53,10 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const rosterId = typeof body.rosterId === 'string' ? body.rosterId : null;
+  // 버튼을 누른 시각과 몇 번째 시도인지는 클라이언트만 안다 — 한 번 눌러두면
+  // 매치가 잡힐 때까지 이 라우트를 여러 번 두드리기 때문이다.
+  const pressedAt = typeof body.pressedAt === 'string' ? body.pressedAt : null;
+  const attempt = typeof body.attempt === 'number' ? body.attempt : 1;
 
   try {
     const supabase = getSupabaseServer();
@@ -55,6 +84,7 @@ export async function POST(request: Request) {
       knownAccountId = members?.member_pubg_accounts.find((a) => a.pubg_account_id)?.pubg_account_id ?? null;
     }
 
+    const pollingStartedAt = Date.now();
     const result = await runPolling({
       supabase,
       apiKey,
@@ -63,6 +93,8 @@ export async function POST(request: Request) {
       playerRetries: 2,
       knownAccountId,
     });
+    const pollingMs = Date.now() - pollingStartedAt;
+    const persistStartedAt = Date.now();
 
     // 등수 스냅샷 캡처·리더보드 갱신은 폴링의 본 목적(매치 기록)에 딸린 부수
     // 효과다 — 실패해도 폴링 응답 자체는 정상으로 돌려준다(사용자는 "폴링
@@ -73,12 +105,26 @@ export async function POST(request: Request) {
     // 저절로 안 바뀐다 — 딱 여기, 이 세션의 라운드 4개가 처음 확인된 순간에만
     // revalidatePath 로 갱신한다. 1~3매치만 폴링된 상태로는 리더보드 화면이
     // 전혀 안 바뀌어야 등수 변동(4매치 확인 후 스냅샷)과 타이밍이 맞는다.
+    let roundCount = 0;
     if (rosterId) {
-      const roundCount = await countRoundsForRoster(supabase, rosterId);
+      roundCount = await countRoundsForRoster(supabase, rosterId);
       if (roundCount >= 4) {
         await captureRankingSnapshotForRoster(supabase, rosterId).catch(() => {});
         revalidatePath('/dashboard');
       }
+    }
+
+    // 매치를 실제로 잡았을 때만 알린다 — 한 번 눌러두면 잡힐 때까지 수십 번
+    // 두드리므로, 못 잡은 시도까지 보내면 알림이 무뎌진다.
+    if (result.scrimsFound > 0 && pressedAt) {
+      await notifyPollDone({
+        scrimDate: toKstDate(result.scrims[0]?.playedAt ?? new Date().toISOString()),
+        roundCount,
+        attempt,
+        pressedAt,
+        pollingMs,
+        persistMs: Date.now() - persistStartedAt,
+      });
     }
 
     return NextResponse.json({ found: result.scrimsFound > 0 });
