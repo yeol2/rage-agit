@@ -1,0 +1,43 @@
+{
+  "_note": "종합 시트(4라운드 최종본)의 트로피 줄에서 읽은 세션별 우승팀. sheetFile 은 image/result_media 안의 파일명이고, place/kill/total 은 그 줄의 PLACE/KILL/TOTAL 칸이다(판독 검증용). roster 는 시트에 적힌 4명 — Ez_ 접두사 없이 시트 표기 그대로 옮겼다. 탈퇴자가 섞여 있어 DB 에 없는 이름이 있을 수 있고, 그건 정상이다.",
+  "sessions": [
+    { "scrimDate": "2026-02-08", "teamNo": 9,  "place": 25, "kill": 27, "total": 52, "roster": ["Jiney", "Garlic", "Dogsi", "Hazi"], "sheetFile": "221_1_1_Screenshot_2026-02-08_at_22.41.33.JPG.1uZayEINDR.jpg" },
+    { "scrimDate": "2026-02-20", "teamNo": 15, "place": 27, "kill": 21, "total": 48, "roster": ["Luno", "Gomseung", "MANDUUUUU", "BUNNY"], "sheetFile": "213_1_1_Screenshot_2026-02-20_at_22.52.06.JPG.X7S31L0ZhY.jpg" },
+    { "scrimDate": "2026-03-01", "teamNo": 9,  "place": 28, "kill": 28, "total": 56, "roster": ["Jiney", "Yellow", "T1ger", "HaAng0_0"], "sheetFile": "205_1_1_Screenshot_2026-03-01_at_22.45.23.JPG.3EUPY9J0D_.jpg" },
+    { "scrimDate": "2026-03-08", "teamNo": 15, "place": 22, "kill": 26, "total": 48, "roster": ["Code", "Jiney", "Gomseung", "Uni"], "sheetFile": "197_1_1_Screenshot_2026-03-08_at_22.38.24.JPG.4uL-GjDmoR.jpg" },
+    { "scrimDate": "2026-03-15", "teamNo": 7,  "place": 30, "kill": 33, "total": 63, "roster": ["Chyopa", "VanNi", "Yellow", "Xavi-"], "sheetFile": "189_1_1_Screenshot_2026-03-15_at_22.21.03.JPG.ys-FMJuYTK.jpg" },
+    { "scrimDate": "2026-03-22", "teamNo": 12, "place": 26, "kill": 24, "total": 50, "roster": ["Chyopa", "ChanE", "Zeri-", "HaAng0_0"], "sheetFile": "181_1_1_Screenshot_2026-03-22_at_22.56.07.JPG.grWSejgqbh.jpg" },
+    { "scrimDate": "2026-03-29", "teamNo": 15, "place": 21, "kill": 22, "total": 43, "roster": ["Dotnl", "ZiDe-_-", "Gomseung", "Xavi-"], "sheetFile": "173_1_1_Screenshot_2026-03-29_at_22.32.51.JPG._6gbhK7sAL.jpg" },
+    { "scrimDate": "2026-04-05", "teamNo": 3,  "place": 21, "kill": 26, "total": 47, "roster": ["HoDDu", "ChanE", "Gangu", "Hana"], "sheetFile": "165_1_1_image.png.fFLC8vetoV.png" },
+    { "scrimDate": "2026-04-12", "teamNo": 5,  "place": 14, "kill": 34, "total": 48, "roster": ["Chyopa", "isfp", "Cold-", "Uang0_0"], "sheetFile": "157_1_1_f96bd894a5646ed3.PNG.8mPuc1eFBQ.webp" },
+    { "scrimDate": "2026-04-19", "teamNo": 15, "place": 27, "kill": 25, "total": 52, "roster": ["HoDDu", "BARA", "Cold-", "Hyuk9"], "sheetFile": "149_1_1_83dd2938dbb71c47.PNG.Iys0mVoy62.webp" },
+    { "scrimDate": "2026-04-26", "teamNo": 10, "place": 18, "kill": 27, "total": 45, "roster": ["imkimSS", "VanNi", "ttang", "soddevil"], "sheetFile": "141_1_1_image.png.ZXz14SmKaB.png" },
+    { "scrimDate": "2026-05-03", "teamNo": 6,  "place": 18, "kill": 21, "total": 39, "roster": ["sejin", "Roman", "BARA", "3GABANG"], "sheetFile": "134_1_1_image.png.ILySCwj3Jo.png" },
+    { "scrimDate": "2026-05-10", "teamNo": 12, "place": 24, "kill": 24, "total": 48, "roster": ["DR01", "vvvv", "Woo", "Rael2"], "sheetFile": "126_1_1_Screenshot_2026-05-10_at_22.22.38.JPG.XHCUarRMO0.jpg" },
+    { "scrimDate": "2026-05-17", "teamNo": 2,  "place": 22, "kill": 30, "total": 52, "roster": ["TaekSIN", "Gomseung", "HaAng0_0", "reummang"], "sheetFile": "118_1_1_image.png.hAPor1fB6v.webp" },
+    { "scrimDate": "2026-05-24", "teamNo": 14, "place": 15, "kill": 20, "total": 35, "roster": ["Code", "JuHyuN", "Hyuk9", "reummang"], "sheetFile": "110_1_1_image.png.kOv6Eoem8c.png" },
+    { "scrimDate": "2026-05-28", "teamNo": 4,  "place": 26, "kill": 24, "total": 50, "roster": ["Code", "MACHO", "tktktk", "Uang0_0"], "sheetFile": "102_1_1_image.png.Q_nJfFbU0w.webp" },
+    { "scrimDate": "2026-05-31", "teamNo": 11, "place": 20, "kill": 19, "total": 39, "roster": ["Pitt", "Gomseung", "Donkey", "Bambi"], "sheetFile": "94_1_1_image.png.WGCLHyNB9j.webp" }
+  ],
+
+  "_matchEraNote": "2026-06-07 부터는 매치 데이터(dak.gg/PUBG API)가 있지만 PUBG 의 team_id 가 매치마다 새로 매겨져서 세션 단위 팀번호가 없다. 그래서 teamNo 대신 우승자 이름을 적고 스크립트가 member_pubg_accounts 로 사람을 찾는다. sheetFile 이 있는 11개는 종합 시트로 확인한 것이고, 없는 4개(08-13~08-23)는 참가 기록이 빠짐없이 다 있어서 합산으로 구했다(그 무렵부터는 디스코드에 시트를 안 올린다).",
+  "matchEraSessions": [
+    { "scrimDate": "2026-06-07", "place": 19, "kill": 20, "total": 39, "roster": ["sejin", "hosu", "Arakis", "Jhoney"], "sheetFile": "86_1_1_image.png.smXD9-L7dF.webp" },
+    { "scrimDate": "2026-06-14", "place": 23, "kill": 41, "total": 64, "roster": ["VanNi", "Gangu", "Cold-", "xijingping"], "sheetFile": "78_1_1_image.png.Jqro6kbwAc.webp" },
+    { "scrimDate": "2026-06-21", "place": 15, "kill": 35, "total": 50, "roster": ["time", "Pitt", "reummang", "Lill"], "sheetFile": "70_1_1_image.png.Ru5d5YkPq2.webp",
+      "_why": "합산만으로는 2위 팀(AT-/Thswm/Rush/MANDUUUUU, 43)이 1위로 나온다 — 탈퇴한 Pitt 의 킬이 빠져서다. 시트가 정답이다." },
+    { "scrimDate": "2026-06-28", "place": 22, "kill": 29, "total": 51, "roster": ["gjsl", "Gi-Man", "NANA", "GUNHU"], "sheetFile": "62_1_1_image.png.m0fVnTCxiB.webp" },
+    { "scrimDate": "2026-07-06", "place": 15, "kill": 31, "total": 46, "roster": ["Dotnl", "ssonz", "Lill", "BUNNY"], "sheetFile": "54_1_1_image.png.y0m5RlAuyp.png" },
+    { "scrimDate": "2026-07-12", "place": 22, "kill": 24, "total": 46, "roster": ["chlrh", "cks", "ZiDe-_-", "241017"], "sheetFile": "46_1_1_image.png.3l8qGs-ehC.png" },
+    { "scrimDate": "2026-07-20", "place": 17, "kill": 25, "total": 42, "roster": ["Emergency", "Cold-", "ttang", "DY91"], "sheetFile": "38_1_1_image.png.56Bf0H9R_O.webp",
+      "_why": "2위(Nero/Zzang9/ZiDe-_-/Ton)와 42점 동점이다. 순위점수 17 대 16 으로 갈렸다." },
+    { "scrimDate": "2026-07-25", "place": 17, "kill": 23, "total": 40, "roster": ["Code", "Cold-", "Xuinness", "Jukatory"], "sheetFile": "30_1_1_image.png.st5XV0KSxC.webp" },
+    { "scrimDate": "2026-07-26", "place": 24, "kill": 21, "total": 45, "roster": ["chlrh", "Horang2", "Dogsi", "Lill"], "sheetFile": "22_1_1_image.png.Me80NcjQAQ.webp" },
+    { "scrimDate": "2026-08-02", "place": 12, "kill": 29, "total": 41, "roster": ["Chyopa", "vvvv", "Arakis", "dmfkckck"], "sheetFile": "9_1_1_image.png.gUJCHz38FN.webp" },
+    { "scrimDate": "2026-08-09", "place": 25, "kill": 32, "total": 57, "roster": ["chlrh", "wNgkdl", "NORAJO", "MANDUUUUU"], "sheetFile": "1_1_1_image.png.CGQFTT1zUx.png" },
+    { "scrimDate": "2026-08-13", "place": 18, "kill": 32, "total": 50, "roster": ["NANA", "Dxwnyam", "HaAng0_0", "dotnl"] },
+    { "scrimDate": "2026-08-16", "place": 29, "kill": 27, "total": 56, "roster": ["Jiney", "Yellow", "Donkey", "Jhoney"] },
+    { "scrimDate": "2026-08-20", "place": 20, "kill": 37, "total": 57, "roster": ["aedimm", "heungmini", "Gi-Man", "meta"] },
+    { "scrimDate": "2026-08-23", "place": 20, "kill": 37, "total": 57, "roster": ["HoDDu", "SPAM", "ttang", "purple"] }
+  ]
+}

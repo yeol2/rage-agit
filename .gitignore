@@ -7,7 +7,11 @@ node_modules/
 .env
 .env.local
 scripts/match-sample.json
-data/
+data/*
+# 우승 판독 결과만 예외로 추적한다. 종합 시트 24장을 사람이 눈으로 읽어 만든
+# 값이라 잃으면 다시 읽는 수밖에 없다 — data/ 의 다른 파일들과 달리 실명이
+# 없고(인게임 닉네임뿐) 크기도 작다.
+!data/session-winners.json
 tsconfig.tsbuildinfo
 supabase/.env.functions
 supabase/.temp/
