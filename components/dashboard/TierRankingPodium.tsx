@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   TROPHY_SIZE,
   TROPHY_VIEWBOX,
@@ -91,39 +91,54 @@ const RANKING_TROPHY_GOLD = 'ranking-trophy-gold';
 const WIN_GLYPH_STEP = 21.5; // svg 사용자 좌표(글리프 폭 18.8 + 여백)
 const MAX_WIN_GLYPHS = 8;
 
+// 트로피를 가로로 늘어놓는 svg. 낱개 svg 를 반복하지 않는 이유는 표 한 줄에
+// 여러 개가 들어가고 시상대에도 쓰여서다 — 요소 수를 줄이고 간격도 한 곳에서
+// 정한다. 색은 문서에 하나만 둔 그라디언트(RANKING_TROPHY_GOLD)를 가리킨다.
+function TrophyRow({ count, className }: { count: number; className: string }) {
+  const width = (count - 1) * WIN_GLYPH_STEP + TROPHY_SIZE;
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${TROPHY_SIZE}`}
+      fill={`url(#${RANKING_TROPHY_GOLD})`}
+      className={className}
+      aria-hidden
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <g key={i} transform={`translate(${i * WIN_GLYPH_STEP - TROPHY_X}, ${-TROPHY_Y})`}>
+          <TrophyPaths />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 /**
- * 뱃지 열 — 내전 종합우승 횟수를 트로피 개수로 보인다.
+ * 내전 종합우승 뱃지 — 횟수만큼 트로피를 늘어놓는다.
  *
- * 트로피 여러 개를 svg 하나에 담는다. 낱개 svg 를 반복하면 줄마다 같은 일을
- * 반복하는 데다, 개수만큼 요소가 늘어 표가 무거워진다.
+ * 표와 시상대가 크기와 '우승 0회' 처리만 다르다. 표는 빈 칸을 '-' 로 채워
+ * 열이 비어 보이지 않게 하고, 시상대는 뱃지 칸 자체가 min-h 로 자리를 잡고
+ * 있어서 아무것도 안 그려도 높이가 안 흔들린다.
  *
  * 광택(sheen)은 넣지 않는다 — 수십 줄이 동시에 번쩍이면 표를 훑기 어렵다.
  * 그건 칸이 넉넉한 클랜원 상세 화면에서만 한다(components/members/WinTrophies.tsx).
  */
-function WinBadge({ count }: { count: number }) {
-  if (count <= 0) return <span className="text-sm text-menu">-</span>;
+function WinBadge({
+  count,
+  className,
+  none = null,
+}: {
+  count: number;
+  className: string;
+  none?: ReactNode;
+}) {
+  if (count <= 0) return <>{none}</>;
 
   const glyphs = Math.min(count, MAX_WIN_GLYPHS);
-  const width = (glyphs - 1) * WIN_GLYPH_STEP + TROPHY_SIZE;
 
   return (
     // 칸을 넘칠 만큼 많아져도 표가 밀리지 않게 자른다. 정확한 횟수는 title 에 있다.
-    <span
-      className="flex min-w-0 items-center gap-1 overflow-hidden"
-      title={`종합우승 ${count}회`}
-    >
-      <svg
-        viewBox={`0 0 ${width} ${TROPHY_SIZE}`}
-        fill={`url(#${RANKING_TROPHY_GOLD})`}
-        className="h-3.5 w-auto shrink-0"
-        aria-hidden
-      >
-        {Array.from({ length: glyphs }, (_, i) => (
-          <g key={i} transform={`translate(${i * WIN_GLYPH_STEP - TROPHY_X}, ${-TROPHY_Y})`}>
-            <TrophyPaths />
-          </g>
-        ))}
-      </svg>
+    <span className="flex min-w-0 items-center gap-1 overflow-hidden" title={`종합우승 ${count}회`}>
+      <TrophyRow count={glyphs} className={className} />
       {/* 그림으로 다 못 보여줄 만큼 많아지면 나머지는 숫자가 받는다 */}
       {count > MAX_WIN_GLYPHS && (
         <span className="text-xs font-bold tabular-nums text-menu">+{count - MAX_WIN_GLYPHS}</span>
@@ -703,7 +718,13 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                         {/* 원본 Vector 2 — 시상대 안쪽 가로 구분선(흰색 7%) */}
                         <span aria-hidden="true" className="mt-4 h-px w-[89%] bg-white/[0.07]" />
 
-                        <p className="mt-5 tabular-nums">
+                        {/* 점수는 시상대 정중앙에 두고 증감만 그 오른쪽에 붙인다.
+                            증감을 같은 흐름에 넣으면 둘의 폭을 합친 가운데가
+                            중앙이 되어 점수가 왼쪽으로 밀린다 — 그래서 증감만
+                            absolute 로 띄워 점수 폭에 영향을 주지 않게 한다.
+                            모바일은 시상대 한 칸이 115px 뿐이라 오른쪽에 붙이면
+                            카드 밖으로 나간다. 거기서는 점수 아래에 둔다. */}
+                        <p className="relative mt-5 tabular-nums">
                           <MetricValue
                             metric={activeMetric}
                             row={member}
@@ -711,14 +732,21 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                             detailClassName="text-sm font-normal text-menu"
                             stacked
                           />
+                          {activeMetric === 'rageScore' && (
+                            <RankChangeBadge
+                              current={slot.rank}
+                              previous={snapshotRankByMember.get(member.memberId)}
+                              className="mt-1 block whitespace-nowrap sm:absolute sm:left-full sm:top-5 sm:ml-2 sm:mt-0 sm:-translate-y-1/2"
+                            />
+                          )}
                         </p>
-                        {activeMetric === 'rageScore' && (
-                          <RankChangeBadge
-                            current={slot.rank}
-                            previous={snapshotRankByMember.get(member.memberId)}
-                            className="mt-1 block"
-                          />
-                        )}
+
+                        {/* 뱃지 칸 — 앞으로 뱃지가 늘어날 자리다. 지금은 종합우승
+                            트로피 하나뿐이라 비어 보일 수 있지만, 자리를 미리
+                            잡아둬야 뱃지가 붙을 때 시상대 높이가 안 흔들린다. */}
+                        <div className="mt-3 flex min-h-[1.25rem] items-center justify-center gap-1.5">
+                          <WinBadge count={member.winCount} className="h-4 w-auto sm:h-[18px]" />
+                        </div>
                       </>
                     )}
                   </div>
@@ -843,7 +871,11 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                           {member.discordNickname}
                         </span>
                         <TierBadge tier={member.tier} className="justify-self-start" />
-                        <WinBadge count={member.winCount} />
+                        <WinBadge
+                          count={member.winCount}
+                          className="h-3.5 w-auto shrink-0"
+                          none={<span className="text-sm text-menu">-</span>}
+                        />
                         <span className="text-right tabular-nums">
                           <MetricValue
                             metric={activeMetric}
