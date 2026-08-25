@@ -458,25 +458,16 @@ for (const role of ['anon', 'authenticated']) {
   );
 }
 
-console.log('\n0020 — 03 내전 시트: 진행 상태(stage)');
+console.log('\n0025 — 03 내전 시트의 진행 상태(stage)를 도로 없앴다');
 
+// 0020 이 넣었던 컬럼을 0025 가 지웠다 — 01/02/03 이 전부 항상 보이는 구조가
+// 되면서 "몇 단계까지 왔는지" 를 기억할 이유가 사라졌기 때문이다. 그래서 이건
+// "있어야 한다" 가 아니라 "없어야 한다" 로 확인한다.
 check(
   (await one(`select count(*) from information_schema.columns
-    where table_name = 'scrim_rosters' and column_name = 'stage'`)) === 1,
-  'scrim_rosters.stage 컬럼이 있다',
+    where table_name = 'scrim_rosters' and column_name = 'stage'`)) === 0,
+  'scrim_rosters.stage 컬럼이 없다',
 );
-
-const stageGrants = await client.query(`
-  select grantee, column_name from information_schema.column_privileges
-  where table_name = 'scrim_rosters' and privilege_type = 'SELECT'
-    and grantee in ('anon', 'authenticated') and column_name = 'stage'
-`);
-for (const role of ['anon', 'authenticated']) {
-  check(
-    stageGrants.rows.some((r) => r.grantee === role),
-    `${role} 은 scrim_rosters.stage 를 읽을 수 있다`,
-  );
-}
 
 console.log('\n0021 — 최근 랭킹 창 12매치 → 16매치');
 
@@ -533,6 +524,44 @@ check(
   (await client.query(`select pg_get_viewdef('scrim_session_summary'::regclass) as def`)).rows[0].def
     .includes('p.member_id'),
   '뷰가 participant_count 에서 member_id 를 우선 쓴다',
+);
+
+console.log('\n0026 — 재경기를 매치 단위로 표시하고 집계에서 뺀다');
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'matches' and column_name = 'excluded_reason'`)) === 1,
+  'matches.excluded_reason 컬럼이 있다',
+);
+
+const excludedGrants = await client.query(`
+  select grantee from information_schema.column_privileges
+  where table_name = 'matches' and column_name = 'excluded_reason'
+    and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    excludedGrants.rows.some((r) => r.grantee === role),
+    `${role} 은 matches.excluded_reason 을 읽을 수 있다`,
+  );
+}
+
+for (const view of ['member_ranking_games', 'scrim_session_summary']) {
+  check(
+    (await client.query(`select pg_get_viewdef($1::regclass) as def`, [view])).rows[0].def.includes(
+      'excluded_reason IS NULL',
+    ),
+    `${view} 가 제외 표시된 매치를 걸러낸다`,
+  );
+}
+
+// 2026-08-16 재경기가 실제로 표시돼 있는지 본다. 뷰만 고치고 데이터를
+// 안 건드리면 화면에는 그대로 5경기로 남는다.
+check(
+  (await one(`select count(*) from matches
+    where pubg_match_id = 'caa76fed-7219-4bd3-8077-075e02221197'
+      and excluded_reason is not null`)) === 1,
+  '2026-08-16 재경기가 제외 표시돼 있다',
 );
 
 await client.end();

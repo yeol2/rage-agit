@@ -62,6 +62,9 @@ export async function fetchSessionMatches(sessionId: string): Promise<ScrimMatch
     .from('matches')
     .select('pubg_match_id, played_at, map_name, participant_count, source')
     .eq('scrim_session_id', sessionId)
+    // 재경기는 세션 요약의 경기 수에서 이미 빠져 있다 — 목록에도 안 나와야
+    // "4경기"라고 써 놓고 다섯 줄이 펼쳐지는 일이 없다.
+    .is('excluded_reason', null)
     .order('played_at');
   if (error) throw new Error(`경기 목록을 불러오지 못했습니다: ${error.message}`);
 

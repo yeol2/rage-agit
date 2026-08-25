@@ -76,10 +76,14 @@ export async function GET(request: Request) {
     });
   }
 
+  // excluded_reason 이 붙은 매치(재경기 등)는 라운드로 세지 않는다. 이걸 안
+  // 걸러내면 2026-08-16 처럼 재경기가 4번째 자리를 차지해서, limit(4) 에
+  // 진짜 마지막 라운드가 잘려나간다.
   const { data: matchRows, error: matchesError } = await supabase
     .from('matches')
     .select('pubg_match_id')
     .eq('scrim_session_id', session.id)
+    .is('excluded_reason', null)
     .order('played_at', { ascending: true })
     .limit(4);
   if (matchesError) {

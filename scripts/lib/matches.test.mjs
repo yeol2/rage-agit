@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { classifyMatch, extractMatchSummary, extractParticipants, isRestartMatch } from './matches.mjs';
+import {
+  classifyMatch,
+  extractMatchSummary,
+  extractParticipants,
+  isAbandonedMatch,
+  isRestartMatch,
+} from './matches.mjs';
 
 // 실제 응답을 본떠 작게 만든다.
 // 진짜 응답(참가자 64명)을 저장소에 넣으면 클랜원 실명이 git 에 들어간다.
@@ -149,11 +155,14 @@ describe('classifyMatch', () => {
     expect(result.reason).toContain('리방');
   });
 
-  it('한 명이라도 스탯이 있으면 정상적인 내전으로 본다', () => {
-    const participants = Array.from({ length: 64 }, (_, i) => ({
-      kills: i === 0 ? 1 : 0,
-      damageDealt: 0,
-      timeSurvived: 0,
+  it('스탯이 붙어 있고 킬도 충분히 나왔으면 정상적인 내전으로 본다', () => {
+    // 리방 검사는 "전원 0" 일 때만 걸려야 한다. 다만 한 명만 1킬 낸 매치는
+    // 리방은 아니어도 재경기 검사(합 킬 30 이하)에 걸리므로, 여기서는 실제
+    // 내전에 가까운 합 킬 64 로 둔다.
+    const participants = Array.from({ length: 64 }, () => ({
+      kills: 1,
+      damageDealt: 120,
+      timeSurvived: 600,
     }));
     const result = classifyMatch({
       matchType: 'custom',
@@ -206,6 +215,56 @@ describe('classifyMatch', () => {
       participantCount: 64,
       clanMemberCount: 63,
       durationSeconds: null,
+    });
+    expect(result.isScrim).toBe(true);
+  });
+});
+
+describe('재경기(중단하고 다시 치른 경기) 판별', () => {
+  // 2026-08-16 4번째 경기 실측값 — 63명이 13분(779초)을 보내고 합 킬 0,
+  // 합 데미지 123. 6분 뒤 같은 맵에서 진짜 4라운드를 다시 했다.
+  const abandoned0816 = Array.from({ length: 63 }, (_, i) => ({
+    kills: 0,
+    damageDealt: i < 3 ? 41 : 0,
+    timeSurvived: 700,
+  }));
+
+  it('08-16 재경기를 내전에서 제외한다', () => {
+    const result = classifyMatch({
+      matchType: 'custom',
+      participantCount: 63,
+      clanMemberCount: 63,
+      participants: abandoned0816,
+      durationSeconds: 779,
+    });
+    expect(result.isScrim).toBe(false);
+    expect(result.reason).toContain('재경기');
+  });
+
+  it('리방 검사로는 08-16 재경기를 못 잡는다(이 검사가 필요한 이유)', () => {
+    expect(isRestartMatch(abandoned0816)).toBe(false);
+  });
+
+  it('합 킬 경계값 30은 재경기, 31은 내전으로 본다', () => {
+    const withTotalKills = (total) =>
+      Array.from({ length: 64 }, (_, i) => ({
+        kills: i < total ? 1 : 0,
+        damageDealt: 200,
+        timeSurvived: 600,
+      }));
+    expect(isAbandonedMatch(withTotalKills(30))).toBe(true);
+    expect(isAbandonedMatch(withTotalKills(31))).toBe(false);
+  });
+
+  it('참가자가 없으면 재경기로 보지 않는다(빈 매치를 오판하지 않는다)', () => {
+    expect(isAbandonedMatch([])).toBe(false);
+  });
+
+  it('participants 를 안 넘기면(dak.gg 백필) 이 검사를 건너뛴다', () => {
+    const result = classifyMatch({
+      matchType: 'custom',
+      participantCount: 64,
+      clanMemberCount: 63,
     });
     expect(result.isScrim).toBe(true);
   });
