@@ -21,15 +21,22 @@ function formatDuration(ms) {
   return `${minutes}분 ${Math.round(seconds - minutes * 60)}초`;
 }
 
+// 한 세션은 4라운드다. 이 수를 채우면 리더보드 갱신과 우승 확정이 열린다.
+const ROUNDS_PER_SESSION = 4;
+
 /**
- * 폴링이 매치를 잡은 순간의 알림 문구.
+ * 새로 기록된 라운드 하나를 알리는 문구.
+ *
+ * **라운드 하나에 알림 하나다.** 한 세션이면 4번 온다. 한 번 폴링에 매치가
+ * 둘 이상 잡히면(늦게 눌렀을 때) 그만큼 여러 번 부른다 — 라운드 하나가
+ * 조용히 넘어가면 어디까지 들어왔는지 세기 어렵다.
  *
  * 못 잡은 시도는 부르지 않는다 — 버튼 한 번에 최대 수십 번 두드리므로
  * 매번 보내면 알림이 무뎌져서 정작 볼 것이 안 보인다.
  */
 export function formatManualPollMessage({
   scrimDate,
-  roundCount,
+  roundNo,
   attempt,
   pressedAt,
   finishedAt,
@@ -38,7 +45,7 @@ export function formatManualPollMessage({
 }) {
   const totalMs = new Date(finishedAt).getTime() - new Date(pressedAt).getTime();
   const lines = [
-    `**폴링 완료!** ${scrimDate} 내전 — ${roundCount}라운드 기록됨`,
+    `**폴링 완료!** ${scrimDate} 내전 — ${roundNo}라운드 기록`,
     `· 버튼 누름 ${toKstTime(pressedAt)} → 매치 발견 ${toKstTime(finishedAt)}`,
     `· 총 걸린 시간 **${formatDuration(totalMs)}** (${attempt}번째 시도에서 발견)`,
     // 아래 둘은 매치를 잡은 마지막 시도만의 시간이다. 총 시간에는 그 앞의
@@ -46,10 +53,12 @@ export function formatManualPollMessage({
     `   └ 마지막 시도: PUBG 조회 ${formatDuration(pollingMs)} + 저장·시트 반영 ${formatDuration(persistMs)}`,
   ];
 
-  // 4라운드가 다 차면 등수 스냅샷과 리더보드 갱신도 이때 일어난다.
-  if (roundCount >= 4) {
+  // 마지막 라운드까지 차면 등수 스냅샷과 리더보드 갱신도 이때 일어난다.
+  if (roundNo >= ROUNDS_PER_SESSION) {
     lines.push('');
-    lines.push('4라운드가 다 찼다 — 리더보드를 갱신했다. 우승 확정을 누르면 된다.');
+    lines.push(
+      `${ROUNDS_PER_SESSION}라운드가 다 찼다 — 리더보드를 갱신했다. 우승 확정을 누르면 된다.`,
+    );
   }
 
   return lines.join('\n');

@@ -3,7 +3,7 @@ import { formatManualPollMessage, sendDiscord } from './notify.mjs';
 
 const base = {
   scrimDate: '2026-08-23',
-  roundCount: 2,
+  roundNo: 1,
   attempt: 3,
   // 20:41:03 KST = 11:41:03 UTC
   pressedAt: '2026-08-23T11:41:03.000Z',
@@ -13,6 +13,12 @@ const base = {
 };
 
 describe('formatManualPollMessage', () => {
+  it('몇 번째 라운드가 기록됐는지 적는다', () => {
+    // 라운드 하나에 알림 하나다 — 한 세션이면 1~4라운드로 네 번 온다.
+    expect(formatManualPollMessage(base)).toContain('2026-08-23 내전 — 1라운드 기록');
+    expect(formatManualPollMessage({ ...base, roundNo: 3 })).toContain('3라운드 기록');
+  });
+
   it('누른 시각과 발견 시각을 한국시간으로 적는다', () => {
     const message = formatManualPollMessage(base);
     expect(message).toContain('버튼 누름 20:41:03');
@@ -42,7 +48,7 @@ describe('formatManualPollMessage', () => {
   });
 
   it('4라운드가 다 차면 리더보드 갱신을 알린다', () => {
-    expect(formatManualPollMessage({ ...base, roundCount: 4 })).toContain('4라운드가 다 찼다');
+    expect(formatManualPollMessage({ ...base, roundNo: 4 })).toContain('4라운드가 다 찼다');
   });
 
   it('아직 4라운드가 아니면 그 안내는 안 넣는다', () => {

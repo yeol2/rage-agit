@@ -2,7 +2,7 @@ declare module '@/supabase/functions/_shared/notify.mjs' {
   /** 폴링이 매치를 잡은 순간의 디스코드 알림 문구를 만든다. */
   export function formatManualPollMessage(args: {
     scrimDate: string;
-    roundCount: number;
+    roundNo: number;
     attempt: number;
     pressedAt: string;
     finishedAt: string;

@@ -12,7 +12,8 @@ import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
 // 자체는 정상으로 돌려준다. 알림 때문에 버튼이 실패로 보이면 안 된다.
 async function notifyPollDone(args: {
   scrimDate: string;
-  roundCount: number;
+  /** 이번 폴링으로 새로 기록된 라운드 번호들. 보통 하나지만 늦게 누르면 여럿이다. */
+  roundNumbers: number[];
   attempt: number;
   pressedAt: string;
   pollingMs: number;
@@ -21,13 +22,13 @@ async function notifyPollDone(args: {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
 
-  try {
-    await sendDiscord(
-      webhookUrl,
-      formatManualPollMessage({ ...args, finishedAt: new Date().toISOString() }),
-    );
-  } catch {
-    // 알림 실패는 조용히 넘긴다.
+  const finishedAt = new Date().toISOString();
+  for (const roundNo of args.roundNumbers) {
+    try {
+      await sendDiscord(webhookUrl, formatManualPollMessage({ ...args, roundNo, finishedAt }));
+    } catch {
+      // 알림 실패는 조용히 넘긴다.
+    }
   }
 }
 
@@ -117,9 +118,16 @@ export async function POST(request: Request) {
     // 매치를 실제로 잡았을 때만 알린다 — 한 번 눌러두면 잡힐 때까지 수십 번
     // 두드리므로, 못 잡은 시도까지 보내면 알림이 무뎌진다.
     if (result.scrimsFound > 0 && pressedAt) {
+      // 라운드 하나에 알림 하나다. 이번에 몇 라운드가 새로 들어왔는지는
+      // scrimsFound 가 알려주고(polled_matches 덕에 같은 매치는 두 번 안 센다),
+      // 그게 몇 번째 라운드인지는 지금 세어둔 총 라운드 수에서 거꾸로 구한다.
+      const firstNewRound = Math.max(1, roundCount - result.scrimsFound + 1);
       await notifyPollDone({
         scrimDate: toKstDate(result.scrims[0]?.playedAt ?? new Date().toISOString()),
-        roundCount,
+        roundNumbers: Array.from(
+          { length: Math.min(result.scrimsFound, roundCount) },
+          (_, i) => firstNewRound + i,
+        ),
         attempt,
         pressedAt,
         pollingMs,
