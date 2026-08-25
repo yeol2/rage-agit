@@ -3,12 +3,14 @@ import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { AccessGate } from '@/components/members/AccessGate';
 import { Hexagon } from '@/components/members/Hexagon';
+import { WinTrophies } from '@/components/members/WinTrophies';
 import {
   MIN_GAMES_FOR_HEXAGON,
   buildHexagonAxes,
   cleanDisplayName,
   fetchMember,
   fetchMemberRecentStats,
+  fetchMemberWinCount,
   fetchTierCohortStats,
   stripTrailingKoreanTag,
   tierColorRamp,
@@ -24,7 +26,10 @@ export default async function MemberDetailPage({
   const member = await fetchMember(params.memberId);
   if (!member) notFound();
 
-  const stats = await fetchMemberRecentStats(member.id);
+  const [stats, winCount] = await Promise.all([
+    fetchMemberRecentStats(member.id),
+    fetchMemberWinCount(member.id),
+  ]);
   const hasEnoughGames = stats !== null && stats.gameCount >= MIN_GAMES_FOR_HEXAGON;
 
   const tierGroup = tierGroupFor(member.tier);
@@ -49,6 +54,7 @@ export default async function MemberDetailPage({
               {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
             </h1>
             <p className="mt-2 text-sm text-menu">{member.tier}티어</p>
+            <WinTrophies count={winCount} />
 
             <div className="mt-10 flex justify-center">
               {axes ? (

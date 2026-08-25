@@ -564,6 +564,44 @@ check(
   '2026-08-16 재경기가 제외 표시돼 있다',
 );
 
+console.log('\n0027 — 내전 종합우승 기록');
+
+check(
+  (await one(`select count(*) from information_schema.tables
+    where table_name = 'session_wins'`)) === 1,
+  'session_wins 테이블이 있다',
+);
+
+// 한 사람이 같은 세션에서 두 번 우승할 수는 없다. 이 제약이 없으면 임포터를
+// 두 번 돌렸을 때 우승 횟수가 조용히 두 배가 된다.
+check(
+  (await one(`select count(*) from pg_constraint
+    where conrelid = 'session_wins'::regclass and contype = 'u'`)) >= 1,
+  '(날짜, 세션번호, 클랜원) 유일 제약이 있다',
+);
+
+const winGrants = await client.query(`
+  select grantee from information_schema.role_table_grants
+  where table_name = 'member_win_counts' and privilege_type = 'SELECT'
+    and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    winGrants.rows.some((r) => r.grantee === role),
+    `${role} 은 member_win_counts 를 읽을 수 있다`,
+  );
+}
+
+// 우승자가 한 세션에 5명 이상이면 팀번호나 이름을 잘못 짚었다는 뜻이다
+// (PUBG 스쿼드는 최대 4명).
+check(
+  (await one(`select count(*) from (
+    select scrim_date, session_number from session_wins
+    group by scrim_date, session_number having count(*) > 4
+  ) t`)) === 0,
+  '한 세션의 우승자가 4명을 넘지 않는다',
+);
+
 await client.end();
 
 console.log('');

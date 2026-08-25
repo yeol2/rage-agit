@@ -28,6 +28,8 @@ export interface RankingStatsRow {
   avgPlacementPoints: number;
   avgRank: number;
   lastPlayedAt: string;
+  // 내전 종합우승 횟수. 랭킹 계산에는 안 쓰고 뱃지 열에만 보인다.
+  winCount: number;
 }
 
 export interface RankingStatsRowWithScore extends RankingStatsRow {
@@ -144,16 +146,24 @@ interface RankingViewRow {
 // member_alltime_stats 는 통산 game_count(자격 판정 기준)를 항상 같이 조회한다 —
 // 최근12 창을 볼 때도 자격은 통산 경기 수로 판정한다(0011 설계 참고).
 export async function fetchRankingStats(window: RankingWindow): Promise<RankingStatsRow[]> {
-  const [alltimeResult, members] = await Promise.all([
+  const [alltimeResult, members, winsResult] = await Promise.all([
     getSupabase()
       .from('member_alltime_stats')
       .select('member_id, tier, game_count, avg_kills, avg_placement_points, avg_rank, last_played_at'),
     fetchAllMembers(),
+    getSupabase().from('member_win_counts').select('member_id, win_count'),
   ]);
   if (alltimeResult.error) {
     throw new Error(`통산 전적을 불러오지 못했습니다: ${alltimeResult.error.message}`);
   }
+  if (winsResult.error) {
+    throw new Error(`우승 횟수를 불러오지 못했습니다: ${winsResult.error.message}`);
+  }
   const alltimeData = alltimeResult.data ?? [];
+  // 우승이 한 번도 없으면 뷰에 행 자체가 없다 — 없는 사람은 0 이다.
+  const winCountByMember = new Map(
+    (winsResult.data ?? []).map((r) => [r.member_id as string, r.win_count as number]),
+  );
 
   let windowData: RankingViewRow[] = alltimeData;
   if (window === 'recent16') {
@@ -186,5 +196,6 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
       avgPlacementPoints: Number(row.avg_placement_points),
       avgRank: Number(row.avg_rank),
       lastPlayedAt: lastPlayedByMember.get(row.member_id) ?? new Date(0).toISOString(),
+      winCount: winCountByMember.get(row.member_id) ?? 0,
     }));
 }

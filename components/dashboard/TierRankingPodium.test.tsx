@@ -17,6 +17,7 @@ function row(overrides: Partial<RankingStatsRow>): RankingStatsRow {
     avgPlacementPoints: 1,
     avgRank: 5,
     lastPlayedAt: new Date().toISOString(),
+    winCount: 0,
     ...overrides,
   };
 }
@@ -146,6 +147,37 @@ describe('TierRankingPodium — 관리자 검색', () => {
 
     fireEvent.change(screen.getByPlaceholderText('닉네임 검색'), { target: { value: '없는이름' } });
     expect(within(screen.getByTestId('podium-slot-1')).getByText('A')).toBeInTheDocument();
+  });
+});
+
+describe('TierRankingPodium — 뱃지(종합우승)', () => {
+  // 뱃지 열은 4위 이하 표에만 있다(1~3위는 시상대라 열 자체가 없다).
+  const trophyCount = (el: HTMLElement) => el.querySelectorAll('svg > g').length;
+
+  it('우승 횟수만큼 트로피를 늘어놓는다', () => {
+    const withWins = RECENT16.map((r) => ({ ...r, winCount: 3 }));
+    render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
+
+    const row4 = screen.getByTestId('ranking-row-4');
+    expect(within(row4).getByTitle('종합우승 3회')).toBeInTheDocument();
+    expect(trophyCount(row4)).toBe(3);
+  });
+
+  it('트로피가 너무 많아지면 8개까지 그리고 나머지는 +N 으로 받는다', () => {
+    const withWins = RECENT16.map((r) => ({ ...r, winCount: 11 }));
+    render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
+
+    const row4 = screen.getByTestId('ranking-row-4');
+    expect(trophyCount(row4)).toBe(8);
+    expect(within(row4).getByText('+3')).toBeInTheDocument();
+    expect(within(row4).getByTitle('종합우승 11회')).toBeInTheDocument();
+  });
+
+  it('우승이 없으면 뱃지 칸이 - 로 남는다', () => {
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
+    const row4 = screen.getByTestId('ranking-row-4');
+    expect(within(row4).getByText('-')).toBeInTheDocument();
+    expect(within(row4).queryByTitle(/종합우승/)).not.toBeInTheDocument();
   });
 });
 

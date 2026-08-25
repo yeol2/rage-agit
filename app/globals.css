@@ -50,3 +50,32 @@ body {
   background-size: 300% 300%;
   animation: holo-shimmer 6s ease-in-out infinite;
 }
+
+/* 우승 트로피 광택 — 트로피 모양으로 잘라낸 흰 띠 하나를 왼쪽에서 오른쪽으로
+   흘려보낸다. 금속에 빛이 스치는 느낌이라 여러 개가 늘어서 있을 때 한 줄로
+   훑고 지나간다. translate 단위는 svg 사용자 좌표계(트로피 한 칸이 18.8)다. */
+@keyframes trophy-sheen {
+  0% {
+    transform: translateX(var(--sheen-start));
+  }
+  /* 한 번 훑고 나면 한참 쉰다 — 쉬지 않고 계속 번쩍이면 눈에 거슬린다. */
+  45%,
+  100% {
+    transform: translateX(var(--sheen-end));
+  }
+}
+
+.trophy-sheen {
+  animation: trophy-sheen 4.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vip-holographic {
+    animation: none;
+  }
+
+  .trophy-sheen {
+    animation: none;
+    opacity: 0;
+  }
+}
