@@ -172,6 +172,10 @@ export const siteConfig = {
     heading: '클랜원 목록',
     searchPlaceholder: '닉네임 검색',
     insufficientDataMessage: '아직 내전 기록이 없습니다.',
+    wins: {
+      trophy: '🏆',
+      label: (count: number) => `종합우승 ${count}회`,
+    },
   },
 
   features: {

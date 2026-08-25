@@ -7,6 +7,7 @@ vi.mock('@/lib/memberStats', async (importOriginal) => {
     ...actual,
     fetchMember: vi.fn(),
     fetchMemberRecentStats: vi.fn(),
+    fetchMemberWinCount: vi.fn(),
     fetchTierCohortStats: vi.fn(),
   };
 });
@@ -14,13 +15,21 @@ vi.mock('@/lib/memberStats', async (importOriginal) => {
 // eslint-disable-next-line import/first
 import MemberDetailPage from './page';
 // eslint-disable-next-line import/first
-import { fetchMember, fetchMemberRecentStats, fetchTierCohortStats } from '@/lib/memberStats';
+import {
+  fetchMember,
+  fetchMemberRecentStats,
+  fetchMemberWinCount,
+  fetchTierCohortStats,
+} from '@/lib/memberStats';
 
 // 이 페이지 테스트의 관심사는 데이터 분기(충분/부족/없음/404)지 게이트 자체가
 // 아니다 — 게이트 동작은 AccessGate.test.tsx 가 이미 덮는다. 미리 풀어두면
 // 잠긴 동안 자식이 aria-hidden 처리되는 것과 안 부딪힌다.
 beforeEach(() => {
   window.localStorage.setItem('rage-members-unlocked', 'true');
+  // 우승 횟수는 대부분의 테스트가 신경 쓰지 않는다 — 안 세운 테스트가 실제
+  // 조회로 새어 나가지 않게 기본값을 둔다.
+  vi.mocked(fetchMemberWinCount).mockResolvedValue(0);
 });
 
 afterEach(cleanup);
@@ -79,6 +88,41 @@ describe('MemberDetailPage', () => {
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
     expect(screen.getByText('아직 내전 기록이 없습니다.')).toBeInTheDocument();
+  });
+
+  it('우승 횟수만큼 트로피를 보인다', async () => {
+    vi.mocked(fetchMember).mockResolvedValue(member);
+    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchTierCohortStats).mockResolvedValue([stats]);
+    vi.mocked(fetchMemberWinCount).mockResolvedValue(3);
+
+    render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
+
+    expect(screen.getByText('종합우승 3회')).toBeInTheDocument();
+    expect(screen.getByText('🏆🏆🏆')).toBeInTheDocument();
+  });
+
+  it('우승이 없으면 트로피 줄을 아예 안 그린다', async () => {
+    vi.mocked(fetchMember).mockResolvedValue(member);
+    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchTierCohortStats).mockResolvedValue([stats]);
+    vi.mocked(fetchMemberWinCount).mockResolvedValue(0);
+
+    render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
+
+    expect(screen.queryByText(/종합우승/)).not.toBeInTheDocument();
+  });
+
+  it('트로피가 너무 많아지면 하나만 두고 숫자에 맡긴다', async () => {
+    vi.mocked(fetchMember).mockResolvedValue(member);
+    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchTierCohortStats).mockResolvedValue([stats]);
+    vi.mocked(fetchMemberWinCount).mockResolvedValue(9);
+
+    render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
+
+    expect(screen.getByText('종합우승 9회')).toBeInTheDocument();
+    expect(screen.getByText('🏆')).toBeInTheDocument();
   });
 
   it('없는 멤버 id 면 404 처리한다', async () => {
