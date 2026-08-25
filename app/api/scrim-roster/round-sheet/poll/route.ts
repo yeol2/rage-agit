@@ -32,10 +32,13 @@ async function countRoundsForRoster(supabase: SupabaseClient, rosterId: string):
     .maybeSingle();
   if (!session) return 0;
 
+  // 라운드 수는 내전 시트가 세는 것과 같아야 한다 — 재경기를 여기서만 세면
+  // "폴링해서 라운드가 늘었다"고 판단해 놓고 시트는 그대로인 상태가 된다.
   const { count } = await supabase
     .from('matches')
     .select('pubg_match_id', { count: 'exact', head: true })
-    .eq('scrim_session_id', session.id);
+    .eq('scrim_session_id', session.id)
+    .is('excluded_reason', null);
   return count ?? 0;
 }
 
