@@ -1,7 +1,14 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
+import {
+  TROPHY_SIZE,
+  TROPHY_VIEWBOX,
+  TROPHY_X,
+  TROPHY_Y,
+  TrophyGoldGradient,
+  TrophyPaths,
+} from '@/components/TrophyGlyph';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -79,30 +86,49 @@ const HEADER_TRAILING_SPACE = String.fromCharCode(160); // U+00A0
 // 하나만 두고 모든 줄이 이 id 를 가리킨다.
 const RANKING_TROPHY_GOLD = 'ranking-trophy-gold';
 
+// 뱃지 칸에 트로피를 늘어놓는 간격·크기. 데스크탑 칸(10rem = 160px)에
+// MAX_WIN_GLYPHS 개가 들어가는 값이다: 8 × 14 + 7 × 2 = 126px.
+const WIN_GLYPH_STEP = 21.5; // svg 사용자 좌표(글리프 폭 18.8 + 여백)
+const MAX_WIN_GLYPHS = 8;
+
 /**
- * 뱃지 열 — 내전 종합우승 횟수.
+ * 뱃지 열 — 내전 종합우승 횟수를 트로피 개수로 보인다.
  *
- * 표가 조밀해서 트로피를 횟수만큼 늘어놓으면 좁은 칸(모바일 5rem)을 넘긴다.
- * 그래서 트로피 하나에 숫자를 붙인다. 클랜원 상세 화면은 칸이 넉넉해서 거기서만
- * 횟수만큼 늘어놓는다(components/members/WinTrophies.tsx).
+ * 트로피 여러 개를 svg 하나에 담는다. 낱개 svg 를 반복하면 줄마다 같은 일을
+ * 반복하는 데다, 개수만큼 요소가 늘어 표가 무거워진다.
  *
- * 광택(sheen)도 넣지 않는다 — 수십 줄이 동시에 번쩍이면 표를 훑기 어렵다.
+ * 광택(sheen)은 넣지 않는다 — 수십 줄이 동시에 번쩍이면 표를 훑기 어렵다.
+ * 그건 칸이 넉넉한 클랜원 상세 화면에서만 한다(components/members/WinTrophies.tsx).
  */
 function WinBadge({ count }: { count: number }) {
   if (count <= 0) return <span className="text-sm text-menu">-</span>;
 
+  const glyphs = Math.min(count, MAX_WIN_GLYPHS);
+  const width = (glyphs - 1) * WIN_GLYPH_STEP + TROPHY_SIZE;
+
   return (
-    <span className="flex items-center gap-1" title={`종합우승 ${count}회`}>
+    // 칸을 넘칠 만큼 많아져도 표가 밀리지 않게 자른다. 정확한 횟수는 title 에 있다.
+    <span
+      className="flex min-w-0 items-center gap-1 overflow-hidden"
+      title={`종합우승 ${count}회`}
+    >
       <svg
-        viewBox={TROPHY_VIEWBOX}
+        viewBox={`0 0 ${width} ${TROPHY_SIZE}`}
         fill={`url(#${RANKING_TROPHY_GOLD})`}
-        className="h-4 w-4 shrink-0"
+        className="h-3.5 w-auto shrink-0"
         aria-hidden
       >
-        <TrophyPaths />
+        {Array.from({ length: glyphs }, (_, i) => (
+          <g key={i} transform={`translate(${i * WIN_GLYPH_STEP - TROPHY_X}, ${-TROPHY_Y})`}>
+            <TrophyPaths />
+          </g>
+        ))}
       </svg>
-      <span className="text-sm font-bold tabular-nums text-foreground">{count}</span>
-      <span className="sr-only">회 종합우승</span>
+      {/* 그림으로 다 못 보여줄 만큼 많아지면 나머지는 숫자가 받는다 */}
+      {count > MAX_WIN_GLYPHS && (
+        <span className="text-xs font-bold tabular-nums text-menu">+{count - MAX_WIN_GLYPHS}</span>
+      )}
+      <span className="sr-only">종합우승 {count}회</span>
     </span>
   );
 }
