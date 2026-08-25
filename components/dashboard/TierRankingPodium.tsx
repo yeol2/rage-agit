@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { TROPHY_VIEWBOX, TrophyPaths } from '@/components/TrophyGlyph';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -152,13 +153,7 @@ const TROPHY_COLORS: Record<1 | 2 | 3, { bg: string; icon: string }> = {
 };
 
 // 박스 윗면·정면 경계에 절반 걸치는 둥근 사각 트로피 배지.
-//
-// 트로피 글리프는 참고 이미지처럼 **전부 채운(solid) 한 덩어리**로 다시 그렸다.
-// 예전엔 컵만 채우고 손잡이·기둥은 가는 선(stroke)이라 굵기가 따로 놀아 어색했다.
-// 컵 / 손잡이 좌우 / 기둥 / 받침을 모두 fill 로 그려 무게감을 통일했다.
-//
-// viewBox 는 글리프 실제 경계(x 2.6~21.4, y 3.5~21)에 맞춰 조였다. 기본
-// `0 0 24 24` 를 쓰면 사방 여백 때문에 같은 svg 크기라도 트로피가 작아 보인다.
+// 트로피 글리프 자체는 components/TrophyGlyph.tsx 에 있다(클랜원 화면과 공용).
 function TrophySquare({ rank }: { rank: 1 | 2 | 3 }) {
   const { bg, icon } = TROPHY_COLORS[rank];
   return (
@@ -166,18 +161,8 @@ function TrophySquare({ rank }: { rank: 1 | 2 | 3 }) {
       className="flex h-10 w-10 items-center justify-center rounded-xl sm:h-11 sm:w-11"
       style={{ background: bg, boxShadow: '0 8px 20px 0 rgba(0, 0, 0, 0.35)' }}
     >
-      <svg viewBox="2.6 2.85 18.8 18.8" fill={icon} className="h-5 w-5 sm:h-[22px] sm:w-[22px]">
-        {/* 컵 */}
-        <path d="M6.5 3.5H17.5V8C17.5 11.59 15.09 14.5 12 14.5C8.91 14.5 6.5 11.59 6.5 8Z" />
-        {/* 왼쪽 손잡이 */}
-        <path d="M6.5 4.6H4C3.23 4.6 2.6 5.23 2.6 6V7.6C2.6 10.3 4.5 12.5 7 13.1V11.4C5.3 10.8 4.3 9.4 4.3 7.6V6.3H6.5Z" />
-        {/* 오른쪽 손잡이 */}
-        <path d="M17.5 4.6H20C20.77 4.6 21.4 5.23 21.4 6V7.6C21.4 10.3 19.5 12.5 17 13.1V11.4C18.7 10.8 19.7 9.4 19.7 7.6V6.3H17.5Z" />
-        {/* 기둥 — 폭 1.7 (x=12 기준 대칭). 아래 끝은 받침 윗변(18.7)보다 살짝 내려
-            19.2 까지 내려서 받침과 빈틈 없이 붙게 한다(같은 색이라 겹침은 안 보인다). */}
-        <path d="M11.15 13.6H12.85V19.2H11.15Z" />
-        {/* 받침 — 두께 2.3 (바닥 y=21 고정, 윗변 18.7). 모서리 반경 0.9 */}
-        <path d="M7.3 18.7H16.7C17.2 18.7 17.6 19.1 17.6 19.6V20.1C17.6 20.6 17.2 21 16.7 21H7.3C6.8 21 6.4 20.6 6.4 20.1V19.6C6.4 19.1 6.8 18.7 7.3 18.7Z" />
+      <svg viewBox={TROPHY_VIEWBOX} fill={icon} className="h-5 w-5 sm:h-[22px] sm:w-[22px]">
+        <TrophyPaths />
       </svg>
     </span>
   );

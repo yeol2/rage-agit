@@ -90,16 +90,21 @@ describe('MemberDetailPage', () => {
     expect(screen.getByText('아직 내전 기록이 없습니다.')).toBeInTheDocument();
   });
 
+  // 트로피는 svg 라 글자로 셀 수 없다. 광택을 잘라내는 clipPath 안에 트로피가
+  // 하나씩 들어가므로 그걸 센다.
+  const trophyCount = (container: HTMLElement) =>
+    container.querySelectorAll('#win-trophy-clip > g').length;
+
   it('우승 횟수만큼 트로피를 보인다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
     vi.mocked(fetchTierCohortStats).mockResolvedValue([stats]);
     vi.mocked(fetchMemberWinCount).mockResolvedValue(3);
 
-    render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
+    const { container } = render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
     expect(screen.getByText('종합우승 3회')).toBeInTheDocument();
-    expect(screen.getByText('🏆🏆🏆')).toBeInTheDocument();
+    expect(trophyCount(container)).toBe(3);
   });
 
   it('우승이 없으면 트로피 줄을 아예 안 그린다', async () => {
@@ -113,16 +118,16 @@ describe('MemberDetailPage', () => {
     expect(screen.queryByText(/종합우승/)).not.toBeInTheDocument();
   });
 
-  it('트로피가 너무 많아지면 하나만 두고 숫자에 맡긴다', async () => {
+  it('트로피가 너무 많아져도 8개까지만 그리고 숫자는 그대로 센다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
     vi.mocked(fetchTierCohortStats).mockResolvedValue([stats]);
-    vi.mocked(fetchMemberWinCount).mockResolvedValue(9);
+    vi.mocked(fetchMemberWinCount).mockResolvedValue(12);
 
-    render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
+    const { container } = render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
-    expect(screen.getByText('종합우승 9회')).toBeInTheDocument();
-    expect(screen.getByText('🏆')).toBeInTheDocument();
+    expect(screen.getByText('종합우승 12회')).toBeInTheDocument();
+    expect(trophyCount(container)).toBe(8);
   });
 
   it('없는 멤버 id 면 404 처리한다', async () => {
