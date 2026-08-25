@@ -1,4 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+// 내전 날짜를 한국시간으로 묶는 규칙은 폴링(Edge Function)과 같아야 한다 —
+// 어긋나면 같은 내전이 두 날짜로 갈린다. 그래서 그쪽 모듈을 그대로 쓴다.
+import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
 import {
   computeRoundSheet,
   computeTeamRoundResults,
@@ -8,17 +11,6 @@ import {
   type RosterMemberForScoring,
   type RoundSheetRow,
 } from '@/lib/roundSheet';
-
-const KST_OFFSET_MS = 9 * 3600 * 1000;
-
-// supabase/functions/_shared/sessions.mjs 의 toKstDate() 와 같은 규칙이다 —
-// 내전은 한국시간 저녁에 열리므로 UTC 날짜로 묶으면 사람이 부르는 날짜와
-// 어긋난다. 그 파일은 Deno/Node 공용 모듈이라 여기서는 짧으니 그냥 옮겨 쓴다.
-export function toKstDate(isoTimestamp: string): string {
-  const kst = new Date(new Date(isoTimestamp).getTime() + KST_OFFSET_MS);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}`;
-}
 
 export interface RoundSheetTeam extends RoundSheetRow {
   players: string[];

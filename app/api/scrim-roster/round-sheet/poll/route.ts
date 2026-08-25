@@ -4,42 +4,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { runPolling } from '@/supabase/functions/_shared/polling.mjs';
 import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
-
-const KST_OFFSET_MS = 9 * 3600 * 1000;
-
-// app/api/scrim-roster/round-sheet/route.ts 의 toKstDate() 와 같은 규칙이다 —
-// 그 파일 주석대로 공용 모듈로 뺄 만큼 크지 않아 짧게 다시 쓴다.
-function toKstDate(isoTimestamp: string): string {
-  const kst = new Date(new Date(isoTimestamp).getTime() + KST_OFFSET_MS);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}`;
-}
+import { buildRoundSheet } from '@/lib/roundSheetData';
 
 // 등수 스냅샷 캡처는 이 로스터가 참여한 내전 세션의 라운드가 몇 개나 기록됐는지
-// 봐야 하므로, round-sheet GET 라우트와 같은 방식으로 세션/매치 수를 센다.
+// 봐야 한다. 시트가 세는 것과 반드시 같아야 하므로(어긋나면 "폴링해서 라운드가
+// 늘었다"고 판단해 놓고 시트는 그대로인 상태가 된다) 같은 함수를 쓴다.
 async function countRoundsForRoster(supabase: SupabaseClient, rosterId: string): Promise<number> {
-  const { data: rosterRow } = await supabase
-    .from('scrim_rosters')
-    .select('fetched_at')
-    .eq('id', rosterId)
-    .maybeSingle();
-  if (!rosterRow) return 0;
-
-  const { data: session } = await supabase
-    .from('scrim_sessions')
-    .select('id')
-    .eq('scrim_date', toKstDate(rosterRow.fetched_at as string))
-    .maybeSingle();
-  if (!session) return 0;
-
-  // 라운드 수는 내전 시트가 세는 것과 같아야 한다 — 재경기를 여기서만 세면
-  // "폴링해서 라운드가 늘었다"고 판단해 놓고 시트는 그대로인 상태가 된다.
-  const { count } = await supabase
-    .from('matches')
-    .select('pubg_match_id', { count: 'exact', head: true })
-    .eq('scrim_session_id', session.id)
-    .is('excluded_reason', null);
-  return count ?? 0;
+  try {
+    return (await buildRoundSheet(supabase, rosterId)).roundCount;
+  } catch {
+    return 0;
+  }
 }
 
 // 03 내전 시트의 "폴링" 버튼 — 방금 끝난 매치 하나를 잡으러 짧은 시간창으로
