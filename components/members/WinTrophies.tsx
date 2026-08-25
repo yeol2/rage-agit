@@ -1,5 +1,11 @@
 import type { CSSProperties } from 'react';
-import { TROPHY_SIZE, TROPHY_X, TROPHY_Y, TrophyPaths } from '@/components/TrophyGlyph';
+import {
+  TROPHY_SIZE,
+  TROPHY_X,
+  TROPHY_Y,
+  TrophyGoldGradient,
+  TrophyPaths,
+} from '@/components/TrophyGlyph';
 import { siteConfig } from '@/lib/siteConfig';
 
 // 트로피를 늘어놓아 우승 횟수를 보여준다. 다만 시즌이 이어지면 횟수가 계속
@@ -41,13 +47,7 @@ export function WinTrophies({ count }: { count: number }) {
           않는다. 뜻은 옆의 글자가 이미 전하므로 그림은 읽어주지 않는다. */}
       <svg viewBox={`0 0 ${width} ${TROPHY_SIZE}`} className="h-[18px] w-auto" aria-hidden>
         <defs>
-          {/* 황금색 — 위쪽이 밝고 아래로 갈수록 짙어져 금속처럼 보인다. */}
-          <linearGradient id="win-trophy-gold" x1="0" y1="0" x2="0.35" y2="1">
-            <stop offset="0%" stopColor="#FFF1BE" />
-            <stop offset="30%" stopColor="#FFD365" />
-            <stop offset="62%" stopColor="#E8A62F" />
-            <stop offset="100%" stopColor="#B0741A" />
-          </linearGradient>
+          <TrophyGoldGradient id="win-trophy-gold" />
 
           <linearGradient id="win-trophy-sheen" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />

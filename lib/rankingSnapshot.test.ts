@@ -13,6 +13,7 @@ function row(overrides: Partial<RankingStatsRow> = {}): RankingStatsRow {
     avgPlacementPoints: 4,
     avgRank: 5,
     lastPlayedAt: new Date().toISOString(),
+    winCount: 0,
     ...overrides,
   };
 }

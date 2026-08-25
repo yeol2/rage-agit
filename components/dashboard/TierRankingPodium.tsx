@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { TROPHY_VIEWBOX, TrophyPaths } from '@/components/TrophyGlyph';
+import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -75,15 +75,36 @@ const RANKING_GRID_NO_CHANGE =
 // 지워버리므로 non-breaking space 를 쓴다.
 const HEADER_TRAILING_SPACE = String.fromCharCode(160); // U+00A0
 
+// 뱃지 열 트로피가 쓰는 그라디언트. 표에 수십 줄이 깔리므로 정의는 문서에
+// 하나만 두고 모든 줄이 이 id 를 가리킨다.
+const RANKING_TROPHY_GOLD = 'ranking-trophy-gold';
+
 /**
- * 뱃지 열에 찍을 값.
+ * 뱃지 열 — 내전 종합우승 횟수.
  *
- * 뱃지는 아직 수집·저장하는 데이터가 없어서 지금은 전원 '-' 로 나온다.
- * 나중에 `RankingStatsRow` 에 `badge` 가 추가되면 이 함수가 그 값을 자동으로
- * 쓰기 때문에, 표 쪽은 손댈 필요가 없다.
+ * 표가 조밀해서 트로피를 횟수만큼 늘어놓으면 좁은 칸(모바일 5rem)을 넘긴다.
+ * 그래서 트로피 하나에 숫자를 붙인다. 클랜원 상세 화면은 칸이 넉넉해서 거기서만
+ * 횟수만큼 늘어놓는다(components/members/WinTrophies.tsx).
+ *
+ * 광택(sheen)도 넣지 않는다 — 수십 줄이 동시에 번쩍이면 표를 훑기 어렵다.
  */
-function badgeLabel(row: RankingStatsRow & { badge?: string | null }): string {
-  return row.badge ?? '-';
+function WinBadge({ count }: { count: number }) {
+  if (count <= 0) return <span className="text-sm text-menu">-</span>;
+
+  return (
+    <span className="flex items-center gap-1" title={`종합우승 ${count}회`}>
+      <svg
+        viewBox={TROPHY_VIEWBOX}
+        fill={`url(#${RANKING_TROPHY_GOLD})`}
+        className="h-4 w-4 shrink-0"
+        aria-hidden
+      >
+        <TrophyPaths />
+      </svg>
+      <span className="text-sm font-bold tabular-nums text-foreground">{count}</span>
+      <span className="sr-only">회 종합우승</span>
+    </span>
+  );
 }
 
 // 티어를 맨 글자가 아니라 둥근 배지로 보여준다 — team-builder 네임플레이트와
@@ -458,6 +479,14 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
 
   return (
     <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
+      {/* 뱃지 열 트로피가 쓰는 그라디언트. 줄마다 정의하면 같은 id 가 수십 번
+          겹치므로 문서에 하나만 두고 모든 줄이 이걸 가리킨다. */}
+      <svg width="0" height="0" aria-hidden className="absolute">
+        <defs>
+          <TrophyGoldGradient id={RANKING_TROPHY_GOLD} />
+        </defs>
+      </svg>
+
       {/* 제목이 위, 집계 창 토글(역대 전체/최근 12매치)이 그 아래 — 사용자가 지정한 순서. */}
       <div className="flex flex-col items-center text-center">
         <p className="hud text-[11px] text-accent sm:text-xs">
@@ -788,7 +817,7 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                           {member.discordNickname}
                         </span>
                         <TierBadge tier={member.tier} className="justify-self-start" />
-                        <span className="text-sm text-menu">{badgeLabel(member)}</span>
+                        <WinBadge count={member.winCount} />
                         <span className="text-right tabular-nums">
                           <MetricValue
                             metric={activeMetric}

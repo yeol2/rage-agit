@@ -11,6 +11,19 @@ export const TROPHY_X = 2.6;
 export const TROPHY_Y = 2.85;
 export const TROPHY_SIZE = 18.8;
 
+// 우승 트로피 황금색 — 위쪽이 밝고 아래로 갈수록 짙어져 금속처럼 보인다.
+// 쓰는 쪽이 같은 문서에 여러 개를 그릴 수 있으므로 id 를 밖에서 정해 넘긴다.
+export function TrophyGoldGradient({ id }: { id: string }) {
+  return (
+    <linearGradient id={id} x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0%" stopColor="#FFF1BE" />
+      <stop offset="30%" stopColor="#FFD365" />
+      <stop offset="62%" stopColor="#E8A62F" />
+      <stop offset="100%" stopColor="#B0741A" />
+    </linearGradient>
+  );
+}
+
 export function TrophyPaths() {
   return (
     <>
