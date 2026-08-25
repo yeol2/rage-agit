@@ -66,17 +66,24 @@ const PEDESTAL_TOP_COLOR = '#2B2B33';
 // 고정폭이고, 짧은 지표에서 칸이 남는 문제는 폭을 줄이는 대신 **콘텐츠를 우측
 // 정렬**해서 푼다 — 값이 항상 칸 오른쪽 끝(= 변동 칸 바로 옆)에 붙으므로 남는
 // 공간이 왼쪽으로 가고, 칸 폭은 건드릴 필요가 없다.
+//
+// 모바일은 폭이 빠듯하다. 375px 화면에서 표가 실제로 쓸 수 있는 폭은 303px
+// (화면 375 − 섹션 좌우 40 − 행 좌우 32)인데, 고정 칸과 칸사이간격을 합치면
+// 그만큼을 다 먹어버려서 1fr 인 닉네임이 0 으로 눌린다 — 닉네임이 아예 안 보였다.
+// 그래서 모바일에서만 고정 칸을 조이고 간격도 좁힌다.
+//   24 + 52 + 48 + 64 + 24 = 212, 간격 5 × 4 = 20 → 232 (닉네임 71px 확보)
+// 티어 칸 52px 는 배지 실측폭(51px)에서 나온 값이라 더는 못 줄인다.
 const RANKING_GRID =
-  'grid grid-cols-[2rem_1fr_3.5rem_5rem_5rem_1.75rem] items-center gap-2 sm:grid-cols-[3rem_1fr_5rem_10rem_8.25rem_1.75rem] sm:gap-3';
+  'grid grid-cols-[1.5rem_1fr_3.25rem_3rem_4rem_1.5rem] items-center gap-1 sm:grid-cols-[3rem_1fr_5rem_10rem_8.25rem_1.75rem] sm:gap-3';
 
 // 변동은 종합점수에서만 계산한다. 평균등수/평균킬 탭에서는 변동 칸을 아예 만들지
 // 않고 **마지막 두 칸을 하나로 합쳐** 점수가 박스 오른쪽 끝까지 쓰게 한다.
 // 합친 폭 = 점수 + 칸사이간격 + 변동 이라 고정폭 총합이 위와 똑같고, 그래서
 // 남는 폭을 먹는 닉네임(1fr) 도 그대로다 — 앞 네 칸 위치가 탭을 바꿔도 안 흔들린다.
 //   데스크탑: 8.25rem + 12px + 1.75rem = 10.75rem
-//   모바일  : 5rem    +  8px + 1.75rem =  7.25rem
+//   모바일  : 4rem    +  4px + 1.5rem  =  5.75rem
 const RANKING_GRID_NO_CHANGE =
-  'grid grid-cols-[2rem_1fr_3.5rem_5rem_7.25rem] items-center gap-2 sm:grid-cols-[3rem_1fr_5rem_10rem_10.75rem] sm:gap-3';
+  'grid grid-cols-[1.5rem_1fr_3.25rem_3rem_5.75rem] items-center gap-1 sm:grid-cols-[3rem_1fr_5rem_10rem_10.75rem] sm:gap-3';
 
 // 점수 헤더를 칸 오른쪽 끝에서 살짝 띄우는 공백. 일반 공백은 HTML 이 줄 끝에서
 // 지워버리므로 non-breaking space 를 쓴다.
@@ -126,10 +133,18 @@ function WinBadge({
   count,
   className,
   none = null,
+  dense = false,
 }: {
   count: number;
   className: string;
   none?: ReactNode;
+  /**
+   * 좁은 칸(4위 이하 표의 모바일 뱃지 칸 = 48px)에서는 트로피를 늘어놓을 수
+   * 없다 — 4개만 돼도 62px 라 잘린다. 칸을 넓히면 이번엔 닉네임이 눌리므로,
+   * 모바일에서만 트로피 하나에 숫자를 붙여 줄인다. 넓어지면(sm~) 원래대로
+   * 늘어놓는다. 시상대는 칸이 넉넉해서 이 옵션을 안 쓴다.
+   */
+  dense?: boolean;
 }) {
   if (count <= 0) return <>{none}</>;
 
@@ -138,11 +153,22 @@ function WinBadge({
   return (
     // 칸을 넘칠 만큼 많아져도 표가 밀리지 않게 자른다. 정확한 횟수는 title 에 있다.
     <span className="flex min-w-0 items-center gap-1 overflow-hidden" title={`종합우승 ${count}회`}>
-      <TrophyRow count={glyphs} className={className} />
-      {/* 그림으로 다 못 보여줄 만큼 많아지면 나머지는 숫자가 받는다 */}
-      {count > MAX_WIN_GLYPHS && (
-        <span className="text-xs font-bold tabular-nums text-menu">+{count - MAX_WIN_GLYPHS}</span>
+      {dense && (
+        <span data-testid="win-badge-dense" className="flex items-center gap-0.5 sm:hidden">
+          <TrophyRow count={1} className={className} />
+          <span className="text-xs font-bold tabular-nums text-foreground">{count}</span>
+        </span>
       )}
+      <span
+        data-testid="win-badge-full"
+        className={`items-center gap-1 ${dense ? 'hidden sm:flex' : 'flex'}`}
+      >
+        <TrophyRow count={glyphs} className={className} />
+        {/* 그림으로 다 못 보여줄 만큼 많아지면 나머지는 숫자가 받는다 */}
+        {count > MAX_WIN_GLYPHS && (
+          <span className="text-xs font-bold tabular-nums text-menu">+{count - MAX_WIN_GLYPHS}</span>
+        )}
+      </span>
       <span className="sr-only">종합우승 {count}회</span>
     </span>
   );
@@ -875,6 +901,7 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                           count={member.winCount}
                           className="h-3.5 w-auto shrink-0"
                           none={<span className="text-sm text-menu">-</span>}
+                          dense
                         />
                         <span className="text-right tabular-nums">
                           <MetricValue
