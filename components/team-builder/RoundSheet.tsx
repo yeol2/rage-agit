@@ -115,6 +115,7 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
   const [polling, setPolling] = useState(false);
   const [pollAttempt, setPollAttempt] = useState(0);
   const [pollMessage, setPollMessage] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   // state 는 리렌더돼야 최신값을 읽으므로, 반복문 안에서 "중단해야 하는지"를
   // 즉시 확인하려면 ref 로 따로 들고 있어야 한다.
   const cancelRef = useRef(false);
@@ -136,11 +137,14 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rosterId]);
 
-  async function pollOnce(): Promise<boolean> {
+  // 누른 시각과 몇 번째 시도인지는 여기서만 안다 — 한 번 눌러두면 매치가
+  // 잡힐 때까지 알아서 두드리므로, 서버는 매 요청을 따로 본다. 디스코드
+  // 알림이 "버튼 누르고 몇 초 만에 들어왔는지"를 적으려면 이 값이 필요하다.
+  async function pollOnce(pressedAt: string, attempt: number): Promise<boolean> {
     const response = await fetch('/api/scrim-roster/round-sheet/poll', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rosterId }),
+      body: JSON.stringify({ rosterId, pressedAt, attempt }),
     });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error ?? '폴링에 실패했습니다.');
@@ -153,6 +157,7 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
     cancelRef.current = false;
     setPolling(true);
     setPollMessage(null);
+    const pressedAt = new Date().toISOString();
 
     for (let attempt = 1; attempt <= AUTO_POLL_MAX_ATTEMPTS; attempt++) {
       if (cancelRef.current) {
@@ -162,7 +167,7 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
       setPollAttempt(attempt);
 
       try {
-        const found = await pollOnce();
+        const found = await pollOnce(pressedAt, attempt);
         if (found) {
           await loadSheet();
           setPollMessage(`폴링 성공 (${attempt}번째 시도)`);
@@ -185,6 +190,28 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
 
   function handleCancelPoll() {
     cancelRef.current = true;
+  }
+
+  // 우승팀은 서버가 시트를 다시 만들어 정한다 — 여기서는 방아쇠만 당긴다.
+  async function handleConfirmWin() {
+    setConfirming(true);
+    setPollMessage(null);
+    try {
+      const response = await fetch('/api/scrim-roster/round-sheet/confirm-win', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rosterId }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? '우승 확정에 실패했습니다.');
+      setPollMessage(
+        `종합우승 확정 — ${body.players.map(cleanName).join(' / ')} (${body.totalScore}점)`,
+      );
+    } catch (err) {
+      setPollMessage(err instanceof Error ? err.message : '우승 확정에 실패했습니다.');
+    } finally {
+      setConfirming(false);
+    }
   }
 
   if (loadError) return <p className="mt-4 text-sm text-red-400">{loadError}</p>;
@@ -344,6 +371,17 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
               중단
             </button>
           )}
+          {/* 4경기가 다 기록돼야 종합우승이 정해진다 — 그 전에는 눌러도
+              서버가 막지만, 버튼부터 잠가 헛클릭을 줄인다. */}
+          <button
+            type="button"
+            onClick={() => void handleConfirmWin()}
+            disabled={confirming || polling || data.roundCount < 4}
+            title={data.roundCount < 4 ? '4경기가 다 기록돼야 확정할 수 있습니다' : undefined}
+            className="rounded-md border border-white/15 px-3 py-2 text-xs text-menu hover:border-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/15"
+          >
+            {confirming ? '확정 중…' : '우승 확정'}
+          </button>
           <button
             type="button"
             onClick={() => void handlePoll()}

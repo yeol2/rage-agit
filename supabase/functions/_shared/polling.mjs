@@ -234,7 +234,6 @@ export async function runPolling({
         participantCount: summary.participantCount,
         clanMemberCount,
         participants,
-        durationSeconds: summary.durationSeconds,
       });
 
       const { error: polledError } = await supabase

@@ -1,78 +1,83 @@
-import { describe, expect, it } from 'vitest';
-import { formatFailureMessage, formatPollingMessage } from './notify.mjs';
+import { describe, expect, it, vi } from 'vitest';
+import { formatManualPollMessage, sendDiscord } from './notify.mjs';
 
-describe('formatPollingMessage', () => {
-  it('내전을 찾으면 날짜와 인원을 알린다', () => {
-    const message = formatPollingMessage(
-      {
-        scrimsFound: 4,
-        scrims: [
-          { playedAt: '2026-08-09T10:59:41Z', participantCount: 64, clanMemberCount: 64 },
-          { playedAt: '2026-08-09T11:34:18Z', participantCount: 64, clanMemberCount: 64 },
-          { playedAt: '2026-08-09T12:05:59Z', participantCount: 64, clanMemberCount: 64 },
-          { playedAt: '2026-08-09T12:38:09Z', participantCount: 64, clanMemberCount: 64 },
-        ],
-        unregistered: new Map(),
-        truncated: false,
-        matchesExamined: 40,
-      },
-      { sinceHours: 24 },
-    );
-    expect(message).toContain('4경기');
-    expect(message).toContain('64');
+const base = {
+  scrimDate: '2026-08-23',
+  roundNo: 1,
+  attempt: 3,
+  // 20:41:03 KST = 11:41:03 UTC
+  pressedAt: '2026-08-23T11:41:03.000Z',
+  finishedAt: '2026-08-23T11:41:24.400Z',
+  pollingMs: 18900,
+  persistMs: 2500,
+};
+
+describe('formatManualPollMessage', () => {
+  it('몇 번째 라운드가 기록됐는지 적는다', () => {
+    // 라운드 하나에 알림 하나다 — 한 세션이면 1~4라운드로 네 번 온다.
+    expect(formatManualPollMessage(base)).toContain('2026-08-23 내전 — 1라운드 기록');
+    expect(formatManualPollMessage({ ...base, roundNo: 3 })).toContain('3라운드 기록');
   });
 
-  it('한국시간으로 보여준다', () => {
-    // UTC 10:59 는 한국시간 19:59 다. UTC 로 적으면 날짜가 헷갈린다.
-    const message = formatPollingMessage(
-      {
-        scrimsFound: 1,
-        scrims: [{ playedAt: '2026-08-09T10:59:41Z', participantCount: 64, clanMemberCount: 64 }],
-        unregistered: new Map(),
-        truncated: false,
-        matchesExamined: 40,
-      },
-      { sinceHours: 24 },
-    );
-    expect(message).toContain('19:59');
+  it('누른 시각과 발견 시각을 한국시간으로 적는다', () => {
+    const message = formatManualPollMessage(base);
+    expect(message).toContain('버튼 누름 20:41:03');
+    expect(message).toContain('매치 발견 20:41:24');
+    expect(message).toContain('3번째 시도');
   });
 
-  it('미등록 참가자를 알린다 — 명단을 고치라는 신호다', () => {
-    const message = formatPollingMessage(
-      {
-        scrimsFound: 1,
-        scrims: [{ playedAt: '2026-08-09T10:59:41Z', participantCount: 64, clanMemberCount: 63 }],
-        unregistered: new Map([['Ez_HxxJxx', 1]]),
-        truncated: false,
-        matchesExamined: 40,
-      },
-      { sinceHours: 24 },
-    );
-    expect(message).toContain('Ez_HxxJxx');
+  it('총 걸린 시간과 마지막 시도의 단계별 소요를 적는다', () => {
+    const message = formatManualPollMessage(base);
+    expect(message).toContain('총 걸린 시간 **21.4초**');
+    // 세부는 매치를 잡은 마지막 시도만이다 — 총합과 안 맞는 게 정상이라
+    // "마지막 시도" 라고 못 박아 둔다.
+    expect(message).toContain('마지막 시도: PUBG 조회 18.9초 + 저장·시트 반영 2.5초');
   });
 
-  it('내전이 없으면 아무것도 보내지 않는다', () => {
-    // 내전 없는 날이 정상이라, 매번 알리면 알림이 무뎌진다.
-    const message = formatPollingMessage(
-      { scrimsFound: 0, scrims: [], unregistered: new Map(), truncated: false, matchesExamined: 12 },
-      { sinceHours: 24 },
-    );
-    expect(message).toBeNull();
+  it('1분을 넘기면 분으로 적는다', () => {
+    const message = formatManualPollMessage({
+      ...base,
+      finishedAt: '2026-08-23T11:43:35.000Z', // 152초
+    });
+    expect(message).toContain('2분 32초');
   });
 
-  it('상한에 걸렸으면 내전이 없어도 알린다', () => {
-    const message = formatPollingMessage(
-      { scrimsFound: 0, scrims: [], unregistered: new Map(), truncated: true, matchesExamined: 200 },
-      { sinceHours: 24 },
-    );
-    expect(message).toContain('상한');
+  it('1초 미만은 ms 로 적는다', () => {
+    const message = formatManualPollMessage({ ...base, persistMs: 420 });
+    expect(message).toContain('저장·시트 반영 420ms');
+  });
+
+  it('4라운드가 다 차면 리더보드 갱신을 알린다', () => {
+    expect(formatManualPollMessage({ ...base, roundNo: 4 })).toContain('4라운드가 다 찼다');
+  });
+
+  it('아직 4라운드가 아니면 그 안내는 안 넣는다', () => {
+    expect(formatManualPollMessage(base)).not.toContain('4라운드가 다 찼다');
   });
 });
 
-describe('formatFailureMessage', () => {
-  it('에러와 만회 방법을 함께 알린다', () => {
-    const message = formatFailureMessage(new Error('Players API 오류 503'), { sinceHours: 24 });
-    expect(message).toContain('503');
-    expect(message).toContain('--since-hours=336');
+describe('sendDiscord', () => {
+  it('웹훅에 content 를 담아 POST 한다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await sendDiscord('https://webhook.example/abc', '안녕');
+
+    expect(fetchMock).toHaveBeenCalledWith('https://webhook.example/abc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '안녕' }),
+    });
+    vi.unstubAllGlobals();
+  });
+
+  it('응답이 실패면 던진다', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 404, text: async () => 'no such webhook' }),
+    );
+
+    await expect(sendDiscord('https://webhook.example/gone', '안녕')).rejects.toThrow('404');
+    vi.unstubAllGlobals();
   });
 });

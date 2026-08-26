@@ -105,3 +105,57 @@ describe('RoundSheet', () => {
     expect(screen.getByRole('button', { name: '폴링' })).toBeInTheDocument();
   });
 });
+
+describe('RoundSheet — 우승 확정', () => {
+  it('4경기가 다 안 들어왔으면 버튼이 잠겨 있다', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => mockSheetResponse(3) }),
+    );
+
+    render(<RoundSheet rosterId="roster-1" />);
+
+    const button = await screen.findByRole('button', { name: '우승 확정' });
+    expect(button).toBeDisabled();
+  });
+
+  it('4경기가 다 들어오면 눌러서 확정하고 우승팀을 알려준다', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('confirm-win')) {
+        return {
+          ok: true,
+          json: async () => ({
+            scrimDate: '2026-08-23',
+            teamNumber: 1,
+            totalScore: 20,
+            players: ['Ez_Alpha', 'Ez_Bravo', 'Ez_Charlie', 'Ez_Delta'],
+          }),
+        };
+      }
+      return { ok: true, json: async () => mockSheetResponse(4) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RoundSheet rosterId="roster-1" />);
+    await userEvent.click(await screen.findByRole('button', { name: '우승 확정' }));
+
+    expect(
+      await screen.findByText('종합우승 확정 — Alpha / Bravo / Charlie / Delta (20점)'),
+    ).toBeInTheDocument();
+  });
+
+  it('서버가 거절하면 그 이유를 그대로 보여준다', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('confirm-win')) {
+        return { ok: false, json: async () => ({ error: '아직 내전 세션이 없습니다.' }) };
+      }
+      return { ok: true, json: async () => mockSheetResponse(4) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<RoundSheet rosterId="roster-1" />);
+    await userEvent.click(await screen.findByRole('button', { name: '우승 확정' }));
+
+    expect(await screen.findByText('아직 내전 세션이 없습니다.')).toBeInTheDocument();
+  });
+});

@@ -152,7 +152,12 @@ describe('TierRankingPodium — 관리자 검색', () => {
 
 describe('TierRankingPodium — 뱃지(종합우승)', () => {
   // 뱃지 열은 4위 이하 표에만 있다(1~3위는 시상대라 열 자체가 없다).
-  const trophyCount = (el: HTMLElement) => el.querySelectorAll('svg > g').length;
+  //
+  // 표는 좁은 모바일용(트로피 1개 + 숫자)과 넓은 화면용(트로피 나열) 두 벌을
+  // 그려두고 CSS 로 하나만 보인다. jsdom 에는 뷰포트가 없어 둘 다 렌더되므로,
+  // 트로피를 셀 때는 넓은 화면용만 본다.
+  const trophyCount = (el: HTMLElement) =>
+    within(el).getByTestId('win-badge-full').querySelectorAll('svg > g').length;
 
   it('우승 횟수만큼 트로피를 늘어놓는다', () => {
     const withWins = RECENT16.map((r) => ({ ...r, winCount: 3 }));
@@ -171,6 +176,16 @@ describe('TierRankingPodium — 뱃지(종합우승)', () => {
     expect(trophyCount(row4)).toBe(8);
     expect(within(row4).getByText('+3')).toBeInTheDocument();
     expect(within(row4).getByTitle('종합우승 11회')).toBeInTheDocument();
+  });
+
+  it('좁은 화면용 뱃지는 트로피 하나에 숫자를 붙인다', () => {
+    // 모바일 뱃지 칸은 48px 뿐이라 트로피 4개(62px)부터 잘린다.
+    const withWins = RECENT16.map((r) => ({ ...r, winCount: 5 }));
+    render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
+
+    const dense = within(screen.getByTestId('ranking-row-4')).getByTestId('win-badge-dense');
+    expect(dense.querySelectorAll('svg > g')).toHaveLength(1);
+    expect(within(dense).getByText('5')).toBeInTheDocument();
   });
 
   it('우승이 없으면 뱃지 칸이 - 로 남는다', () => {

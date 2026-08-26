@@ -8,23 +8,17 @@
 // 틀릴 수 있는데, 시트의 팀 킬 합계와 인게임 선수 킬의 합이 어긋나면
 // 그 자리에서 드러난다. 대조 없이 넣으면 틀린 값이 조용히 랭킹에 남는다.
 
+// 점수표는 앱(lib/roundSheet.ts)과 같아야 해서 한 곳에서 가져온다.
+// 시트에 적힌 점수와 대조하는 데 쓴다.
+import { placementPoints } from '../../lib/placementPoints.mjs';
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function fail(message) {
   throw new Error(message);
 }
 
-// 0012 의 placement_points 와 같은 표. 시트에 적힌 점수와 대조하는 데 쓴다.
-export function placementPoints(place) {
-  if (place === 1) return 10;
-  if (place === 2) return 6;
-  if (place === 3) return 5;
-  if (place === 4) return 4;
-  if (place === 5) return 3;
-  if (place === 6) return 2;
-  if (place === 7 || place === 8) return 1;
-  return 0;
-}
+export { placementPoints };
 
 // 시트는 같은 숫자를 여러 방향으로 다시 적어둔다 — 라운드 점수는 순위에서
 // 나오고, 라운드 합계는 점수+킬이며, PLACE/KILL/TOTAL 은 라운드들의 합이다.

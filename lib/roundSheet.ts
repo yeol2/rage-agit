@@ -1,6 +1,10 @@
 // 03 내전 시트 — 팀별 라운드(매치) 점수를 계산한다. 저장은 안 하고 매번
 // match_participants + scrim_roster_entries.team_number 로 즉석 계산한다.
 
+// 점수표는 스크린샷 임포트 스크립트(.mjs)와 같아야 해서 lib/placementPoints.mjs
+// 한 곳에 둔다. 여기서 다시 내보내 기존 import 경로를 그대로 유지한다.
+import { placementPoints } from '@/lib/placementPoints.mjs';
+
 export interface RoundParticipant {
   memberId: string | null;
   kills: number;
@@ -19,18 +23,7 @@ export interface TeamRoundResult {
   teamRank: number | null;
 }
 
-// 0012 마이그레이션의 placement_points() SQL 함수를 그대로 옮긴 값이다 —
-// 점수표가 바뀌면 두 곳 다 고쳐야 한다.
-export function placementPoints(teamRank: number): number {
-  if (teamRank === 1) return 10;
-  if (teamRank === 2) return 6;
-  if (teamRank === 3) return 5;
-  if (teamRank === 4) return 4;
-  if (teamRank === 5) return 3;
-  if (teamRank === 6) return 2;
-  if (teamRank === 7 || teamRank === 8) return 1;
-  return 0;
-}
+export { placementPoints };
 
 // 매치(라운드) 하나의 참가자 목록에서 이 로스터의 팀별 킬합계·순위를 뽑는다.
 // 팀원끼리는 실제 게임에서 같은 team_rank 를 공유하는 게 정상이지만, 혹시
