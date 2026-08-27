@@ -11,10 +11,9 @@ export function Nav() {
   const pathname = usePathname();
 
   return (
-    // relative + z-[60] — AccessGate(클랜원 페이지 인증 팝업)의 전체화면 블러 오버레이가
-    // z-50 이라, 이거 없이는 메뉴바까지 덮여서 인증을 안 풀면 뒤로가기 말고는 나갈
-    // 방법이 없었다. bg-background 로 오버레이 어두운 색조가 메뉴바 뒤로 비치지
-    // 않게 막는다(같은 배경색이라 이음새가 안 보인다).
+    // relative + z-[60] — 원래는 클랜원 페이지 인증 팝업(AccessGate)의 전체화면
+    // 블러(z-50)에 메뉴바까지 덮이는 걸 막으려던 것이다. 그 잠금은 없앴지만,
+    // 메뉴바는 어떤 오버레이보다도 위에 있어야 나갈 길이 막히지 않으므로 그대로 둔다.
     <header className="relative z-[60] w-full space-y-3 bg-background">
       {/* 좌우 패딩은 본문 섹션(max-w-shell px-5 sm:px-8)과 반드시 맞춘다 — 로고/메뉴가
           아래 본문 텍스트와 세로로 일직선이 되어야 한다. 높이는 본문보다 눈에 띄게

@@ -602,6 +602,71 @@ check(
   '한 세션의 우승자가 4명을 넘지 않는다',
 );
 
+console.log('\n0028 — 내전 세션 최종등수 1~16');
+
+check(
+  (await one(`select count(*) from information_schema.tables
+    where table_name = 'session_standings'`)) === 1,
+  'session_standings 테이블이 있다',
+);
+
+// 확정 버튼을 두 번 눌러도 등수가 두 배로 쌓이면 안 된다.
+check(
+  (await one(`select count(*) from pg_constraint
+    where conrelid = 'session_standings'::regclass and contype = 'u'`)) >= 1,
+  '(날짜, 세션번호, 클랜원) 유일 제약이 있다',
+);
+
+// 0027 의 우승 기록이 standing=1 로 다 넘어왔는지. 하나라도 빠지면 그 사람의
+// 트로피가 조용히 사라진다.
+check(
+  (await one(`select count(*) from session_wins w
+    where not exists (
+      select 1 from session_standings s
+      where s.scrim_date = w.scrim_date
+        and s.session_number = w.session_number
+        and s.member_id = w.member_id
+        and s.standing = 1
+    )`)) === 0,
+  'session_wins 의 우승 기록이 standing=1 로 다 옮겨졌다',
+);
+
+// 한 팀은 최대 4명이므로 같은 세션에 같은 등수가 5명 이상이면 팀을 잘못 묶은 것이다.
+check(
+  (await one(`select count(*) from (
+    select scrim_date, session_number, standing from session_standings
+    group by scrim_date, session_number, standing having count(*) > 4
+  ) t`)) === 0,
+  '한 세션에서 같은 등수를 가진 사람이 4명을 넘지 않는다',
+);
+
+// 표 자체는 anon 에 안 열고 뷰로만 내보낸다 (0012 와 같은 방침).
+const standingGrants = await client.query(`
+  select table_name, grantee from information_schema.role_table_grants
+  where table_name in ('session_standings', 'member_session_standings')
+    and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    standingGrants.rows.some(
+      (r) => r.grantee === role && r.table_name === 'member_session_standings',
+    ),
+    `${role} 은 member_session_standings 를 읽을 수 있다`,
+  );
+  check(
+    !standingGrants.rows.some((r) => r.grantee === role && r.table_name === 'session_standings'),
+    `${role} 은 session_standings 표를 직접 읽지 못한다`,
+  );
+}
+
+// 우승 횟수의 출처가 session_standings 로 옮겨졌는지 — session_wins 를 계속
+// 보고 있으면 앞으로 확정하는 내전의 트로피가 안 늘어난다.
+check(
+  (await one(`select count(*) from pg_views
+    where viewname = 'member_win_counts' and definition like '%session_standings%'`)) === 1,
+  'member_win_counts 가 session_standings 를 본다',
+);
+
 await client.end();
 
 console.log('');

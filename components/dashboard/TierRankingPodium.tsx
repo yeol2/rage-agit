@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import {
   TROPHY_SIZE,
   TROPHY_VIEWBOX,
@@ -22,7 +23,14 @@ import {
   type RankingStatsRow,
 } from '@/lib/rankingStats';
 import { computeRankChange, type RankingSnapshotRow } from '@/lib/rankingSnapshot';
-import { tierNameplateStyle } from '@/lib/memberStats';
+import { MemberDashboard } from '@/components/members/MemberDashboard';
+import {
+  buildWindowStats,
+  standingsByMember,
+  type RecentSession,
+  type SessionStanding,
+} from '@/lib/memberDashboard';
+import { tierColorRamp, tierNameplateStyle } from '@/lib/memberStats';
 import { siteConfig } from '@/lib/siteConfig';
 import { useAdmin } from '@/components/admin/AdminProvider';
 
@@ -330,10 +338,122 @@ const RAGE_SCORE_HELP = [
   '티어별로 킬 점수가 달라요 — 1티어 1킬 ≠ 4티어 1킬',
 ];
 
+// 참여한 내전이 하나도 없는 사람도 칩 줄은 그려야 한다(전부 '-'). 매번 새 Map 을
+// 만들면 MemberDashboard 가 계속 다시 그려지므로 빈 것 하나를 돌려 쓴다.
+const EMPTY_STANDINGS: Map<string, number> = new Map();
+
+// 펼친 패널의 뾰족한 꼭지가 시상대 어느 칸을 가리킬지 — 칸 중심의 가로 위치다.
+// 시상대 줄은 `flex max-w-4xl` 에 `gap-[3%]` 인 세 칸(flex-1 basis-0)이라
+// 한 칸 폭이 (100-6)/3 = 31.333% 이고, 중심은 각각 아래 값이 된다.
+// 패널도 같은 max-w-4xl 이라 퍼센트가 그대로 맞아떨어진다.
+//
+// 시각적 순서는 PODIUM_SLOTS 대로 2위 · 1위 · 3위다(1위가 가운데).
+const PODIUM_ARROW_LEFT: Record<1 | 2 | 3, string> = {
+  2: '15.67%',
+  1: '50%',
+  3: '84.33%',
+};
+
+// 리더보드 줄을 눌렀을 때 아래로 펼쳐지는 패널. 클랜원 상세 페이지와 **같은
+// 컴포넌트**를 압축 모드로 쓴다 — 두 화면이 다른 코드를 쓰면 한쪽만 고쳐진다.
+//
+// 집계 창은 리더보드 상단 토글을 그대로 따라가므로 패널 안에는 토글을 두지 않는다.
+function MemberStandingPanel({
+  member,
+  activeWindow,
+  recent16,
+  alltime,
+  sessions,
+  standingByDate,
+  arrowRank,
+}: {
+  member: RankingStatsRow;
+  activeWindow: Window;
+  recent16: RankingStatsRow[];
+  alltime: RankingStatsRow[];
+  sessions: RecentSession[];
+  standingByDate: Map<string, number>;
+  /**
+   * 시상대(1~3위)에서 펼쳤을 때 그 등수. 주면 패널이 시상대 아래에 홀로 놓이고
+   * 위쪽에 **뾰족한 꼭지**가 생겨 세 칸 중 누구를 눌렀는지 가리킨다 — 시상대는
+   * 3열이라 칸 안에 패널을 넣을 수 없어서, 꼭지가 유일한 연결 표시다.
+   * 없으면 4위 이하 표 줄에 그대로 붙는 모양이다.
+   */
+  arrowRank?: 1 | 2 | 3;
+}) {
+  const stats = useMemo(
+    () => ({
+      alltime: buildWindowStats(member.memberId, alltime),
+      recent16: buildWindowStats(member.memberId, recent16),
+    }),
+    [member.memberId, alltime, recent16],
+  );
+
+  // 테두리는 그 사람 티어 색으로 은은하게 빛낸다 — 클랜원 상세 카드가 쓰는
+  // 것과 같은 배합(from 66% 테두리 / from 33% 번짐)이라 두 화면이 같은 말을 한다.
+  const ramp = tierColorRamp(member.tier);
+  const glow = {
+    borderColor: `${ramp.from}66`,
+    boxShadow: `0 0 24px ${ramp.from}33`,
+  };
+
+  return (
+    <div
+      data-testid={`ranking-panel-${member.memberId}`}
+      className={
+        arrowRank
+          ? 'relative mx-auto mt-5 max-w-4xl rounded-xl border bg-[#17171E] p-4'
+          : 'relative mb-1 rounded-b-xl border border-t-0 bg-[#17171E] p-4'
+      }
+      style={glow}
+    >
+      {arrowRank && (
+        // 정사각형을 45° 돌려 위 두 변만 테두리를 남긴 고전적인 말풍선 꼭지.
+        // 패널과 같은 배경색이라 아래쪽 테두리 선이 꼭지 안에서 끊겨 보이지 않는다.
+        // 한 변 20px 정사각형을 돌리면 대각선이 28px 이라, top -11px 에 두면
+        // 위로 15px 쯤 튀어나오고 아래 절반은 패널 안에 잠겨 테두리를 지운다.
+        // 👉 더/덜 튀어나오게 하려면 w/h 와 top 을 같이 키우면 된다(top ≈ -(변/2+1)).
+        <span
+          aria-hidden="true"
+          data-testid="podium-panel-arrow"
+          className="absolute -top-[11px] -ml-[10px] h-5 w-5 rotate-45 border-l border-t"
+          style={{
+            left: PODIUM_ARROW_LEFT[arrowRank],
+            background: '#17171E',
+            borderColor: `${ramp.from}66`,
+          }}
+        />
+      )}
+      <MemberDashboard
+        stats={stats}
+        sessions={sessions}
+        standingByDate={standingByDate}
+        ramp={tierColorRamp(member.tier)}
+        compact
+        window={activeWindow}
+      />
+      <div className="mt-2.5 text-right">
+        <Link
+          href={`/members/${member.memberId}`}
+          className="text-xs text-menu transition-colors hover:text-foreground"
+        >
+          클랜원 상세 보기 →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export interface TierRankingPodiumProps {
   recent16: RankingStatsRow[];
   alltime: RankingStatsRow[];
   snapshots: RankingSnapshotRow[];
+  /**
+   * 드롭다운에 쓸 최근 내전 회차와 그 등수. 없으면 줄은 여전히 펼쳐지되 칩 줄만
+   * 안 나온다 — 등수를 아직 한 번도 확정하지 않은 상태에서도 표는 멀쩡해야 한다.
+   */
+  sessions?: RecentSession[];
+  standings?: SessionStanding[];
 }
 
 function formatMetricValue(
@@ -450,12 +570,23 @@ function windowButtonClass(selected: boolean): string {
     : 'rounded-lg px-6 py-2 text-sm text-menu transition-colors hover:text-foreground';
 }
 
-export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingPodiumProps) {
+export function TierRankingPodium({
+  recent16,
+  alltime,
+  snapshots,
+  sessions = [],
+  standings = [],
+}: TierRankingPodiumProps) {
   const { isAdmin } = useAdmin();
   const [activeMetric, setActiveMetric] = useState<Metric>('rageScore');
   const [activeWindow, setActiveWindow] = useState<Window>('recent16');
   const [activeGroupId, setActiveGroupId] = useState<TierGroup['id']>(TIER_GROUPS[0].id);
   const [searchQuery, setSearchQuery] = useState('');
+  // 한 번에 한 명만 펼친다 — 여러 줄이 동시에 열리면 표가 어디까지가 누구 것인지
+  // 알아보기 어려워진다.
+  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
+
+  const standingByMember = useMemo(() => standingsByMember(standings), [standings]);
 
   // 변동 칸은 종합점수 탭에만 있다 — 표 전체(헤더+행)가 같은 판단을 써야 열이
   // 어긋나지 않으므로 여기 한 곳에서만 정한다.
@@ -684,11 +815,34 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
       <div className="mx-auto mt-12 flex max-w-4xl items-start justify-center gap-2 sm:gap-[3%]">
         {PODIUM_SLOTS.map((slot) => {
           const member = top[slot.rank - 1];
+          const expanded = member !== undefined && expandedMemberId === member.memberId;
+          const toggle = () => {
+            if (!member) return;
+            setExpandedMemberId(expanded ? null : member.memberId);
+          };
           return (
             <div
               key={slot.rank}
               data-testid={`podium-slot-${slot.rank}`}
-              className={`${slot.order} ${slot.offset} flex min-w-0 flex-1 basis-0 flex-col items-center`}
+              // 시상대 칸도 4위 이하 표 줄과 똑같이 눌러서 펼친다. 펼쳐진 패널은
+              // 이 칸 안이 아니라 시상대 세 칸 전체 아래에 놓인다(폭 때문에).
+              {...(member
+                ? {
+                    role: 'button' as const,
+                    tabIndex: 0,
+                    'aria-expanded': expanded,
+                    onClick: toggle,
+                    onKeyDown: (event: React.KeyboardEvent) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggle();
+                      }
+                    },
+                  }
+                : {})}
+              className={`${slot.order} ${slot.offset} flex min-w-0 flex-1 basis-0 flex-col items-center rounded-xl outline-none ring-white/20 focus-visible:ring-2 ${
+                member ? 'cursor-pointer' : ''
+              }`}
             >
               {/* 아바타 — 실사진이 없어서 넣는 더미 이미지. */}
               <DummyAvatar />
@@ -697,6 +851,19 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
               <p className="mt-3 max-w-full truncate text-xl font-bold text-foreground sm:text-2xl">
                 {member ? member.discordNickname : '—'}
               </p>
+
+              {/* 펼침 표시 — 이름과 시상대 사이의 빈 자리(mt-8)에 넣어 가운데 정렬된
+                  이름을 밀지 않는다. */}
+              {member && (
+                <span
+                  aria-hidden="true"
+                  className={`mt-1 text-[10px] leading-none text-menu transition-transform ${
+                    expanded ? 'rotate-180' : ''
+                  }`}
+                >
+                  ▼
+                </span>
+              )}
 
               {/* 시상대 3D 박스 — 윗면(사다리꼴)과 앞면(그라데이션, 아래로 갈수록
                   어두워지다 배경에 마스크로 녹아 사라짐) 두 겹으로 입체감을 준다. */}
@@ -782,6 +949,25 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
           );
         })}
       </div>
+
+      {/* 시상대에서 펼친 사람의 패널. 시상대는 3열이라 칸 안에 넣으면 폭이 1/3
+          밖에 안 나온다 — 세 칸 전체 아래에 전폭으로 편다. */}
+      {(() => {
+        const podiumIndex = top.findIndex((row) => row.memberId === expandedMemberId);
+        if (podiumIndex === -1) return null;
+        const podiumMember = top[podiumIndex];
+        return (
+          <MemberStandingPanel
+            member={podiumMember}
+            activeWindow={activeWindow}
+            recent16={recent16}
+            alltime={alltime}
+            sessions={sessions}
+            standingByDate={standingByMember.get(podiumMember.memberId) ?? EMPTY_STANDINGS}
+            arrowRank={(podiumIndex + 1) as 1 | 2 | 3}
+          />
+        );
+      })()}
 
       {/* 다음 내전까지 카운트다운 — 참고 이미지의 "Ends in" 블록 구조 그대로
           시계 아이콘 / 라벨 / 남은 시간 세 덩어리를 세로로 쌓는다.
@@ -885,16 +1071,37 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                 {displayedRanked.map((member) => {
                   const originalRank = restRanked.indexOf(member) + 4;
                   const indexInRest = originalRank - 4;
+                  const expanded = expandedMemberId === member.memberId;
                   return (
                     <Fragment key={member.memberId}>
                       <div
                         data-testid={`ranking-row-${originalRank}`}
-                        className={`${rankingGrid} rounded-xl px-4 py-2.5`}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={expanded}
+                        onClick={() =>
+                          setExpandedMemberId(expanded ? null : member.memberId)
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setExpandedMemberId(expanded ? null : member.memberId);
+                          }
+                        }}
+                        className={`${rankingGrid} cursor-pointer rounded-xl px-4 py-2.5 outline-none ring-white/20 focus-visible:ring-2 ${
+                          expanded ? 'rounded-b-none' : ''
+                        }`}
                         style={{ background: RANKING_ROW_BG }}
                       >
                         <span className="text-sm font-bold text-menu">{originalRank}</span>
-                        <span className="min-w-0 truncate text-sm font-bold text-foreground">
-                          {member.discordNickname}
+                        <span className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-foreground">
+                          <span
+                            aria-hidden="true"
+                            className={`shrink-0 text-[9px] text-menu transition-transform ${expanded ? 'rotate-90' : ''}`}
+                          >
+                            ▶
+                          </span>
+                          <span className="truncate">{member.discordNickname}</span>
                         </span>
                         <TierBadge tier={member.tier} className="justify-self-start" />
                         <WinBadge
@@ -922,6 +1129,16 @@ export function TierRankingPodium({ recent16, alltime, snapshots }: TierRankingP
                           </span>
                         )}
                       </div>
+                      {expanded && (
+                        <MemberStandingPanel
+                          member={member}
+                          activeWindow={activeWindow}
+                          recent16={recent16}
+                          alltime={alltime}
+                          sessions={sessions}
+                          standingByDate={standingByMember.get(member.memberId) ?? EMPTY_STANDINGS}
+                        />
+                      )}
                       {showAverageDivider && dividerIndexInRest === indexInRest + 1 && (
                         <AverageDivider label={averageLabel} />
                       )}

@@ -10,7 +10,13 @@ const REQUIRED_ROUNDS = 4;
 /**
  * 03 내전 시트의 "우승 확정" 버튼.
  *
- * 우승팀은 클라이언트가 보낸 값을 믿지 않고 서버에서 시트를 다시 만들어 구한다
+ * 이름은 "우승 확정"이지만 저장하는 건 그날 **1~16위 전부**다 (0028). 우승만
+ * 남기면 클랜원 화면의 "최근 N회 내전 종합등수" 줄이 볼 게 없고, 나중에
+ * 계산으로 되짚을 수도 없기 때문이다 — 탈퇴자 정리가 참가 기록을 행째로 지워서
+ * 팀 킬 합계가 미달되고, 총점 = 순위점수 + 킬이라 순위가 뒤집힌다(0027 참고).
+ * 그래서 확정 시점의 값을 그대로 박아둔다.
+ *
+ * 등수는 클라이언트가 보낸 값을 믿지 않고 서버에서 시트를 다시 만들어 구한다
  * (buildRoundSheet 을 시트 조회와 같이 쓴다). 화면에 보이는 것과 저장되는 것이
  * 어긋날 수 없다.
  */
@@ -48,33 +54,43 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '우승팀을 찾지 못했습니다.' }, { status: 400 });
   }
 
-  // 이미 확정한 세션을 다시 누르면 아무 일도 안 일어나야 한다. (날짜, 세션번호,
-  // 클랜원) 유일 제약이 있으므로 upsert 로 조용히 넘긴다 — 다만 우승팀을 잘못
-  // 확정했다가 고치는 경우를 위해, 같은 날짜의 기존 기록은 먼저 지운다.
+  // 등수는 팀 단위지만 표는 사람 단위다 — 팀원 4명이 같은 standing 을 나눠 갖는다.
+  // 매칭된 클랜원이 하나도 없는 팀(탈퇴자·게스트만 있던 팀)은 남길 행이 없어
+  // 자연히 빠진다. 그 팀의 standing 번호는 그대로 비게 되는데, 그게 맞다 —
+  // 남은 사람들의 등수를 당겨 매기면 실제 시트와 어긋난다.
+  const rows = sheet.teams.flatMap((team) =>
+    team.memberIds.map((memberId) => ({
+      scrim_date: sheet.scrimDate,
+      session_number: 1,
+      standing: team.standing,
+      team_no: team.teamNumber,
+      place_points: team.totalPlacementPoints,
+      kills: team.totalKills,
+      total_score: team.totalScore,
+      member_id: memberId,
+      source: 'match',
+      note: `내전 시트에서 확정 (${team.totalScore}점)`,
+    })),
+  );
+
+  // 이미 확정한 세션을 다시 누르면 그때 값으로 덮어써야 한다 — 뒤늦게 붙은
+  // 경기나 고쳐진 팀 배정이 반영되지 않으면 화면과 기록이 어긋난다.
+  // (날짜, 세션번호, 클랜원) 유일 제약이 있으므로 같은 날짜를 먼저 지운다.
   const { error: deleteError } = await supabase
-    .from('session_wins')
+    .from('session_standings')
     .delete()
     .eq('scrim_date', sheet.scrimDate)
     .eq('session_number', 1);
   if (deleteError) {
-    return NextResponse.json({ error: '기존 우승 기록을 정리하지 못했습니다.' }, { status: 500 });
+    return NextResponse.json({ error: '기존 등수 기록을 정리하지 못했습니다.' }, { status: 500 });
   }
 
-  const { error: insertError } = await supabase.from('session_wins').insert(
-    winner.memberIds.map((memberId) => ({
-      scrim_date: sheet.scrimDate,
-      session_number: 1,
-      team_no: null, // 매치 데이터에는 세션 단위 팀번호가 없다 (PUBG team_id 는 매치마다 바뀐다)
-      member_id: memberId,
-      source: 'match',
-      note: `내전 시트에서 확정 (${winner.totalScore}점)`,
-    })),
-  );
+  const { error: insertError } = await supabase.from('session_standings').insert(rows);
   if (insertError) {
-    return NextResponse.json({ error: '우승 기록을 저장하지 못했습니다.' }, { status: 500 });
+    return NextResponse.json({ error: '등수 기록을 저장하지 못했습니다.' }, { status: 500 });
   }
 
-  // 우승 횟수는 리더보드 뱃지 열과 클랜원 화면에 바로 보여야 한다.
+  // 우승 횟수(뱃지 열·클랜원 화면)와 종합등수 줄이 바로 보여야 한다.
   revalidatePath('/dashboard');
   revalidatePath('/members');
 
@@ -83,5 +99,9 @@ export async function POST(request: Request) {
     teamNumber: winner.teamNumber,
     totalScore: winner.totalScore,
     players: winner.players,
+    // 몇 팀·몇 명이 실제로 기록됐는지 — 매칭이 덜 된 채로 확정한 걸 화면에서
+    // 알아챌 수 있게 같이 돌려준다.
+    savedTeams: new Set(rows.map((row) => row.standing)).size,
+    savedMembers: rows.length,
   });
 }

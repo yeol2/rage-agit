@@ -12,6 +12,23 @@ vi.mock('@/lib/memberStats', async (importOriginal) => {
   };
 });
 
+// 대시보드(종합점수 링·최근 내전 등수)는 이 페이지 테스트의 관심사가 아니다 —
+// 계산은 memberDashboard.test.ts 가, 그림은 컴포넌트가 따로 덮는다. 여기서는
+// 조회가 실제 Supabase 로 새어 나가지 않게만 막는다.
+vi.mock('@/lib/rankingStats', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/rankingStats')>();
+  return { ...actual, fetchRankingStats: vi.fn().mockResolvedValue([]) };
+});
+
+vi.mock('@/lib/memberDashboard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/memberDashboard')>();
+  return {
+    ...actual,
+    fetchRecentSessions: vi.fn().mockResolvedValue([]),
+    fetchMemberStandings: vi.fn().mockResolvedValue([]),
+  };
+});
+
 // eslint-disable-next-line import/first
 import MemberDetailPage from './page';
 // eslint-disable-next-line import/first
@@ -22,11 +39,7 @@ import {
   fetchTierCohortStats,
 } from '@/lib/memberStats';
 
-// 이 페이지 테스트의 관심사는 데이터 분기(충분/부족/없음/404)지 게이트 자체가
-// 아니다 — 게이트 동작은 AccessGate.test.tsx 가 이미 덮는다. 미리 풀어두면
-// 잠긴 동안 자식이 aria-hidden 처리되는 것과 안 부딪힌다.
 beforeEach(() => {
-  window.localStorage.setItem('rage-members-unlocked', 'true');
   // 우승 횟수는 대부분의 테스트가 신경 쓰지 않는다 — 안 세운 테스트가 실제
   // 조회로 새어 나가지 않게 기본값을 둔다.
   vi.mocked(fetchMemberWinCount).mockResolvedValue(0);

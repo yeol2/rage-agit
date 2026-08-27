@@ -12,6 +12,10 @@ data/*
 # 값이라 잃으면 다시 읽는 수밖에 없다 — data/ 의 다른 파일들과 달리 실명이
 # 없고(인게임 닉네임뿐) 크기도 작다.
 !data/session-winners.json
+
+# 같은 이유로 추적한다 — 최근 10회 종합 시트에서 1~16위를 눈으로 읽은 값이고,
+# 잃으면 시트 10장을 다시 판독해야 한다. 인게임 닉네임뿐이라 실명이 없다.
+!data/session-standings.json
 tsconfig.tsbuildinfo
 supabase/.env.functions
 supabase/.temp/
