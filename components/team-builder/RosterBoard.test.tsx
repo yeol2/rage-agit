@@ -429,6 +429,28 @@ describe('RosterBoard - 03 표 스왑 / VIP 정렬', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/scrim-roster/reroll', expect.anything());
   });
 
+  // team_number 를 바꾸는 UPDATE 는 같은 roster 행을 고치는 것이라 rosterId 는
+  // 안 바뀐다. 01(RoundSheet)이 rosterId 만 보고 있으면 최초 한 번 불러온 뒤로
+  // 다시 안 불러와서, 02에서 팀을 다시 짜도 01이 예전 팀 그대로 남는 버그가
+  // 실제로 있었다 — teamsVersion 을 의존성에 넣어 고쳤다.
+  it('리롤이 성공하면 01 시트도 team_number 를 다시 읽어온다', async () => {
+    const entries = makeFullEntries();
+    const roster = makeRoster(entries);
+    const rerolled = entries.map((entry) => (entry.id === 'a' ? { ...entry, teamNumber: 2 } : entry));
+    const fetchMock = stubFetchForOtherCalls({ entries: rerolled });
+    const sheetCallCount = () =>
+      fetchMock.mock.calls.filter(([url]) => url === ROUND_SHEET_GET_URL).length;
+
+    render(<RosterBoard roster={roster} />);
+    await waitFor(() => expect(sheetCallCount()).toBeGreaterThan(0));
+    const beforeReroll = sheetCallCount();
+
+    await userEvent.click(screen.getByRole('button', { name: '전체 리롤' }));
+    await screen.findByRole('button', { name: '전체 리롤' });
+
+    await waitFor(() => expect(sheetCallCount()).toBeGreaterThan(beforeReroll));
+  });
+
   it('리롤 전에는 "리롤 되돌리기" 버튼이 비활성화돼 있다', async () => {
     const entries = makeFullEntries();
     const roster = makeRoster(entries);
@@ -491,7 +513,10 @@ describe('RosterBoard - 03 표 스왑 / VIP 정렬', () => {
     await userEvent.click(screen.getByRole('button', { name: '리롤 되돌리기' }));
 
     // 두 번째 리롤(5번팀)을 되돌리는 거니까 그 직전 스냅샷인 3번팀으로 복원돼야 한다.
-    expect(fetchMock).toHaveBeenLastCalledWith(
+    // 마지막 호출이 아니라 있었는지만 본다 — 되돌리기 성공은 teamsVersion을 올려
+    // 01 시트가 team_number를 다시 읽어오게 하므로, 그 뒤에 round-sheet GET이
+    // 한 번 더 따라붙는다(01이 바뀐 팀 배정을 놓치지 않는지 확인하는 테스트가 따로 있다).
+    expect(fetchMock).toHaveBeenCalledWith(
       '/api/scrim-roster/reroll/undo',
       expect.objectContaining({
         method: 'POST',

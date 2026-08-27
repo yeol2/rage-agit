@@ -109,7 +109,21 @@ async function interruptibleSleep(ms: number, cancelRef: { current: boolean }) {
   }
 }
 
-export function RoundSheet({ rosterId }: { rosterId: string }) {
+export function RoundSheet({
+  rosterId,
+  teamsVersion,
+}: {
+  rosterId: string;
+  /**
+   * 팀 배정을 바꾸는 조작(02의 팀 구성/리롤/되돌리기/스왑/VIP 정렬)이 성공할
+   * 때마다 부모(RosterBoard)가 하나씩 올려서 넘긴다. team_number 는 이
+   * roster 행을 UPDATE 하는 것이라 rosterId 자체는 안 바뀌므로, rosterId 만
+   * 보고 있으면 최초 한 번 불러온 뒤로 다시 안 불러온다 — 그러면 02에서 팀을
+   * 다시 짜도 01은 처음 열었을 때의 팀 그대로 남는다. 값 자체는 안 쓰고
+   * 의존성 배열에만 넣어 재조회를 트리거한다.
+   */
+  teamsVersion?: number;
+}) {
   const [data, setData] = useState<RoundSheetResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
@@ -135,7 +149,7 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
   useEffect(() => {
     void loadSheet();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rosterId]);
+  }, [rosterId, teamsVersion]);
 
   // 누른 시각과 몇 번째 시도인지는 여기서만 안다 — 한 번 눌러두면 매치가
   // 잡힐 때까지 알아서 두드리므로, 서버는 매 요청을 따로 본다. 디스코드
