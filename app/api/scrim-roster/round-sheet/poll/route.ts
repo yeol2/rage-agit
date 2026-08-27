@@ -63,11 +63,16 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServer();
 
     // rosterId가 있으면 이번 내전 참가자가 이미 확정돼 있다(01/02/03을 거침) —
-    // 후보 30명을 훑는 대신 1번팀 1티어 한 명만 고정 씨앗으로 써서 API 호출을
+    // 후보 30명을 훑는 대신 1번팀에서 한 명만 고정 씨앗으로 써서 API 호출을
     // 줄인다. 팀 배정은 02에서 나서야 정해지므로 이 사람이 누군지는 03 시트에
     // 들어오기 전까진 알 수 없다 — 그래서 매번 이 자리에서 다시 조회한다.
     // 그 자리가 비었거나(수동 추가한 사람이라 member_id가 없다든지) PUBG 계정이
     // 없으면 아예 못 찾은 채로 넘어가고, runPolling이 기존 방식으로 대체한다.
+    //
+    // 씨앗은 1티어(슬롯1)가 아니라 2티어(슬롯2) 자리다. 슬롯1 에 있던 사람이
+    // 안 쓰는 부계정(Ez_ClanMozip, 최근 매치 0건)을 갖고 있었고 아래 find 가
+    // 하필 그걸 골라서, 폴링이 계속 빈손으로 돌아왔다.
+    const SEED_TIER_SLOT = 2;
     let knownAccountId: string | null = null;
     if (rosterId) {
       const { data: entryRow } = await supabase
@@ -75,7 +80,7 @@ export async function POST(request: Request) {
         .select('members(member_pubg_accounts(pubg_account_id))')
         .eq('roster_id', rosterId)
         .eq('team_number', 1)
-        .eq('tier_slot', 1)
+        .eq('tier_slot', SEED_TIER_SLOT)
         .not('member_id', 'is', null)
         .maybeSingle();
 
