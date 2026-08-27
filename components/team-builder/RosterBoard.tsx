@@ -332,6 +332,21 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   // "팀 구성" 버튼 — 서버가 01 표시 순서 그대로 팀 번호를 계산해 저장하고,
   // 갱신된 전체 명단을 돌려준다. 그 응답으로 로컬 상태를 갈아끼우면 별도
   // 재조회 없이 02 표를 바로 채울 수 있다.
+  // 서버가 이 화면이 모르는 이유로 요청을 거절했을 때(다른 관리자의 변경과
+  // 어긋남) 최신 명단을 다시 받아온다. 실패해도 그냥 넘어간다 — 이건 에러
+  // 메시지를 더 정확하게 만들기 위한 보조 수단이지, 이것 자체가 실패했다고
+  // 원래 에러를 덮어써서는 안 된다.
+  async function refetchEntries() {
+    try {
+      const response = await fetch(`/api/scrim-roster/entries/list?rosterId=${rosterId}`);
+      if (!response.ok) return;
+      const body = await response.json();
+      setEntries(body.entries as RosterEntry[]);
+    } catch {
+      // 조용히 넘어간다 — 위 주석 참고.
+    }
+  }
+
   async function handleAssignTeams() {
     setAssigning(true);
     setAssignError(null);
@@ -343,7 +358,17 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         body: JSON.stringify({ rosterId }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? '팀 구성에 실패했습니다.');
+      if (!response.ok) {
+        // "1~4티어가 모두 채워져야" 실패는 대개 이 화면의 entries 가 오래된
+        // 상태라서 난다 — 다른 관리자가 그 사이 명단을 바꿨는데, 이 탭은
+        // 그걸 모른 채로 "16/16/16/16"이라고 믿고 버튼을 눌렀을 수 있다(서버는
+        // 그 순간의 진짜 상태로 다시 판단해 다른 결론을 낸다). 조용히 실패
+        // 메시지만 띄우면 관리자는 왜 방금까지 맞던 게 틀렸다는 건지 알 도리가
+        // 없으므로, 최신 명단을 다시 받아와 이 자리에서 바로잡는다 — 그러면
+        // 화면의 숫자가 실제로 몇 명 비는지 정확히 보여준다.
+        await refetchEntries();
+        throw new Error(body.error ?? '팀 구성에 실패했습니다.');
+      }
 
       setEntries(body.entries as RosterEntry[]);
       // 새로 배정된 팀 번호 기준으로 다시 시작 — 이전 배정을 향한 리롤 되돌리기

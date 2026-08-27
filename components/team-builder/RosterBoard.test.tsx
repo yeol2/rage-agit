@@ -108,6 +108,45 @@ describe('RosterBoard - 팀 구성', () => {
     expect(within(teamTable()).queryByText('Ez_Test')).not.toBeInTheDocument();
   });
 
+  // 다른 관리자가 그 사이 명단을 바꿔서 이 화면의 entries 가 오래된 상태일
+  // 때(같은 값을 보고도 서버는 다르게 판단해 거절할 때) 실패로 끝내지 않고
+  // 최신 명단을 다시 받아온다 — 안 그러면 관리자는 "방금까지 16이었는데
+  // 왜 안 되지"라고 밖에 못 느낀다.
+  it('팀 구성 실패 후 최신 명단을 다시 받아와 화면을 바로잡는다', async () => {
+    const staleEntries = [
+      makeEntry({ id: 'a', tierSlot: 1, tier: 0 }),
+      makeEntry({ id: 'b', tierSlot: 2, tier: 2 }),
+      makeEntry({ id: 'c', tierSlot: 3, tier: 3 }),
+      makeEntry({ id: 'd', tierSlot: 4, tier: 4 }),
+    ];
+    // 다른 관리자가 다섯 번째 사람(e, 1티어)을 그 사이 추가해둔 걸 흉내낸다.
+    const freshEntries = [
+      ...staleEntries,
+      makeEntry({ id: 'e', discordNickname: 'Ez_Echo', tierSlot: 1, tier: 1.5 }),
+    ];
+    const roster = makeRoster(staleEntries);
+
+    const fetchMock = stubFetch((url) => {
+      if (url === '/api/scrim-roster/team-assignments') {
+        return { ok: false, json: async () => ({ error: '1~4티어가 모두 정확히 채워져야 팀을 구성할 수 있습니다.' }) };
+      }
+      if (url === '/api/scrim-roster/entries/list?rosterId=roster-1') {
+        return { ok: true, json: async () => ({ entries: freshEntries }) };
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    render(<RosterBoard roster={roster} />);
+    await userEvent.click(screen.getByRole('button', { name: '팀 구성' }));
+
+    expect(
+      await screen.findByText('1~4티어가 모두 정확히 채워져야 팀을 구성할 수 있습니다.'),
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/scrim-roster/entries/list?rosterId=roster-1');
+    // 새로 추가된 사람(Ez_Echo)이 02 표(보류 칸)에 보여야 화면이 갱신됐다는 뜻이다.
+    expect(await screen.findByText('Ez_Echo')).toBeInTheDocument();
+  });
+
   it('team_number 가 이미 있는 로스터는 새로고침해도 03 표가 바로 채워져 있다', () => {
     const entries = [
       makeEntry({ id: 'a', tierSlot: 1, tier: 0, teamNumber: 1 }),
