@@ -596,9 +596,20 @@ export function TierRankingPodium({
   const snapshotRankByMember = useMemo(() => {
     const map = new Map<string, number>();
     for (const snapshot of snapshots) {
-      if (snapshot.window === activeWindow && snapshot.groupId === activeGroupId) {
-        map.set(snapshot.memberId, snapshot.rankPosition);
-      }
+      if (snapshot.window !== activeWindow || snapshot.groupId !== activeGroupId) continue;
+      // rankPosition 은 "이번 캡처 시점" 등수라 캡처 직후엔 항상 지금 계산하는
+      // 등수와 같아져서 비교 기준이 못 된다 — previousRankPosition(그 앞 세션
+      // 결과)과 비교해야 "이번 세션으로 얼마나 움직였는지"가 나온다(0031).
+      //
+      // previousRankPosition 이 null이면 두 가지 경우다: 그 사람이 정말 처음
+      // 랭킹에 들었거나, 0031 이전에 이미 캡처된 행이라 지난 세션 값을 아예
+      // 복구할 수 없는 경우. 후자가 훨씬 흔한데(도입 시점의 기존 행 전부가
+      // 여기 해당한다) 그걸 전부 "신규"로 띄우면 명단 절반이 갑자기 NEW로
+      // 도배된다 — 그래서 rankPosition(예전 방식, 지금과 같아 변동 없음으로
+      // 보임)으로 조용히 물러난다. 다음 세션이 한 번 캡처되고 나면 이 분기 없이
+      // 정상적으로 비교된다.
+      const previous = snapshot.previousRankPosition ?? snapshot.rankPosition;
+      map.set(snapshot.memberId, previous);
     }
     return map;
   }, [snapshots, activeWindow, activeGroupId]);

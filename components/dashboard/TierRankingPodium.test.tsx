@@ -199,7 +199,9 @@ describe('TierRankingPodium — 뱃지(종합우승)', () => {
 describe('TierRankingPodium — 등수 변화', () => {
   it('종합점수 탭에서 이전보다 등수가 오르면 빨간 상승 표시를 낸다', () => {
     // recent16/전체 기준 D가 2위 — 스냅샷에서 D가 3위였다면 1계단 상승.
-    const snapshots = [{ window: 'recent16' as const, groupId: 'all', memberId: 'd', rankPosition: 3 }];
+    const snapshots = [
+      { window: 'recent16' as const, groupId: 'all', memberId: 'd', rankPosition: 2, previousRankPosition: 3 },
+    ];
     render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={snapshots} />);
     expect(screen.getByText('▲1')).toBeInTheDocument();
   });
@@ -209,8 +211,28 @@ describe('TierRankingPodium — 등수 변화', () => {
     expect(within(screen.getByTestId('podium-slot-1')).getByText('NEW')).toBeInTheDocument();
   });
 
+  // 0031 이전에 캡처된 행은 previousRankPosition 이 없다(그 전 세션 값을 되살릴
+  // 방법이 없다) — rankPosition(예전 방식)으로 물러나 "변동 없음"처럼 조용히
+  // 보여야 한다. 그렇지 않으면 이미 랭킹에 있던 사람들이 전부 NEW로 도배된다.
+  // rankPosition 값 자체은 안 맞아도 상관없다(위/아래 화살표가 나올 순 있어도
+  // NEW 만 아니면 된다) — 여기서 확인하려는 건 "행이 있으면 undefined 로
+  // 안 떨어진다"는 것뿐이다.
+  it('previousRankPosition 이 없으면(0031 이전 캡처) NEW로 도배하지 않고 조용히 넘어간다', () => {
+    const snapshots = ['a', 'b', 'd', 'e', 'f', 'g'].map((memberId) => ({
+      window: 'recent16' as const,
+      groupId: 'all',
+      memberId,
+      rankPosition: 1,
+      previousRankPosition: null,
+    }));
+    render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={snapshots} />);
+    expect(screen.queryByText('NEW')).not.toBeInTheDocument();
+  });
+
   it('평균킬 탭에서는 스냅샷이 있어도 변화 표시를 안 한다', () => {
-    const snapshots = [{ window: 'recent16' as const, groupId: 'all', memberId: 'd', rankPosition: 3 }];
+    const snapshots = [
+      { window: 'recent16' as const, groupId: 'all', memberId: 'd', rankPosition: 2, previousRankPosition: 3 },
+    ];
     render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={snapshots} />);
     fireEvent.click(screen.getByRole('button', { name: '평균킬' }));
     expect(screen.queryByText('▲2')).not.toBeInTheDocument();

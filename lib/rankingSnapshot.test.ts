@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeRankChange, computeSnapshotRows } from './rankingSnapshot';
+import { attachPreviousRanks, computeRankChange, computeSnapshotRows, snapshotKey } from './rankingSnapshot';
 import type { RankingStatsRow } from './rankingStats';
 
 function row(overrides: Partial<RankingStatsRow> = {}): RankingStatsRow {
@@ -48,6 +48,41 @@ describe('computeSnapshotRows', () => {
     const result = computeSnapshotRows(recentRows, alltimeRows);
     expect(result.filter((r) => r.window === 'alltime').map((r) => r.memberId)).toContain('a');
     expect(result.filter((r) => r.window === 'recent16').map((r) => r.memberId)).toContain('a');
+  });
+});
+
+describe('attachPreviousRanks', () => {
+  // 0031: 캡처 직후 rank_position 이 "지금" 등수로 덮어써지면 화면이 그걸
+  // 실시간 등수와 비교해도 항상 같아져 변동이 안 보인다 — previousRankPosition
+  // 이 그 앞 캡처(지난 세션) 값을 대신 들고 있어야 비교 기준이 산다.
+  it('덮어쓰기 전 값을 previousRankPosition 으로 옮겨 붙인다', () => {
+    const newRows = [{ window: 'recent16' as const, groupId: 'all', memberId: 'a', rankPosition: 1 }];
+    const previous = new Map([[snapshotKey(newRows[0]), 3]]);
+
+    expect(attachPreviousRanks(newRows, previous)).toEqual([
+      { window: 'recent16', groupId: 'all', memberId: 'a', rankPosition: 1, previousRankPosition: 3 },
+    ]);
+  });
+
+  it('그 조합이 전에 없었으면(첫 캡처) previousRankPosition 이 null이다', () => {
+    const newRows = [{ window: 'alltime' as const, groupId: '0-1.5', memberId: 'b', rankPosition: 5 }];
+
+    expect(attachPreviousRanks(newRows, new Map())).toEqual([
+      { window: 'alltime', groupId: '0-1.5', memberId: 'b', rankPosition: 5, previousRankPosition: null },
+    ]);
+  });
+
+  it('window/groupId가 다르면 같은 memberId라도 서로 안 섞인다', () => {
+    const newRows = [
+      { window: 'recent16' as const, groupId: 'all', memberId: 'a', rankPosition: 2 },
+      { window: 'alltime' as const, groupId: 'all', memberId: 'a', rankPosition: 4 },
+    ];
+    const previous = new Map([
+      [snapshotKey(newRows[0]), 9],
+      [snapshotKey(newRows[1]), 7],
+    ]);
+
+    expect(attachPreviousRanks(newRows, previous).map((r) => r.previousRankPosition)).toEqual([9, 7]);
   });
 });
 

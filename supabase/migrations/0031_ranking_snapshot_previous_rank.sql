@@ -1,0 +1,21 @@
+-- 0022 의 의도는 "항상 '가장 최근 세션 이전' 스냅샷 하나만 유지"하는 것이었다
+-- (그 마이그레이션 주석에 그대로 적혀 있다). 그런데 실제 캡처 시점(4번째
+-- 라운드가 막 폴링된 순간)에는 그 라운드가 이미 matches/match_participants에
+-- 들어가 있어서, capture 가 계산하는 "지금 등수"는 방금 끝난 세션까지 포함한
+-- 값이다 — "이전"이 아니라 "이후"를 rank_position 에 덮어써 온 것이다.
+--
+-- 화면(TierRankingPodium)의 변동 배지는 그 rank_position 을, 렌더될 때마다
+-- 새로 계산하는 "지금 등수"와 비교한다. 캡처 직후에는 두 값이 항상 똑같아지므로
+-- (둘 다 "방금 끝난 세션까지 포함한 등수"), 세션이 끝나는 순간 변동 배지가
+-- 전부 사라진다 — 다음 세션이 다시 4라운드를 채울 때까지 계속 그렇다.
+--
+-- 캡처마다 "지금 막 계산한 등수"만 남기지 않고, 그 직전까지 rank_position 에
+-- 있던 값을 previous_rank_position 으로 옮겨 같이 남긴다. 화면은 이제
+-- rank_position(=항상 최신, 다음 캡처의 '이전' 값이 될 재료) 이 아니라
+-- previous_rank_position(=그 앞 세션 결과, 지금 등수와 비교할 진짜 기준)을
+-- 본다.
+--
+-- 이 컬럼이 채워지기 전(과거에 캡처된 행)은 previous_rank_position 이 null 이라
+-- "신규"로 보인다 — 지난 데이터를 소급해서 되살릴 방법은 없고, 다음 세션이
+-- 한 번 캡처되고 나면 그때부터 다시 정상적으로 비교된다.
+alter table ranking_snapshots add column if not exists previous_rank_position integer;
