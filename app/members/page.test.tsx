@@ -5,8 +5,10 @@ import { cleanup, render, screen } from '@testing-library/react';
 // 바깥에 선언한 변수를 참조하면 초기화 전에 접근하게 된다.
 vi.mock('@/lib/memberStats', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/memberStats')>()),
+  // vipRank 를 빼면 undefined 가 되는데, MemberDirectory 는 `!== null` 로 VIP 를
+  // 가려내므로 VIP 섹션과 티어 섹션 양쪽에 그려진다. 실제 타입대로 null 을 준다.
   fetchAllMembers: vi.fn().mockResolvedValue([
-    { id: 'm-1', discordNickname: 'Ez_Alpha', tier: 0 },
+    { id: 'm-1', discordNickname: 'Ez_Alpha', tier: 0, vipRank: null },
   ]),
 }));
 
@@ -16,12 +18,10 @@ import MembersPage from './page';
 afterEach(cleanup);
 
 describe('MembersPage', () => {
-  it('제목을 그리고 암구호로 가려둔다', async () => {
+  it('제목과 명단을 바로 보여준다', async () => {
     render(await MembersPage());
-    // 잠긴 동안은 AccessGate 가 자식에 aria-hidden 을 걸어 스크린리더가 못 쓰는
-    // 콘텐츠를 안내하지 않게 한다 — 그래서 접근성 role 이 아니라 텍스트로 찾는다.
-    expect(screen.getByText('클랜원 목록')).toBeInTheDocument();
-    // 이 테스트 프로세스에는 암구호가 설정돼 있지 않으므로 게이트가 잠긴 채다.
-    expect(screen.getByText('Rage 클랜원을 인증하세요')).toBeInTheDocument();
+    // 예전에는 암구호 게이트(AccessGate)로 가려뒀지만 이제 누구나 볼 수 있다.
+    expect(screen.getByRole('heading', { name: '클랜원 목록' })).toBeInTheDocument();
+    expect(screen.getByText('Ez_Alpha')).toBeInTheDocument();
   });
 });

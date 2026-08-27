@@ -14,8 +14,7 @@ export function AdminLoginButton() {
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // 팝오버 바깥을 클릭하면 닫는다 — AccessGate는 전체 화면을 가려서 이 문제가
-  // 없었지만, 여긴 작은 드롭다운이라 바깥 클릭 처리가 필요하다.
+  // 팝오버 바깥을 클릭하면 닫는다 — 작은 드롭다운이라 바깥 클릭 처리가 필요하다.
   useEffect(() => {
     if (!open) return;
     function handlePointerDown(event: MouseEvent) {

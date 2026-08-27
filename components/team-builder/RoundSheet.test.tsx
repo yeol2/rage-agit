@@ -119,7 +119,7 @@ describe('RoundSheet — 우승 확정', () => {
     expect(button).toBeDisabled();
   });
 
-  it('4경기가 다 들어오면 눌러서 확정하고 우승팀을 알려준다', async () => {
+  it('4경기가 다 들어오면 눌러서 확정하고, 우승팀과 저장된 등수 규모를 알려준다', async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.includes('confirm-win')) {
         return {
@@ -129,6 +129,8 @@ describe('RoundSheet — 우승 확정', () => {
             teamNumber: 1,
             totalScore: 20,
             players: ['Ez_Alpha', 'Ez_Bravo', 'Ez_Charlie', 'Ez_Delta'],
+            savedTeams: 16,
+            savedMembers: 63,
           }),
         };
       }
@@ -139,8 +141,12 @@ describe('RoundSheet — 우승 확정', () => {
     render(<RoundSheet rosterId="roster-1" />);
     await userEvent.click(await screen.findByRole('button', { name: '우승 확정' }));
 
+    // 저장되는 건 우승팀만이 아니라 1~16위 전부다(0028) — 몇 팀·몇 명이 들어갔는지가
+    // 같이 보여야 매칭이 덜 된 채로 확정한 걸 알아챌 수 있다.
     expect(
-      await screen.findByText('종합우승 확정 — Alpha / Bravo / Charlie / Delta (20점)'),
+      await screen.findByText(
+        '종합우승 확정 — Alpha / Bravo / Charlie / Delta (20점) · 종합등수 16팀 63명 저장',
+      ),
     ).toBeInTheDocument();
   });
 

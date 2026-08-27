@@ -1,0 +1,225 @@
+{
+  "_note": "최근 10회 내전의 종합 시트(image/recent_final_result_sheet/YYYYMMDD.png)에서 읽은 1~16위. teams 는 시트에 적힌 순서 그대로이므로 배열 인덱스+1 이 곧 standing 이다. teamNo 는 시트의 (#NN) 칸이고, players 는 시트 표기 그대로(Ez_ 접두사 없이) 옮겼다. place/kill/total 은 그 줄의 PLACE/KILL/TOTAL 칸으로, 임포터가 검산에 쓴다. 탈퇴자가 섞여 있어 DB 에 없는 이름이 있을 수 있고, 그건 정상이다.",
+  "sessions": [
+    {
+      "scrimDate": "2026-07-12",
+      "sheetFile": "20260712.png",
+      "teams": [
+        { "teamNo": 16, "place": 22, "kill": 24, "total": 46, "players": ["chlrh", "cks", "ZiDe-_-", "241017"] },
+        { "teamNo": 10, "place": 14, "kill": 30, "total": 44, "players": ["JIGOD", "Mingo", "JuHyuN", "Buddy"] },
+        { "teamNo": 2,  "place": 20, "kill": 19, "total": 39, "players": ["1ntiV", "MACHO", "WY", "benson"] },
+        { "teamNo": 4,  "place": 11, "kill": 18, "total": 29, "players": ["gjsl", "Zzang9", "Arakis", "meta"] },
+        { "teamNo": 8,  "place": 6,  "kill": 23, "total": 29, "players": ["Jiney", "hosu", "T1ger", "Xayah"] },
+        { "teamNo": 12, "place": 11, "kill": 14, "total": 25, "players": ["HyoJun", "siu", "Cold-", "Rakan"] },
+        { "teamNo": 11, "place": 7,  "kill": 18, "total": 25, "players": ["HoDDu", "Gomseung", "hattae", "purple"] },
+        { "teamNo": 13, "place": 6,  "kill": 17, "total": 23, "players": ["Code", "NANA", "Hyuk9", "BUNNY"] },
+        { "teamNo": 14, "place": 7,  "kill": 15, "total": 22, "players": ["dotnl", "2pan4pan", "Dogsi", "Rush"] },
+        { "teamNo": 9,  "place": 6,  "kill": 10, "total": 16, "players": ["Qhrb", "Emergency", "tktktk", "xijingping"] },
+        { "teamNo": 15, "place": 5,  "kill": 10, "total": 15, "players": ["time", "Pitt", "Lill", "Xavi-"] },
+        { "teamNo": 5,  "place": 1,  "kill": 14, "total": 15, "players": ["sejin", "grim", "halremalre", "yeonDu"] },
+        { "teamNo": 3,  "place": 4,  "kill": 10, "total": 14, "players": ["Lapaz", "SPAM", "Hyunjin", "EEEing"] },
+        { "teamNo": 7,  "place": 2,  "kill": 11, "total": 13, "players": ["KimSS", "Gi-Man", "NORAJO", "ton"] },
+        { "teamNo": 1,  "place": 5,  "kill": 2,  "total": 7,  "players": ["ChoeunDad", "VanNi", "reummang", "Jukatory"] },
+        { "teamNo": 6,  "place": 1,  "kill": 5,  "total": 6,  "players": ["BX", "hamIN", "Woo", "DY91"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-07-20",
+      "sheetFile": "20260720.png",
+      "teams": [
+        { "teamNo": 3,  "place": 17, "kill": 25, "total": 42, "players": ["Emergency", "Cold-", "ttang", "DY91"] },
+        { "teamNo": 15, "place": 16, "kill": 26, "total": 42, "players": ["Nero", "Zzang9", "ZiDe-_-", "Ton"] },
+        { "teamNo": 7,  "place": 17, "kill": 23, "total": 40, "players": ["gjsl", "vvvv", "reummang", "BUNNY"] },
+        { "teamNo": 4,  "place": 8,  "kill": 21, "total": 29, "players": ["BX", "JuHyuN", "Uang0_0", "MANDUUUUU"] },
+        { "teamNo": 12, "place": 13, "kill": 15, "total": 28, "players": ["JIGOD", "Gi-Man", "vhtlrwk", "sunny_"] },
+        { "teamNo": 9,  "place": 12, "kill": 16, "total": 28, "players": ["sejin", "DanE", "Chacha", "Hazi"] },
+        { "teamNo": 11, "place": 6,  "kill": 16, "total": 22, "players": ["Code", "Garlic", "Arakis", "benson"] },
+        { "teamNo": 6,  "place": 0,  "kill": 20, "total": 20, "players": ["Lapaz", "Whoru", "Dogsi", "Xavi-"] },
+        { "teamNo": 5,  "place": 4,  "kill": 15, "total": 19, "players": ["Dotnl", "Donkey", "Woo", "Yareu"] },
+        { "teamNo": 13, "place": 8,  "kill": 10, "total": 18, "players": ["heungmini", "Siu", "YeonDu", "Xayah"] },
+        { "teamNo": 1,  "place": 5,  "kill": 13, "total": 18, "players": ["Yellow", "hosu", "meta", "MIYO"] },
+        { "teamNo": 14, "place": 4,  "kill": 12, "total": 16, "players": ["kimss", "halremalre", "Hyunjin", "owen"] },
+        { "teamNo": 2,  "place": 6,  "kill": 9,  "total": 15, "players": ["ShonG2", "Aura", "Daks", "purple"] },
+        { "teamNo": 8,  "place": 5,  "kill": 8,  "total": 13, "players": ["7thHeaven", "grim", "tktktk", "241017"] },
+        { "teamNo": 10, "place": 6,  "kill": 6,  "total": 12, "players": ["CuriAng0_0", "Mingo", "Hyuk9", "GUNHU"] },
+        { "teamNo": 16, "place": 1,  "kill": 8,  "total": 9,  "players": ["2pan4pan", "JJOGI", "HaAng0_0", "xijingping"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-07-25",
+      "sheetFile": "20260725.png",
+      "teams": [
+        { "teamNo": 11, "place": 17, "kill": 23, "total": 40, "players": ["Code", "Cold-", "Xuinness", "Jukatory"] },
+        { "teamNo": 13, "place": 20, "kill": 16, "total": 36, "players": ["KimSS", "Mingo", "Woo", "rindA"] },
+        { "teamNo": 8,  "place": 10, "kill": 26, "total": 36, "players": ["Lapaz", "Gi-Man", "Xavi-", "zzang_9"] },
+        { "teamNo": 14, "place": 16, "kill": 16, "total": 32, "players": ["Chyopa", "Ukings", "NORAJO", "Rin"] },
+        { "teamNo": 2,  "place": 12, "kill": 16, "total": 28, "players": ["MACHO", "Sugar", "ttang", "Persimmon96"] },
+        { "teamNo": 16, "place": 6,  "kill": 18, "total": 24, "players": ["gjsl", "Garlic", "JuHyuN", "Daks"] },
+        { "teamNo": 6,  "place": 3,  "kill": 21, "total": 24, "players": ["Hound", "Gomseung", "Lill", "Xayah"] },
+        { "teamNo": 3,  "place": 8,  "kill": 15, "total": 23, "players": ["Jiney", "DanE", "MANDUUUUU", "BUNNY"] },
+        { "teamNo": 7,  "place": 7,  "kill": 15, "total": 22, "players": ["Chanii", "2pan4pan", "Donkey", "MIYO"] },
+        { "teamNo": 9,  "place": 5,  "kill": 15, "total": 20, "players": ["Emergency", "Zidori", "tktktk", "YeonDu"] },
+        { "teamNo": 12, "place": 5,  "kill": 14, "total": 19, "players": ["Nero", "LUX", "JJOGI", "HaAng0_0"] },
+        { "teamNo": 4,  "place": 5,  "kill": 12, "total": 17, "players": ["JIGOD", "SPAM", "vvvv", "EEEing"] },
+        { "teamNo": 5,  "place": 1,  "kill": 15, "total": 16, "players": ["heungmini", "Grim", "DR01", "Dogsi"] },
+        { "teamNo": 15, "place": 5,  "kill": 10, "total": 15, "players": ["jstyle", "dlrur", "Hyunjin", "DY91"] },
+        { "teamNo": 10, "place": 6,  "kill": 7,  "total": 13, "players": ["Chanbab", "hosu", "vir", "sunny_"] },
+        { "teamNo": 1,  "place": 2,  "kill": 5,  "total": 7,  "players": ["time", "ssonz", "Hyuk9", "Mangzi-"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-07-26",
+      "sheetFile": "20260726.png",
+      "teams": [
+        { "teamNo": 2,  "place": 24, "kill": 21, "total": 45, "players": ["chlrh", "Horang2", "Dogsi", "Lill"] },
+        { "teamNo": 9,  "place": 18, "kill": 25, "total": 43, "players": ["Dotnl", "Gi-Man", "hattae", "EEEing"] },
+        { "teamNo": 17, "place": 16, "kill": 21, "total": 37, "players": ["kimss", "MACHO", "Xavi-", "BUNNY"] },
+        { "teamNo": 3,  "place": 15, "kill": 20, "total": 35, "players": ["Emergency", "wNgkdl", "T1ger", "Bambi"] },
+        { "teamNo": 4,  "place": 11, "kill": 19, "total": 30, "players": ["Gomseung", "DanE", "vir", "FFan"] },
+        { "teamNo": 10, "place": 9,  "kill": 21, "total": 30, "players": ["BX", "nice2minxu", "bbakgom", "tomato"] },
+        { "teamNo": 7,  "place": 4,  "kill": 25, "total": 29, "players": ["7thHeaven", "NANA", "Donkey", "BboSic2"] },
+        { "teamNo": 14, "place": 7,  "kill": 17, "total": 24, "players": ["heungmini", "Cold-", "reummang", "YeonDu"] },
+        { "teamNo": 11, "place": 7,  "kill": 17, "total": 24, "players": ["HoDDu", "Mingo", "vhtlrwk", "Xayah"] },
+        { "teamNo": 16, "place": 5,  "kill": 16, "total": 21, "players": ["Lapaz", "Chanbab", "ZiDe-_-", "MANDUUUUU"] },
+        { "teamNo": 1,  "place": 3,  "kill": 17, "total": 20, "players": ["Qhrb", "grim", "JJOGI", "Rakan"] },
+        { "teamNo": 13, "place": 5,  "kill": 10, "total": 15, "players": ["time", "JuHyuN", "Hyuk9", "DY91"] },
+        { "teamNo": 8,  "place": 2,  "kill": 11, "total": 13, "players": ["chanii", "Xuinness", "Arakis", "HaAng0_0"] },
+        { "teamNo": 15, "place": 2,  "kill": 5,  "total": 7,  "players": ["Nero", "Thswm", "Woo", "Daks"] },
+        { "teamNo": 6,  "place": 0,  "kill": 7,  "total": 7,  "players": ["shinchangmin", "SPAM", "WY", "zzang_9"] },
+        { "teamNo": 12, "place": 0,  "kill": 6,  "total": 6,  "players": ["CuriAng0_0", "2pan4pan", "NORAJO", "sunny_"] },
+        { "teamNo": 5,  "place": 0,  "kill": 1,  "total": 1,  "players": ["Jiney", "Eunking", "Cruise", "xijingping"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-08-02",
+      "sheetFile": "20260802.png",
+      "teams": [
+        { "teamNo": 8,  "place": 12, "kill": 29, "total": 41, "players": ["Chyopa", "vvvv", "Arakis", "dmfkckck"] },
+        { "teamNo": 13, "place": 12, "kill": 27, "total": 39, "players": ["Gi-Man", "SoluTion", "tktktk", "Buddy"] },
+        { "teamNo": 2,  "place": 14, "kill": 24, "total": 38, "players": ["JIGOD", "Sugar", "MANDUUUUU", "Xayah"] },
+        { "teamNo": 7,  "place": 18, "kill": 14, "total": 32, "players": ["KimSS", "Zidori", "Xavi-", "SeaCrab"] },
+        { "teamNo": 15, "place": 6,  "kill": 22, "total": 28, "players": ["gjsl", "BARA", "GE", "saebyeok"] },
+        { "teamNo": 10, "place": 10, "kill": 14, "total": 24, "players": ["time", "Gomseung", "ZiDe-_-", "xijingping"] },
+        { "teamNo": 5,  "place": 9,  "kill": 15, "total": 24, "players": ["HyoJun", "Mingo", "NORAJO", "BUNNY"] },
+        { "teamNo": 6,  "place": 9,  "kill": 13, "total": 22, "players": ["Code", "DanE", "LUX", "Hyuk9"] },
+        { "teamNo": 16, "place": 9,  "kill": 13, "total": 22, "players": ["BX", "Grim", "TheKing2", "reummang"] },
+        { "teamNo": 4,  "place": 5,  "kill": 16, "total": 21, "players": ["Lapaz", "Thswm", "Jinmo", "Jukatory"] },
+        { "teamNo": 1,  "place": 11, "kill": 9,  "total": 20, "players": ["dmdcjwkd", "Cold-", "Hyunjin", "purple"] },
+        { "teamNo": 3,  "place": 1,  "kill": 18, "total": 19, "players": ["Dotnl", "VanNi", "zkvndj", "YeonDu"] },
+        { "teamNo": 9,  "place": 6,  "kill": 12, "total": 18, "players": ["Emergency", "dlrur", "Woo", "IMJA"] },
+        { "teamNo": 11, "place": 3,  "kill": 11, "total": 14, "players": ["SHSH", "MACHO", "T1ger", "DY91"] },
+        { "teamNo": 12, "place": 0,  "kill": 11, "total": 11, "players": ["heungmini", "Garlic", "vir", "HaAng0_0"] },
+        { "teamNo": 14, "place": 3,  "kill": 2,  "total": 5,  "players": ["chlrh", "2pan4pan", "Owen", "Hazi"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-08-09",
+      "sheetFile": "20260809.png",
+      "teams": [
+        { "teamNo": 6,  "place": 25, "kill": 32, "total": 57, "players": ["chlrh", "wNgkdl", "NORAJO", "MANDUUUUU"] },
+        { "teamNo": 3,  "place": 25, "kill": 27, "total": 52, "players": ["7thHeaven", "Sugar", "vir", "HaAng0_0"] },
+        { "teamNo": 1,  "place": 11, "kill": 27, "total": 38, "players": ["Lapaz", "Mingo", "tktktk", "dmfkckck"] },
+        { "teamNo": 8,  "place": 4,  "kill": 29, "total": 33, "players": ["Gimli", "DanE", "Aura", "Buddy"] },
+        { "teamNo": 7,  "place": 9,  "kill": 21, "total": 30, "players": ["HoDDu", "BARA", "reummang", "rindA"] },
+        { "teamNo": 13, "place": 11, "kill": 13, "total": 24, "players": ["Emergency", "Gomseung", "TheKing2", "Dongpal"] },
+        { "teamNo": 14, "place": 7,  "kill": 15, "total": 22, "players": ["SHSH", "vhtlrwk", "Jinmo", "DY91"] },
+        { "teamNo": 10, "place": 8,  "kill": 13, "total": 21, "players": ["2Z2Z", "Grim", "Rush", "Jhoney"] },
+        { "teamNo": 4,  "place": 6,  "kill": 12, "total": 18, "players": ["sejin", "WY", "Lill", "purple"] },
+        { "teamNo": 9,  "place": 0,  "kill": 18, "total": 18, "players": ["Gi-Man", "Zzang9", "Arakis", "Rakan"] },
+        { "teamNo": 15, "place": 5,  "kill": 10, "total": 15, "players": ["Koojun", "JuHyuN", "Hyuk9", "benson"] },
+        { "teamNo": 5,  "place": 1,  "kill": 13, "total": 14, "players": ["Nero", "SPAM", "busankalzap2", "EEEing"] },
+        { "teamNo": 11, "place": 7,  "kill": 4,  "total": 11, "players": ["Jiney", "ttang", "Kopy", "YeonDu"] },
+        { "teamNo": 16, "place": 4,  "kill": 7,  "total": 11, "players": ["HyoJun", "Cold-", "ZiDe-_-", "Dotori"] },
+        { "teamNo": 12, "place": 3,  "kill": 7,  "total": 10, "players": ["Chanbab", "2pan4pan", "hattae", "Xayah"] },
+        { "teamNo": 2,  "place": 2,  "kill": 6,  "total": 8,  "players": ["Code", "MACHO", "Hyunjin", "Bambi"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-08-13",
+      "sheetFile": "20260813.png",
+      "teams": [
+        { "teamNo": 12, "place": 18, "kill": 32, "total": 50, "players": ["Dotnl", "NANA", "HaAng0_0", "Dxwnyam"] },
+        { "teamNo": 14, "place": 26, "kill": 22, "total": 48, "players": ["Code", "Yellow", "JuHyuN", "Jukatory"] },
+        { "teamNo": 11, "place": 12, "kill": 18, "total": 30, "players": ["time", "Thswm", "Dogsi", "Rush"] },
+        { "teamNo": 4,  "place": 10, "kill": 20, "total": 30, "players": ["gjsl", "DanE", "Donkey", "Chacha"] },
+        { "teamNo": 7,  "place": 11, "kill": 18, "total": 29, "players": ["KimSS", "chlrh", "Arakis", "purple"] },
+        { "teamNo": 16, "place": 10, "kill": 16, "total": 26, "players": ["Lapaz", "Hound", "Xavi-", "Buddy"] },
+        { "teamNo": 13, "place": 6,  "kill": 19, "total": 25, "players": ["sejin", "0521", "LUX", "sunny_"] },
+        { "teamNo": 1,  "place": 8,  "kill": 15, "total": 23, "players": ["3748", "Garlic", "ttang", "EEEing"] },
+        { "teamNo": 15, "place": 1,  "kill": 20, "total": 21, "players": ["Chyopa", "2pan4pan", "Cold-", "Hyuk9"] },
+        { "teamNo": 6,  "place": 7,  "kill": 13, "total": 20, "players": ["shinchangmin", "Gi-Man", "YeonDu", "alswn"] },
+        { "teamNo": 9,  "place": 0,  "kill": 18, "total": 18, "players": ["SHSH", "Mingo", "Hyunjin", "tomato"] },
+        { "teamNo": 10, "place": 9,  "kill": 8,  "total": 17, "players": ["HyoJun", "Hetto", "Woo", "dmfkckck"] },
+        { "teamNo": 3,  "place": 3,  "kill": 14, "total": 17, "players": ["Nero", "Zzang9", "MANDUUUUU", "reummang"] },
+        { "teamNo": 2,  "place": 4,  "kill": 5,  "total": 9,  "players": ["Chanii", "grim", "ZiDe-_-", "benson"] },
+        { "teamNo": 5,  "place": 2,  "kill": 7,  "total": 9,  "players": ["JIGOD", "Sugar", "Jinmo", "Owen"] },
+        { "teamNo": 8,  "place": 1,  "kill": 5,  "total": 6,  "players": ["Koojun", "Chanbab", "Uang0_0", "77l"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-08-16",
+      "sheetFile": "20260816.png",
+      "teams": [
+        { "teamNo": 7,  "place": 29, "kill": 27, "total": 56, "players": ["Jiney", "Yellow", "Donkey", "Jhoney"] },
+        { "teamNo": 14, "place": 27, "kill": 26, "total": 53, "players": ["7thHeaven", "JuHyuN", "Woo", "Uang0_0"] },
+        { "teamNo": 6,  "place": 11, "kill": 24, "total": 35, "players": ["3748", "HamiN", "Hyunjin", "benson"] },
+        { "teamNo": 11, "place": 9,  "kill": 21, "total": 30, "players": ["Gimli", "NORAJO", "Dogsi", "purple"] },
+        { "teamNo": 15, "place": 13, "kill": 13, "total": 26, "players": ["Code", "Cold-", "Arakis", "Jukatory"] },
+        { "teamNo": 8,  "place": 4,  "kill": 21, "total": 25, "players": ["chlrh", "Zzang9", "vhtlrwk", "Hyuk9"] },
+        { "teamNo": 12, "place": 8,  "kill": 15, "total": 23, "players": ["Chanii", "Thswm", "GE", "Yareu"] },
+        { "teamNo": 2,  "place": 4,  "kill": 19, "total": 23, "players": ["SHSH", "SPAM", "vir", "Rush"] },
+        { "teamNo": 16, "place": 8,  "kill": 13, "total": 21, "players": ["time", "2pan4pan", "Xavi-", "IMJA"] },
+        { "teamNo": 10, "place": 0,  "kill": 19, "total": 19, "players": ["BX", "BARA", "Owen", "Rakan"] },
+        { "teamNo": 1,  "place": 3,  "kill": 15, "total": 18, "players": ["Emergency", "Mingo", "MANDUUUUU", "Persimmon96"] },
+        { "teamNo": 3,  "place": 4,  "kill": 9,  "total": 13, "players": ["JIGOD", "grim", "hattae", "reummang"] },
+        { "teamNo": 4,  "place": 1,  "kill": 11, "total": 12, "players": ["Gi-Man", "Sugar", "Dxwnyam", "dmfkckck"] },
+        { "teamNo": 13, "place": 5,  "kill": 6,  "total": 11, "players": ["Gomseung", "WY", "HaAng0_0", "Xayah"] },
+        { "teamNo": 9,  "place": 2,  "kill": 3,  "total": 5,  "players": ["HoDDu", "wNgkdl", "Shxt", "Bambi"] },
+        { "teamNo": 5,  "place": 0,  "kill": 3,  "total": 3,  "players": ["Chanbab", "Seung", "Aura", "tomato"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-08-20",
+      "sheetFile": "20260820.png",
+      "teams": [
+        { "teamNo": 1,  "place": 20, "kill": 37, "total": 57, "players": ["heungmini", "Gi-Man", "aedimm", "meta"] },
+        { "teamNo": 9,  "place": 16, "kill": 25, "total": 41, "players": ["Code", "2pan4pan", "Woo", "purple"] },
+        { "teamNo": 4,  "place": 17, "kill": 22, "total": 39, "players": ["Chyopa", "Zzang9", "Jangsungeon", "benson"] },
+        { "teamNo": 3,  "place": 17, "kill": 16, "total": 33, "players": ["Jiney", "DanE", "TheKing2", "Xayah"] },
+        { "teamNo": 2,  "place": 6,  "kill": 27, "total": 33, "players": ["Dotnl", "SHSH", "Hyunjin", "xijingping"] },
+        { "teamNo": 5,  "place": 3,  "kill": 20, "total": 23, "players": ["Lapaz", "Nero", "vhtlrwk", "241017"] },
+        { "teamNo": 14, "place": 9,  "kill": 12, "total": 21, "players": ["gjsl", "Thswm", "Uang0_0", "HYEOK"] },
+        { "teamNo": 11, "place": 7,  "kill": 14, "total": 21, "players": ["Koojun", "Pxxce", "tktktk", "Hyuk9"] },
+        { "teamNo": 12, "place": 8,  "kill": 11, "total": 19, "players": ["7thHeaven", "Yellow", "JuHyuN", "reummang"] },
+        { "teamNo": 8,  "place": 3,  "kill": 16, "total": 19, "players": ["JIGOD", "Mingo", "alswn", "Jukatory"] },
+        { "teamNo": 10, "place": 8,  "kill": 10, "total": 18, "players": ["Emergency", "what9jihofan", "HaAng0_0", "Dongpal"] },
+        { "teamNo": 6,  "place": 5,  "kill": 9,  "total": 14, "players": ["Ssn2", "chlrh", "Arakis", "sunny_"] },
+        { "teamNo": 15, "place": 4,  "kill": 6,  "total": 10, "players": ["KimSS", "Hound", "Xavi-", "BUNNY"] },
+        { "teamNo": 13, "place": 1,  "kill": 7,  "total": 8,  "players": ["sejin", "Cold-", "LUX", "hoizza"] },
+        { "teamNo": 7,  "place": 4,  "kill": 1,  "total": 5,  "players": ["dmdcjwkd", "BARA", "Jinmo", "EEEing"] }
+      ]
+    },
+    {
+      "scrimDate": "2026-08-23",
+      "sheetFile": "20260823.png",
+      "teams": [
+        { "teamNo": 7,  "place": 20, "kill": 37, "total": 57, "players": ["HoDDu", "SPAM", "ttang", "purple"] },
+        { "teamNo": 14, "place": 17, "kill": 22, "total": 39, "players": ["Code", "JuHyuN", "Woo", "YeonDu"] },
+        { "teamNo": 3,  "place": 17, "kill": 20, "total": 37, "players": ["chlrh", "Eunking", "HaAng0_0", "EEEing"] },
+        { "teamNo": 2,  "place": 12, "kill": 23, "total": 35, "players": ["Emergency", "Mingo", "GE", "JaemoonE"] },
+        { "teamNo": 8,  "place": 15, "kill": 19, "total": 34, "players": ["Lapaz", "Chanbab", "meta", "DY91"] },
+        { "teamNo": 16, "place": 11, "kill": 22, "total": 33, "players": ["dmdcjwkd", "Thswm", "henm1n", "hattae"] },
+        { "teamNo": 15, "place": 8,  "kill": 21, "total": 29, "players": ["Dotnl", "0521", "Xavi-", "ZiDe-_-v"] },
+        { "teamNo": 5,  "place": 6,  "kill": 18, "total": 24, "players": ["2Z2Z", "wNgkdl", "JJOGI", "Jinmo"] },
+        { "teamNo": 10, "place": 4,  "kill": 12, "total": 16, "players": ["heungmini", "Gi-Man", "Cold-", "xijingping"] },
+        { "teamNo": 9,  "place": 1,  "kill": 13, "total": 14, "players": ["time-", "2pan4pan", "vir", "Hyuk9"] },
+        { "teamNo": 12, "place": 4,  "kill": 9,  "total": 13, "players": ["BX", "BINing-_o", "T1ger", "dmfkckck"] },
+        { "teamNo": 11, "place": 2,  "kill": 11, "total": 13, "players": ["Gimli", "Gomseung", "Rush", "Thugclub"] },
+        { "teamNo": 13, "place": 6,  "kill": 6,  "total": 12, "players": ["SHSH", "what9jihofan", "MANDUUUUU", "Jukatory"] },
+        { "teamNo": 1,  "place": 5,  "kill": 6,  "total": 11, "players": ["Jiney", "isfp", "Uang0_0", "Bambi"] },
+        { "teamNo": 4,  "place": 0,  "kill": 8,  "total": 8,  "players": ["JIGOD", "DanE", "yunsik98", "MIYO"] },
+        { "teamNo": 6,  "place": 0,  "kill": 7,  "total": 7,  "players": ["Ssn2", "Zzang9", "WY", "BUNNY"] }
+      ]
+    }
+  ]
+}

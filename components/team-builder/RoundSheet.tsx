@@ -204,8 +204,11 @@ export function RoundSheet({ rosterId }: { rosterId: string }) {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? '우승 확정에 실패했습니다.');
+      // 저장되는 건 우승팀만이 아니라 1~16위 전부다(0028) — 몇 팀·몇 명이
+      // 들어갔는지 같이 보여줘야 매칭이 덜 된 채로 확정한 걸 알아챌 수 있다.
       setPollMessage(
-        `종합우승 확정 — ${body.players.map(cleanName).join(' / ')} (${body.totalScore}점)`,
+        `종합우승 확정 — ${body.players.map(cleanName).join(' / ')} (${body.totalScore}점)` +
+          ` · 종합등수 ${body.savedTeams}팀 ${body.savedMembers}명 저장`,
       );
     } catch (err) {
       setPollMessage(err instanceof Error ? err.message : '우승 확정에 실패했습니다.');

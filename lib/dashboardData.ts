@@ -29,6 +29,15 @@ export function getRecentScrims(sessions: ScrimSession[], limit = 10): ScrimSess
 
 const KOREAN_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
+// 대시보드 칩처럼 칸이 좁은 곳에서 쓰는 짧은 표기 — '08-23(일)'.
+// 요일은 빼지 않는다: 이 클랜 내전은 목·일이 기본이라 요일이 곧 그 내전의 성격이고,
+// 즉석내전(2026-07-20 월, 07-25 토)은 요일이 붙어야 구분된다.
+export function formatChipDate(dateISO: string): string {
+  const [year, month, day] = dateISO.split('-').map(Number);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  return `${dateISO.slice(5)}(${KOREAN_WEEKDAYS[utcDate.getUTCDay()]})`;
+}
+
 export function formatScrimDate(dateISO: string): string {
   const [year, month, day] = dateISO.split('-').map(Number);
   const utcDate = new Date(Date.UTC(year, month - 1, day));

@@ -1,6 +1,12 @@
 // 스크린샷 시대(2026-02 ~ 05) 내전의 종합우승을 session_wins 에 넣는다.
 // 사용법: node scripts/import-session-wins.mjs [--dry-run] [data/session-winners.json]
 //
+// ⚠️ 0028 이후로 session_wins 는 더 이상 화면이 읽지 않는다. 우승 횟수
+// (member_win_counts)와 클랜원 화면의 종합등수는 session_standings 를 본다.
+// 이 스크립트를 다시 돌려도 트로피는 늘지 않는다 — 이미 넣은 것을 되짚는
+// 검산 근거로만 남겨둔 표다. 새 기록은 03 내전 시트의 "우승 확정" 버튼이
+// (app/api/scrim-roster/round-sheet/confirm-win) 1~16위째로 넣는다.
+//
 // 우승팀을 데이터에서 되짚을 수 없어서 사람이 시트를 읽어 넣는다 —
 // 탈퇴자 정리가 참가 기록을 행째로 지운 탓에 팀 킬 합계가 미달되고,
 // 총점 순위가 뒤집힌다(0027 마이그레이션 주석 참고). 실제로 17개 세션 중

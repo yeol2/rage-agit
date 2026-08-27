@@ -203,7 +203,18 @@ export function computeRoundSheet(
     rounds: roundsByTeam.get(teamNumber) ?? [],
   }));
 
-  rows.sort((a, b) => b.totalScore - a.totalScore);
+  // 총점이 같으면 순위점수(PLACE)가 높은 쪽이 위다 — 0027 주석이 적어둔 시트의
+  // 규칙이고, 2026-07-20 이 실제로 42점 동점에서 순위점수 17 대 16 으로 갈렸다
+  // (data/session-winners.json). 그것도 같으면 팀번호 순으로 둔다.
+  //
+  // 우승팀 하나만 볼 때는 동점이 나도 대개 티가 안 났지만, 0028 부터는 1~16
+  // 전부를 저장하므로 동점의 앞뒤가 그대로 기록에 남는다.
+  rows.sort(
+    (a, b) =>
+      b.totalScore - a.totalScore ||
+      b.totalPlacementPoints - a.totalPlacementPoints ||
+      a.teamNumber - b.teamNumber,
+  );
   rows.forEach((row, index) => {
     row.standing = index + 1;
   });

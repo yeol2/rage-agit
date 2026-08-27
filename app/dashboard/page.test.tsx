@@ -11,6 +11,13 @@ vi.mock('@/lib/rankingSnapshot', async (importOriginal) => ({
   fetchRankingSnapshots: vi.fn().mockResolvedValue([]),
 }));
 
+// 드롭다운에 쓰는 최근 내전 등수 — 이 테스트의 관심사가 아니라 조회만 막는다.
+vi.mock('@/lib/memberDashboard', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/memberDashboard')>()),
+  fetchRecentSessions: vi.fn().mockResolvedValue([]),
+  fetchSessionStandings: vi.fn().mockResolvedValue([]),
+}));
+
 // eslint-disable-next-line import/first
 import DashboardPage from './page';
 

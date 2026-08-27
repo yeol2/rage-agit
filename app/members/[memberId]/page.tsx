@@ -1,9 +1,15 @@
 import { notFound } from 'next/navigation';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
-import { AccessGate } from '@/components/members/AccessGate';
 import { Hexagon } from '@/components/members/Hexagon';
+import { MemberDashboard } from '@/components/members/MemberDashboard';
 import { WinTrophies } from '@/components/members/WinTrophies';
+import {
+  buildWindowStats,
+  fetchMemberStandings,
+  fetchRecentSessions,
+} from '@/lib/memberDashboard';
+import { fetchRankingStats } from '@/lib/rankingStats';
 import {
   MIN_GAMES_FOR_HEXAGON,
   buildHexagonAxes,
@@ -26,10 +32,20 @@ export default async function MemberDetailPage({
   const member = await fetchMember(params.memberId);
   if (!member) notFound();
 
-  const [stats, winCount] = await Promise.all([
+  const [stats, winCount, alltimeRows, recent16Rows, sessions, standings] = await Promise.all([
     fetchMemberRecentStats(member.id),
     fetchMemberWinCount(member.id),
+    fetchRankingStats('alltime'),
+    fetchRankingStats('recent16'),
+    fetchRecentSessions(),
+    fetchMemberStandings(member.id),
   ]);
+
+  const dashboardStats = {
+    alltime: buildWindowStats(member.id, alltimeRows),
+    recent16: buildWindowStats(member.id, recent16Rows),
+  };
+  const standingByDate = new Map(standings.map((row) => [row.scrimDate, row.standing]));
   const hasEnoughGames = stats !== null && stats.gameCount >= MIN_GAMES_FOR_HEXAGON;
 
   const tierGroup = tierGroupFor(member.tier);
@@ -40,32 +56,40 @@ export default async function MemberDetailPage({
   return (
     <main className="min-h-screen">
       <Nav />
-      <AccessGate>
-        <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
-          <div
-            className="mx-auto max-w-lg rounded-2xl border px-8 py-10 text-center"
-            style={{
-              background: `linear-gradient(160deg, ${ramp.from}1f, ${ramp.to}1f)`,
-              borderColor: `${ramp.from}66`,
-              boxShadow: `0 0 24px ${ramp.from}33`,
-            }}
-          >
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
-            </h1>
-            <p className="mt-2 text-sm text-menu">{member.tier}티어</p>
-            <WinTrophies count={winCount} />
+      <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
+        <div
+          className="mx-auto max-w-[880px] rounded-2xl border px-6 py-10 text-center sm:px-8"
+          style={{
+            background: `linear-gradient(160deg, ${ramp.from}1f, ${ramp.to}1f)`,
+            borderColor: `${ramp.from}66`,
+            boxShadow: `0 0 24px ${ramp.from}33`,
+          }}
+        >
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
+          </h1>
+          <p className="mt-2 text-sm text-menu">{member.tier}티어</p>
+          <WinTrophies count={winCount} />
 
-            <div className="mt-10 flex justify-center">
-              {axes ? (
-                <Hexagon axes={axes} />
-              ) : (
-                <p className="text-menu">{siteConfig.memberDirectory.insufficientDataMessage}</p>
-              )}
-            </div>
+          {/* 숫자를 먼저 보고 6각형으로 넘어가는 흐름 — 대시보드가 6각형 위에 온다. */}
+          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+            <MemberDashboard
+              stats={dashboardStats}
+              sessions={sessions}
+              standingByDate={standingByDate}
+              ramp={ramp}
+            />
           </div>
-        </section>
-      </AccessGate>
+
+          <div className="mt-10 flex justify-center">
+            {axes ? (
+              <Hexagon axes={axes} />
+            ) : (
+              <p className="text-menu">{siteConfig.memberDirectory.insufficientDataMessage}</p>
+            )}
+          </div>
+        </div>
+      </section>
       <Footer />
     </main>
   );

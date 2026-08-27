@@ -116,6 +116,39 @@ describe('computeRoundSheet', () => {
     ]);
   });
 
+  it('총점이 같으면 순위점수가 높은 쪽이 위다', () => {
+    // 2026-07-20 내전이 42점 동점에서 순위점수 17 대 16 으로 갈렸던 상황과 같은
+    // 구조다 — 킬로 벌어놓은 1팀과 등수로 벌어놓은 2팀이 총점만 같다.
+    const round1: TeamRoundResult[] = [
+      { teamNumber: 1, kills: 10, teamRank: 9 }, // 10 + 0 = 10
+      { teamNumber: 2, kills: 4, teamRank: 4 }, //   4 + 4 = 8
+    ];
+    const round2: TeamRoundResult[] = [
+      { teamNumber: 1, kills: 10, teamRank: 9 }, // 10 + 0 = 10, 누적 20 / 순위점수 0
+      { teamNumber: 2, kills: 6, teamRank: 2 }, //   6 + 6 = 12, 누적 20 / 순위점수 10
+    ];
+
+    const rows = computeRoundSheet([round1, round2], [1, 2]);
+    expect(rows.map((r) => [r.teamNumber, r.standing, r.totalScore, r.totalPlacementPoints])).toEqual([
+      [2, 1, 20, 10],
+      [1, 2, 20, 0],
+    ]);
+  });
+
+  it('총점과 순위점수가 모두 같으면 팀번호 순으로 둔다', () => {
+    const round: TeamRoundResult[] = [
+      { teamNumber: 3, kills: 5, teamRank: 4 },
+      { teamNumber: 1, kills: 5, teamRank: 4 },
+      { teamNumber: 2, kills: 5, teamRank: 4 },
+    ];
+    const rows = computeRoundSheet([round], [3, 1, 2]);
+    expect(rows.map((r) => [r.teamNumber, r.standing])).toEqual([
+      [1, 1],
+      [2, 2],
+      [3, 3],
+    ]);
+  });
+
   it('매칭 안 된 팀(kills/teamRank null)은 그 라운드 점수를 0으로 취급한다', () => {
     const round1: TeamRoundResult[] = [{ teamNumber: 1, kills: null, teamRank: null }];
     const rows = computeRoundSheet([round1], [1]);

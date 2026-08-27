@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
-import { AccessGate } from '@/components/members/AccessGate';
 import { MemberDirectory } from '@/components/members/MemberDirectory';
 import { fetchAllMembers } from '@/lib/memberStats';
 import { siteConfig } from '@/lib/siteConfig';
@@ -20,18 +19,16 @@ export default async function MembersPage() {
   return (
     <main className="min-h-screen">
       <Nav />
-      <AccessGate>
-        <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
-          <div className="flex items-center gap-4">
-            <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">{copy.eyebrow}</p>
-            <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
-          </div>
-          <h1 className="mt-6 text-3xl font-bold tracking-tight md:text-4xl">{copy.heading}</h1>
-          <div className="mt-10">
-            <MemberDirectory members={members} />
-          </div>
-        </section>
-      </AccessGate>
+      <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
+        <div className="flex items-center gap-4">
+          <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">{copy.eyebrow}</p>
+          <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
+        </div>
+        <h1 className="mt-6 text-3xl font-bold tracking-tight md:text-4xl">{copy.heading}</h1>
+        <div className="mt-10">
+          <MemberDirectory members={members} />
+        </div>
+      </section>
       <Footer />
     </main>
   );

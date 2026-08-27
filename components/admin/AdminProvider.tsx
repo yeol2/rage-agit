@@ -6,7 +6,7 @@ const STORAGE_KEY = 'rage-admin-unlocked';
 
 interface AdminContextValue {
   // 마운트 전(SSR)에는 로컬스토리지를 못 읽으므로 false로 시작한다 —
-  // AccessGate와 같은 이유로 하이드레이션 경고를 피한다.
+  // 서버와 첫 클라이언트 렌더가 어긋나 하이드레이션 경고가 나는 걸 피한다.
   isAdmin: boolean;
   login: (code: string) => boolean;
   logout: () => void;
