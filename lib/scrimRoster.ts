@@ -332,10 +332,19 @@ export async function fetchLatestRoster(): Promise<Roster | null> {
 
   // members(vip_rank) 는 member_id 외래키를 타고 오는 조인이다 — VIP 왕관을 띄울지
   // 판단하는 데만 쓴다. 수동 추가한 사람은 member_id 가 없어 자연스럽게 null 이 된다.
+  //
+  // 정렬을 명시하지 않으면 Postgres 가 행을 어떤 순서로 돌려줄지 보장이 없다 —
+  // 02 화면은 같은 티어 안에서 이 배열 순서로 동점자를 나열하므로, 관리자마다
+  // 페이지를 열 때 카드 줄이 달라 보이는 원인이었다. team-assignments/reroll/
+  // vip-sort 가 갱신된 명단을 돌려줄 때도 반드시 같은 기준(id)으로 정렬해야
+  // 한다 — 여기와 기준이 다르면 "팀 구성 누르기 전/후"에 순서가 또 바뀐다.
+  // discord_username 으로 정렬하고 싶어도 anon 키에는 그 칼럼 select 권한이
+  // 없어(0016) 못 쓴다 — 절대 안 바뀌는 id(PK)가 유일하게 항상 열려 있다.
   const { data: entriesData, error: entriesError } = await getFreshSupabase()
     .from('scrim_roster_entries')
     .select('id, discord_nickname, member_id, tier, tier_slot, matched, team_number, fixed, members(vip_rank)')
-    .eq('roster_id', rosterRow.id);
+    .eq('roster_id', rosterRow.id)
+    .order('id', { ascending: true });
   if (entriesError) throw new Error(`팀 구성 명단을 불러오지 못했습니다: ${entriesError.message}`);
 
   return {
