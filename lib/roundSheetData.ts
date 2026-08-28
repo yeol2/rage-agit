@@ -5,7 +5,7 @@ import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
 import {
   computeRoundSheet,
   computeTeamRoundResults,
-  deriveSquadsFromMatches,
+  squadsFromTeamIds,
   type MatchParticipantForSquads,
   type RoundParticipant,
   type RosterMemberForScoring,
@@ -23,6 +23,11 @@ export interface RoundSheetData {
   scrimDate: string | null;
   roundCount: number;
   teams: RoundSheetTeam[];
+  /**
+   * 세션 도중 team_id 가 바뀐 클랜원의 닉네임. 비어 있는 게 정상이다.
+   * 값이 있으면 팀 번호를 team_id 로 삼는 전제가 깨진 것이라 화면이 경고한다.
+   */
+  unstableTeamPlayers: string[];
 }
 
 /**
@@ -80,6 +85,7 @@ export async function buildRoundSheet(
       players: playersByTeam.get(row.teamNumber) ?? [],
       memberIds: [],
     })),
+    unstableTeamPlayers: [],
   });
 
   if (!session) return emptySheet();
@@ -104,10 +110,16 @@ export async function buildRoundSheet(
     teamId: number;
   }[][] = [];
   for (const match of matchRows) {
+    // 정렬을 명시하지 않으면 Postgres 가 행을 어떤 순서로 돌려줄지 보장이 없다
+    // (0030 에서 scrim_roster_entries 에 같은 이유로 order 를 붙였다). 실제로
+    // 이 표는 계획이 순차 스캔이냐 인덱스 스캔이냐에 따라 순서가 달라진다.
+    // 팀 번호는 이제 team_id 라 순서와 무관하지만, 팀 안에서 이름을 늘어놓는
+    // 순서(같은 티어끼리)는 여전히 이 배열 순서를 탄다.
     const { data: participantRows, error: participantsError } = await supabase
       .from('match_participants')
       .select('member_id, kills, team_rank, team_id')
-      .eq('pubg_match_id', match.pubg_match_id);
+      .eq('pubg_match_id', match.pubg_match_id)
+      .order('id', { ascending: true });
     if (participantsError) throw new Error('매치 참가자를 불러오지 못했습니다.');
     matchParticipants.push(
       (participantRows ?? []).map((row) => ({
@@ -120,13 +132,13 @@ export async function buildRoundSheet(
   }
 
   // "02 팀 구성 테이블"대로 안 하고 즉석에서 스쿼드를 짠 채로 내전을 치를 수도
-  // 있다 — team_number 로는 실제로 누가 누구랑 뛰었는지 알 수 없으므로, 매치에
-  // 실제 참가 기록이 있으면 계획(team_number) 대신 실제 PUBG team_id 로 되짚은
-  // 스쿼드를 쓴다. 계획대로 뛰었다면 결과가 같으므로 이쪽이 항상 더 정확하다.
+  // 있다 — 실제로 최근 세션은 계획한 team_number 와 실제로 뛴 팀이 거의 다
+  // 어긋났다. 그래서 계획이 아니라 PUBG 가 매긴 team_id 를 팀 번호로 쓴다.
+  // 계획대로 뛰었다면 결과가 같으므로 이쪽이 항상 더 정확하다.
   const squadsForMatches: MatchParticipantForSquads[][] = matchParticipants.map((participants) =>
     participants.map((p) => ({ memberId: p.memberId, teamId: p.teamId })),
   );
-  const squadByMemberId = deriveSquadsFromMatches(squadsForMatches);
+  const { squadByMemberId, unstableMemberIds } = squadsFromTeamIds(squadsForMatches);
   const squadNumbers = [...new Set(squadByMemberId.values())].sort((a, b) => a - b);
   const squadMembers: RosterMemberForScoring[] = [...squadByMemberId.entries()].map(
     ([memberId, teamNumber]) => ({ memberId, teamNumber }),
@@ -171,6 +183,9 @@ export async function buildRoundSheet(
   return {
     scrimDate,
     roundCount: roundsResults.length,
+    unstableTeamPlayers: unstableMemberIds.map(
+      (id) => nicknameByMemberId.get(id) ?? '(닉네임 정보 없음)',
+    ),
     teams: computeRoundSheet(roundsResults, squadNumbers).map((row) => {
       const memberIds = memberIdsBySquad.get(row.teamNumber) ?? [];
       return {

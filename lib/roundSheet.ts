@@ -84,81 +84,54 @@ export interface MatchParticipantForSquads {
   teamId: number;
 }
 
-// PUBG 의 team_id 는 매치마다 새로 매겨져서, 같은 4명이라도 라운드마다 다른
-// 번호를 받는다. "02 팀 구성 테이블"대로 안 하고 즉석에서 스쿼드를 짠 채로
-// 내전을 치른 경우 team_number 로는 실제로 누가 누구랑 뛰었는지 알 수 없다.
-// 그래서 라운드 전체에서 "누구랑 누가 몇 번이나 같은 팀이었는지"를 세어
-// 스쿼드를 되짚는다 — union-find로 합치되 PUBG 스쿼드 상한(4명)을 넘기면
-// 합치지 않는다. 자주 겹친 짝부터 먼저 합쳐야 안정적으로 뭉친다.
-export function deriveSquadsFromMatches(matches: MatchParticipantForSquads[][]): Map<string, number> {
-  const parent = new Map<string, string>();
-  const clusterSize = new Map<string, number>();
+export interface SquadAssignment {
+  /** 클랜원 → 그 사람이 뛴 팀 번호(PUBG team_id). */
+  squadByMemberId: Map<string, number>;
+  /**
+   * 한 세션 안에서 team_id 가 라운드마다 달랐던 사람들.
+   *
+   * 비어 있는 게 정상이다. 값이 있으면 아래 전제가 깨졌다는 뜻이므로 화면이
+   * 경고를 띄운다 — 조용히 틀린 시트를 보여주는 것보다 낫다.
+   */
+  unstableMemberIds: string[];
+}
 
-  function find(x: string): string {
-    let root = x;
-    while (parent.get(root) !== root) root = parent.get(root)!;
-    let cur = x;
-    while (parent.get(cur) !== root) {
-      const next = parent.get(cur)!;
-      parent.set(cur, root);
-      cur = next;
-    }
-    return root;
-  }
-
-  function union(a: string, b: string) {
-    const rootA = find(a);
-    const rootB = find(b);
-    if (rootA === rootB) return;
-    const combinedSize = (clusterSize.get(rootA) ?? 1) + (clusterSize.get(rootB) ?? 1);
-    if (combinedSize > 4) return; // PUBG 스쿼드는 최대 4명
-    parent.set(rootA, rootB);
-    clusterSize.set(rootB, combinedSize);
-  }
-
-  const firstSeenOrder: string[] = [];
-  const coOccurrence = new Map<string, number>();
-
-  for (const participants of matches) {
-    const byTeamId = new Map<number, string[]>();
-    for (const p of participants) {
-      if (p.memberId === null) continue;
-      if (!parent.has(p.memberId)) {
-        parent.set(p.memberId, p.memberId);
-        clusterSize.set(p.memberId, 1);
-        firstSeenOrder.push(p.memberId);
-      }
-      const list = byTeamId.get(p.teamId) ?? [];
-      list.push(p.memberId);
-      byTeamId.set(p.teamId, list);
-    }
-    for (const members of byTeamId.values()) {
-      for (let i = 0; i < members.length; i++) {
-        for (let j = i + 1; j < members.length; j++) {
-          const key = [members[i], members[j]].sort().join('|');
-          coOccurrence.set(key, (coOccurrence.get(key) ?? 0) + 1);
-        }
-      }
-    }
-  }
-
-  const pairsByFrequency = [...coOccurrence.entries()].sort((a, b) => b[1] - a[1]);
-  for (const [key] of pairsByFrequency) {
-    const [a, b] = key.split('|');
-    union(a, b);
-  }
-
-  const squadNumberByRoot = new Map<string, number>();
+/**
+ * 라운드별 참가 기록에서 스쿼드를 뽑는다. 번호는 PUBG 가 매긴 team_id 를 그대로 쓴다.
+ *
+ * 전제: 한 세션(4라운드) 동안 team_id 는 안 바뀐다. 실측으로 확인했다 —
+ * 2026-08-01 이후 7세션에서 team_id 로 묶으면 늘 16팀 × 정확히 4명이고,
+ * 라운드 사이에 번호가 바뀐 사람은 0명이다.
+ *
+ * 그 전(~2026-07-25)에는 라운드마다 번호가 새로 매겨져서, 같은 방식으로 묶으면
+ * 한 팀에 7~16명이 들어갔다. 그래서 예전에는 "누가 누구랑 몇 번이나 같은
+ * 팀이었나"를 세어 되짚었는데(union-find), 그러면 번호를 새로 지어내야 하고
+ * 그 번호가 행이 도착한 순서에 따라 달라졌다 — 같은 경기인데 보는 사람마다
+ * (#01)이 (#16)으로 보일 수 있었다. team_id 를 그대로 쓰면 그 문제가 사라지고,
+ * 덤으로 시트의 팀 번호가 사람들이 게임 안에서 본 번호와 일치한다.
+ *
+ * 선수 교체로 한 팀에 5명 이상이 매핑될 수 있다. 그건 정상이다 —
+ * 라운드별 점수는 그 판에 실제로 뛴 사람만 더하므로(computeTeamRoundResults)
+ * 합계가 부풀지 않는다.
+ */
+export function squadsFromTeamIds(matches: MatchParticipantForSquads[][]): SquadAssignment {
   const squadByMemberId = new Map<string, number>();
-  for (const memberId of firstSeenOrder) {
-    const root = find(memberId);
-    if (!squadNumberByRoot.has(root)) {
-      squadNumberByRoot.set(root, squadNumberByRoot.size + 1);
+  const unstableMemberIds: string[] = [];
+
+  // 라운드 순서대로(matches 는 played_at 오름차순) 돌면서 처음 본 번호를 쓴다.
+  for (const participants of matches) {
+    for (const { memberId, teamId } of participants) {
+      if (memberId === null) continue; // 미등록 참가자는 시트에 안 올라간다
+      const existing = squadByMemberId.get(memberId);
+      if (existing === undefined) {
+        squadByMemberId.set(memberId, teamId);
+      } else if (existing !== teamId && !unstableMemberIds.includes(memberId)) {
+        unstableMemberIds.push(memberId);
+      }
     }
-    squadByMemberId.set(memberId, squadNumberByRoot.get(root)!);
   }
 
-  return squadByMemberId;
+  return { squadByMemberId, unstableMemberIds };
 }
 
 // 라운드별(매치 순서대로) 팀 결과를 받아 누적 킬/배치점수/Total과 최종 순위

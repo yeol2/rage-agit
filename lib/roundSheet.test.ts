@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   computeRoundSheet,
   computeTeamRoundResults,
-  deriveSquadsFromMatches,
+  squadsFromTeamIds,
   placementPoints,
   type MatchParticipantForSquads,
   type RosterMemberForScoring,
@@ -162,46 +162,59 @@ describe('computeRoundSheet', () => {
   });
 });
 
-describe('deriveSquadsFromMatches', () => {
-  it('라운드마다 team_id 가 달라도 같이 뛴 4명을 한 스쿼드로 묶는다', () => {
+describe('squadsFromTeamIds', () => {
+  it('PUBG 가 매긴 team_id 를 그대로 팀 번호로 쓴다', () => {
     const matches: MatchParticipantForSquads[][] = [
       [
-        { memberId: 'a', teamId: 5 },
-        { memberId: 'b', teamId: 5 },
-        { memberId: 'c', teamId: 9 },
-        { memberId: 'd', teamId: 9 },
+        { memberId: 'a', teamId: 7 },
+        { memberId: 'b', teamId: 7 },
+        { memberId: 'c', teamId: 3 },
       ],
+    ];
+    const { squadByMemberId, unstableMemberIds } = squadsFromTeamIds(matches);
+    expect(squadByMemberId.get('a')).toBe(7);
+    expect(squadByMemberId.get('b')).toBe(7);
+    expect(squadByMemberId.get('c')).toBe(3);
+    expect(unstableMemberIds).toEqual([]);
+  });
+
+  // 예전 union-find 방식이 못 지키던 것 — 같은 경기인데 행이 도착한 순서가
+  // 달라지면 팀 번호가 통째로 뒤집혔다. team_id 를 쓰면 순서를 안 탄다.
+  it('행 순서가 뒤집혀도 팀 번호가 같다', () => {
+    const round: MatchParticipantForSquads[] = [
+      { memberId: 'a', teamId: 1 },
+      { memberId: 'b', teamId: 1 },
+      { memberId: 'c', teamId: 16 },
+      { memberId: 'd', teamId: 16 },
+    ];
+    const forward = squadsFromTeamIds([round]);
+    const reversed = squadsFromTeamIds([[...round].reverse()]);
+    expect([...forward.squadByMemberId].sort()).toEqual([...reversed.squadByMemberId].sort());
+  });
+
+  it('세션 도중 team_id 가 바뀐 사람을 알려준다', () => {
+    const matches: MatchParticipantForSquads[][] = [
+      [{ memberId: 'a', teamId: 5 }],
+      [{ memberId: 'a', teamId: 9 }], // 2라운드에 다른 번호
+    ];
+    const { squadByMemberId, unstableMemberIds } = squadsFromTeamIds(matches);
+    expect(squadByMemberId.get('a')).toBe(5); // 1라운드 번호를 쓴다
+    expect(unstableMemberIds).toEqual(['a']);
+  });
+
+  it('선수 교체로 한 팀이 4명을 넘어도 그대로 둔다', () => {
+    const matches: MatchParticipantForSquads[][] = [
       [
         { memberId: 'a', teamId: 2 },
         { memberId: 'b', teamId: 2 },
-        { memberId: 'c', teamId: 7 },
-        { memberId: 'd', teamId: 7 },
+        { memberId: 'c', teamId: 2 },
+        { memberId: 'd', teamId: 2 },
       ],
+      [{ memberId: 'e', teamId: 2 }], // 2라운드에 교체 투입
     ];
-    const squads = deriveSquadsFromMatches(matches);
-    expect(squads.get('a')).toBe(squads.get('b'));
-    expect(squads.get('c')).toBe(squads.get('d'));
-    expect(squads.get('a')).not.toBe(squads.get('c'));
-  });
-
-  it('한 스쿼드는 4명을 넘지 못한다', () => {
-    const matches: MatchParticipantForSquads[][] = [
-      [
-        { memberId: 'a', teamId: 1 },
-        { memberId: 'b', teamId: 1 },
-        { memberId: 'c', teamId: 1 },
-        { memberId: 'd', teamId: 1 },
-        { memberId: 'e', teamId: 1 }, // 5명(비정상 데이터) — 그래도 4명 상한은 지킨다
-      ],
-    ];
-    const squads = deriveSquadsFromMatches(matches);
-    const counts = new Map<number, number>();
-    for (const squadNumber of squads.values()) {
-      counts.set(squadNumber, (counts.get(squadNumber) ?? 0) + 1);
-    }
-    for (const count of counts.values()) {
-      expect(count).toBeLessThanOrEqual(4);
-    }
+    const { squadByMemberId, unstableMemberIds } = squadsFromTeamIds(matches);
+    expect(squadByMemberId.get('e')).toBe(2);
+    expect(unstableMemberIds).toEqual([]);
   });
 
   it('member_id 가 null 인 참가자는 무시한다', () => {
@@ -211,8 +224,9 @@ describe('deriveSquadsFromMatches', () => {
         { memberId: 'a', teamId: 1 },
       ],
     ];
-    const squads = deriveSquadsFromMatches(matches);
-    expect(squads.size).toBe(1);
-    expect(squads.get('a')).toBe(1);
+    const { squadByMemberId } = squadsFromTeamIds(matches);
+    expect(squadByMemberId.size).toBe(1);
+    expect(squadByMemberId.get('a')).toBe(1);
   });
 });
+

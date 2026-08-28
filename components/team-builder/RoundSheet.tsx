@@ -24,6 +24,11 @@ interface RoundSheetTeam {
 interface RoundSheetResponse {
   roundCount: number;
   teams: RoundSheetTeam[];
+  /**
+   * 세션 도중 PUBG 팀 번호가 바뀐 사람. 팀 번호를 team_id 로 삼는 전제가
+   * 깨졌다는 뜻이라, 조용히 이상한 시트를 보여주지 않고 여기서 알린다.
+   */
+  unstableTeamPlayers?: string[];
 }
 
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
@@ -238,8 +243,17 @@ export function RoundSheet({
   // 온 라운드는 "-"로 비워둔 채, 폴링될 때마다 그 칸이 채워지는 방식.
   const rounds = [1, 2, 3, 4] as const;
 
+  const unstable = data.unstableTeamPlayers ?? [];
+
   return (
     <div>
+      {unstable.length > 0 && (
+        <p className="mb-4 rounded-md border border-amber-400/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+          팀 번호가 라운드 중간에 바뀐 사람이 있습니다 ({unstable.map(cleanName).join(', ')}).
+          시트는 1라운드 번호를 기준으로 그렸으니, 이 팀들의 점수는 확정 전에 한 번
+          확인해주세요.
+        </p>
+      )}
       <div className="overflow-x-auto">
         <table
           aria-label="내전 시트"

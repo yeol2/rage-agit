@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     const sheet = await buildRoundSheet(getSupabaseServer(), rosterId);
     return NextResponse.json({
       roundCount: sheet.roundCount,
+      unstableTeamPlayers: sheet.unstableTeamPlayers,
       // memberIds 는 우승 확정(confirm-win)이 서버에서 쓰는 값이라 내보내지 않는다.
       teams: sheet.teams.map(({ memberIds: _memberIds, ...team }) => team),
     });
