@@ -34,8 +34,8 @@ const planned = [];
 // 시트 이름은 Ez_ 접두사가 없고 대소문자·기호가 흔들린다.
 const norm = (v) => v.toLowerCase().replace(/^ezb?_/, '').replace(/[^a-z0-9]/g, '');
 
-// 이름 맞추기는 두 단계다. import-session-wins.mjs 는 처음부터 접두사로 맞췄는데,
-// 그 규칙만 쓰면 실제로 다른 사람끼리 붙는다 —
+// 이름 맞추기는 두 단계다. 앞선 우승 임포터(0032 에서 session_wins 와 함께
+// 지웠다)는 처음부터 접두사로 맞췄는데, 그 규칙만 쓰면 다른 사람끼리 붙는다 —
 //   Ez_Zzang9 ⊂ Ez_Zzang9FanT, Ez_JuHyuN ⊂ Ez_Juhyunping, Ez_Rin ⊂ Ez_rindA.
 // 그래서 정확히 같은 이름을 먼저 찾고, 없을 때만 접두사로 넓힌다 (시트는 칸이 좁아
 // 줄여 적거나 늘여 적는다: GarlicDPS → Garlic, MANDU → MANDUUUUU).
