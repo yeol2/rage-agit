@@ -22,7 +22,7 @@ function row(overrides: Partial<MemberRecentStatsRow>): MemberRecentStatsRow {
     gameCount: 10,
     avgDamage: 200,
     avgKills: 2,
-    headshotRatio: 0.3,
+    rankStddev: 3,
     avgSurvival: 1200,
     avgAssists: 1,
     avgRank: 5,
@@ -82,16 +82,16 @@ describe('percentile', () => {
 });
 
 describe('buildHexagonAxes', () => {
-  const target = row({ avgDamage: 200, avgKills: 2, headshotRatio: 0.3, avgSurvival: 1200, avgAssists: 1, avgRank: 5 });
+  const target = row({ avgDamage: 200, avgKills: 2, rankStddev: 2, avgSurvival: 1200, avgAssists: 1, avgRank: 5 });
   const cohort = [
     target,
-    row({ memberId: 'm-2', avgDamage: 100, avgKills: 1, headshotRatio: 0.1, avgSurvival: 600, avgAssists: 0, avgRank: 10 }),
+    row({ memberId: 'm-2', avgDamage: 100, avgKills: 1, rankStddev: 5, avgSurvival: 600, avgAssists: 0, avgRank: 10 }),
   ];
 
   it('6축을 정해진 순서와 라벨로 낸다', () => {
     const axes = buildHexagonAxes(target, cohort);
-    expect(axes.map((a) => a.key)).toEqual(['damage', 'kills', 'headshot', 'survival', 'assists', 'rank']);
-    expect(axes.map((a) => a.label)).toEqual(['딜량', '킬', '헤드샷', '생존', '어시', '순위']);
+    expect(axes.map((a) => a.key)).toEqual(['damage', 'kills', 'stability', 'survival', 'assists', 'rank']);
+    expect(axes.map((a) => a.label)).toEqual(['딜량', '킬', '안정성', '생존', '어시', '순위']);
   });
 
   it('본인이 코호트 중 전부 앞서면 모든 축이 100', () => {
@@ -99,32 +99,32 @@ describe('buildHexagonAxes', () => {
     expect(axes.every((a) => a.percentile === 100)).toBe(true);
   });
 
-  it('headshotRatio 가 null 인 코호트 구성원은 정확도 비교 대상에서 뺀다', () => {
-    const withNull = [...cohort, row({ memberId: 'm-3', headshotRatio: null })];
+  it('rankStddev 가 null 인 코호트 구성원은 안정성 비교 대상에서 뺀다', () => {
+    const withNull = [...cohort, row({ memberId: 'm-3', rankStddev: null })];
     const axes = buildHexagonAxes(target, withNull);
-    const headshotAxis = axes.find((a) => a.key === 'headshot')!;
-    expect(headshotAxis.percentile).toBe(100); // null 이 낀 것과 무관하게 그대로
+    const stabilityAxis = axes.find((a) => a.key === 'stability')!;
+    expect(stabilityAxis.percentile).toBe(100); // null 이 낀 것과 무관하게 그대로
   });
 
-  it('본인의 headshotRatio 가 null 이면 정확도는 0', () => {
-    const nullTarget = row({ headshotRatio: null });
+  it('본인의 rankStddev 가 null 이면 안정성은 0', () => {
+    const nullTarget = row({ rankStddev: null });
     const axes = buildHexagonAxes(nullTarget, [nullTarget, ...cohort]);
-    expect(axes.find((a) => a.key === 'headshot')!.percentile).toBe(0);
+    expect(axes.find((a) => a.key === 'stability')!.percentile).toBe(0);
   });
 
   it('코호트 평균도 같은 코호트 안에서 백분위로 낸다', () => {
     // damage=[200,100] 평균 150 → 150 이하인 값은 100 하나뿐이니 2명 중 1명 = 50%.
-    // rank 는 낮을수록 좋으므로 방향이 뒤집힌다: [5,10] 평균 7.5 → 7.5 이상인
+    // rank·안정성은 낮을수록 좋으므로 방향이 뒤집힌다: [5,10] 평균 7.5 → 7.5 이상인
     // 값은 10 하나뿐 = 50%. 우연히 다 50%가 나오는 대칭 표본으로 골랐다.
     const axes = buildHexagonAxes(target, cohort);
     expect(axes.every((a) => a.averagePercentile === 50)).toBe(true);
   });
 
-  it('null 인 headshotRatio 는 평균 계산에서도 빠진다', () => {
-    const withNull = [...cohort, row({ memberId: 'm-3', headshotRatio: null })];
+  it('null 인 rankStddev 는 평균 계산에서도 빠진다', () => {
+    const withNull = [...cohort, row({ memberId: 'm-3', rankStddev: null })];
     const axes = buildHexagonAxes(target, withNull);
-    // withNull 이 추가돼도 헤드샷 평균은 [0.3, 0.1] 기준 그대로라 50%.
-    expect(axes.find((a) => a.key === 'headshot')!.averagePercentile).toBe(50);
+    // withNull 이 추가돼도 안정성 평균은 [2, 5] 기준 그대로라 50%.
+    expect(axes.find((a) => a.key === 'stability')!.averagePercentile).toBe(50);
   });
 });
 

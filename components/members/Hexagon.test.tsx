@@ -8,7 +8,7 @@ afterEach(cleanup);
 const axes: HexagonAxis[] = [
   { key: 'damage', label: '딜량', percentile: 80, averagePercentile: 55 },
   { key: 'kills', label: '킬', percentile: 60, averagePercentile: 45 },
-  { key: 'headshot', label: '헤드샷', percentile: 40, averagePercentile: 50 },
+  { key: 'stability', label: '안정성', percentile: 40, averagePercentile: 50 },
   { key: 'survival', label: '생존', percentile: 90, averagePercentile: 60 },
   { key: 'assists', label: '어시', percentile: 20, averagePercentile: 35 },
   { key: 'rank', label: '순위', percentile: 70, averagePercentile: 50 },

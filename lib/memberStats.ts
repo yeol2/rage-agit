@@ -9,7 +9,8 @@ export interface MemberRecentStatsRow {
   gameCount: number;
   avgDamage: number;
   avgKills: number;
-  headshotRatio: number | null;
+  /** 최근 창 안에서 팀등수가 얼마나 흔들렸나(표본표준편차). 작을수록 안정적. */
+  rankStddev: number | null;
   avgSurvival: number;
   avgAssists: number;
   avgRank: number;
@@ -176,14 +177,14 @@ export function percentile(value: number, cohortValues: number[], higherIsBetter
   return Math.round((count / pool.length) * 100);
 }
 
-export type HexagonAxisKey = 'damage' | 'kills' | 'headshot' | 'survival' | 'assists' | 'rank';
+export type HexagonAxisKey = 'damage' | 'kills' | 'stability' | 'survival' | 'assists' | 'rank';
 
 // 대시보드 경기 표(ScrimSessionRow)가 이미 쓰는 용어와 맞춘다 —
 // '화력'·'결정력' 같은 추상적인 말보다 딜량·킬 그대로가 더 직관적이다.
 export const HEXAGON_AXIS_LABELS: Record<HexagonAxisKey, string> = {
   damage: '딜량',
   kills: '킬',
-  headshot: '헤드샷',
+  stability: '안정성',
   survival: '생존',
   assists: '어시',
   rank: '순위',
@@ -219,10 +220,11 @@ export function buildHexagonAxes(
   target: MemberRecentStatsRow,
   cohort: MemberRecentStatsRow[],
 ): HexagonAxis[] {
-  // 헤드샷 비율이 없는 사람(킬이 0인 채로 4경기 이상 뛴 경우)은 정확도
-  // 비교 대상에서 뺀다 — null 을 숫자로 잘못 취급하면 백분위가 틀어진다.
-  const headshotPool = cohort
-    .map((c) => c.headshotRatio)
+  // 안정성이 없는 사람(경기가 하나뿐이라 표준편차가 안 나오는 경우)은 비교
+  // 대상에서 뺀다 — null 을 숫자로 잘못 취급하면 백분위가 틀어진다. 6각형은
+  // 4경기부터 그리므로 실제로는 거의 없다.
+  const stabilityPool = cohort
+    .map((c) => c.rankStddev)
     .filter((v): v is number => v !== null);
 
   return [
@@ -237,10 +239,13 @@ export function buildHexagonAxes(
       ...axisPercentiles(target.avgKills, cohort.map((c) => c.avgKills), true),
     },
     {
-      key: 'headshot',
-      label: HEXAGON_AXIS_LABELS.headshot,
-      percentile: target.headshotRatio === null ? 0 : percentile(target.headshotRatio, headshotPool, true),
-      averagePercentile: percentile(average(headshotPool), headshotPool, true),
+      // 등수 축과 같이 **작은 값이 좋은 쪽**이다(higherIsBetter = false).
+      // 편차가 작다는 건 그날그날 결과가 덜 흔들린다는 뜻이다.
+      key: 'stability',
+      label: HEXAGON_AXIS_LABELS.stability,
+      percentile:
+        target.rankStddev === null ? 0 : percentile(target.rankStddev, stabilityPool, false),
+      averagePercentile: percentile(average(stabilityPool), stabilityPool, false),
     },
     {
       key: 'survival',
@@ -315,7 +320,7 @@ function toStatsRow(row: {
   game_count: number;
   avg_damage: number;
   avg_kills: number;
-  headshot_ratio: number | null;
+  rank_stddev: number | null;
   avg_survival: number;
   avg_assists: number;
   avg_rank: number;
@@ -326,7 +331,7 @@ function toStatsRow(row: {
     gameCount: row.game_count,
     avgDamage: Number(row.avg_damage),
     avgKills: Number(row.avg_kills),
-    headshotRatio: row.headshot_ratio === null ? null : Number(row.headshot_ratio),
+    rankStddev: row.rank_stddev === null ? null : Number(row.rank_stddev),
     avgSurvival: Number(row.avg_survival),
     avgAssists: Number(row.avg_assists),
     avgRank: Number(row.avg_rank),
@@ -336,7 +341,7 @@ function toStatsRow(row: {
 export async function fetchMemberRecentStats(memberId: string): Promise<MemberRecentStatsRow | null> {
   const { data, error } = await getSupabase()
     .from('member_recent_stats')
-    .select('member_id, tier, game_count, avg_damage, avg_kills, headshot_ratio, avg_survival, avg_assists, avg_rank')
+    .select('member_id, tier, game_count, avg_damage, avg_kills, avg_survival, avg_assists, avg_rank, rank_stddev')
     .eq('member_id', memberId)
     .maybeSingle();
   if (error) throw new Error(`최근 전적을 불러오지 못했습니다: ${error.message}`);
@@ -351,7 +356,7 @@ export async function fetchMemberRecentStats(memberId: string): Promise<MemberRe
 export async function fetchTierCohortStats(tiers: number[]): Promise<MemberRecentStatsRow[]> {
   const { data, error } = await getSupabase()
     .from('member_recent_stats')
-    .select('member_id, tier, game_count, avg_damage, avg_kills, headshot_ratio, avg_survival, avg_assists, avg_rank')
+    .select('member_id, tier, game_count, avg_damage, avg_kills, avg_survival, avg_assists, avg_rank, rank_stddev')
     .in('tier', tiers)
     .gte('game_count', MIN_GAMES_FOR_HEXAGON);
   if (error) throw new Error(`티어 그룹 전적을 불러오지 못했습니다: ${error.message}`);

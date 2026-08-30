@@ -64,7 +64,7 @@ const stats = {
   gameCount: 10,
   avgDamage: 200,
   avgKills: 2,
-  headshotRatio: 0.3,
+  rankStddev: 3,
   avgSurvival: 1200,
   avgAssists: 1,
   avgRank: 5,
