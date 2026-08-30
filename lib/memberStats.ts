@@ -2,6 +2,9 @@
 // 여기 있는 함수들은 Supabase 없이 테스트한다.
 
 import { getSupabase } from './supabaseBrowser';
+// 축 값을 도형 위 위치로 옮기는 자를 클랜원 대시보드의 막대와 공유한다 —
+// 아래 axisPercent 주석 참고.
+import { centeredPercent, mean, stddev } from './memberDashboard';
 
 export interface MemberRecentStatsRow {
   memberId: string;
@@ -163,20 +166,6 @@ export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
   };
 }
 
-// value 가 cohortValues 안에서 몇 번째 백분위인지. 자기 자신도 비교 대상에 포함된다
-// (표본이 자기 혼자면 100이 나오는데, 이건 의도된 동작이다).
-//
-// higherIsBetter=false 인 축(등수)은 방향을 뒤집는다 — "나보다 등수가 나쁜(숫자가 큰)
-// 사람이 몇 명인가"를 센다.
-export function percentile(value: number, cohortValues: number[], higherIsBetter: boolean): number {
-  const pool = cohortValues.filter((v) => Number.isFinite(v));
-  if (pool.length === 0) return 0;
-  const count = higherIsBetter
-    ? pool.filter((v) => v <= value).length
-    : pool.filter((v) => v >= value).length;
-  return Math.round((count / pool.length) * 100);
-}
-
 export type HexagonAxisKey = 'damage' | 'kills' | 'stability' | 'survival' | 'assists' | 'rank';
 
 // 대시보드 경기 표(ScrimSessionRow)가 이미 쓰는 용어와 맞춘다 —
@@ -190,79 +179,98 @@ export const HEXAGON_AXIS_LABELS: Record<HexagonAxisKey, string> = {
   rank: '순위',
 };
 
+// 6각형 축 하나. 도형 위 위치와 툴팁에 적을 실제 값을 같이 들고 있다.
 export interface HexagonAxis {
   key: HexagonAxisKey;
   label: string;
-  percentile: number;
-  // 코호트 평균이 같은 코호트 안에서 몇 번째 백분위인지. 본인 도형(실선)
-  // 옆에 점선으로 겹쳐 그려서 "나는 평균보다 위인가 아래인가"를 보여준다.
-  averagePercentile: number;
+  /** 도형에서 이 축의 위치(%). 4~96 사이. */
+  percent: number;
+  /** 내 값을 사람이 읽는 형태로. 툴팁이 그대로 적는다. */
+  valueText: string;
+  /** 티어 그룹 평균값. 〃 */
+  averageText: string;
 }
 
-function average(values: number[]): number {
-  const pool = values.filter((v) => Number.isFinite(v));
-  if (pool.length === 0) return 0;
-  return pool.reduce((sum, v) => sum + v, 0) / pool.length;
-}
+// 티어 그룹 평균이 놓이는 자리. **모든 축에서 같은 값**이라 평균 도형이 정확한
+// 정육각형이 된다.
+//
+// 예전에는 축마다 "평균이 그 그룹 안에서 몇 번째 백분위인가"를 따로 구해서 찍었다.
+// 그러면 분포가 한쪽으로 쏠린 축(딜량처럼 상위 몇 명이 평균을 끌어올리는 축)은
+// 평균이 45번째, 고른 축은 52번째에 찍혀서 점선이 찌그러진 육각형이 됐다. 같은
+// "평균"인데 축마다 다른 반지름에 있으면 안팎을 눈으로 비교할 수가 없다.
+export const HEXAGON_AVERAGE_PERCENT = 50;
 
-function axisPercentiles(
-  targetValue: number,
+// 축 값을 도형 위 위치로 옮기는 자는 클랜원 대시보드의 막대와 같은 것을 쓴다
+// (lib/memberDashboard.ts 의 centeredPercent) — 그룹 평균이 언제나 한가운데고,
+// 거기서 몇 표준편차 떨어졌는지로 안팎이 정해진다. 같은 화면에 있는 두 그림이
+// 다른 자를 쓰면 "가운데보다 바깥"이라는 말이 두 뜻을 갖는다.
+function axisPercent(
+  value: number,
   cohortValues: number[],
   higherIsBetter: boolean,
-): { percentile: number; averagePercentile: number } {
+): { percent: number; average: number } {
+  const pool = cohortValues.filter((v) => Number.isFinite(v));
+  const average = mean(pool);
   return {
-    percentile: percentile(targetValue, cohortValues, higherIsBetter),
-    averagePercentile: percentile(average(cohortValues), cohortValues, higherIsBetter),
+    percent: centeredPercent(value, average, stddev(pool, average), higherIsBetter),
+    average,
   };
 }
+
+// 툴팁에 적을 형식. 축마다 단위와 자릿수가 다르다.
+const AXIS_FORMAT: Record<HexagonAxisKey, (value: number) => string> = {
+  damage: (v) => `${Math.round(v)}딜`,
+  kills: (v) => `${v.toFixed(2)}킬`,
+  // 안정성은 등수의 표준편차라 단위가 '등'이다 — 낮을수록 덜 흔들린다.
+  stability: (v) => `±${v.toFixed(2)}등`,
+  survival: (v) => `${(v / 60).toFixed(1)}분`,
+  assists: (v) => `${v.toFixed(2)}어시`,
+  rank: (v) => `${v.toFixed(1)}등`,
+};
+
 
 export function buildHexagonAxes(
   target: MemberRecentStatsRow,
   cohort: MemberRecentStatsRow[],
 ): HexagonAxis[] {
   // 안정성이 없는 사람(경기가 하나뿐이라 표준편차가 안 나오는 경우)은 비교
-  // 대상에서 뺀다 — null 을 숫자로 잘못 취급하면 백분위가 틀어진다. 6각형은
+  // 대상에서 뺀다 — null 을 숫자로 잘못 취급하면 축이 통째로 틀어진다. 6각형은
   // 4경기부터 그리므로 실제로는 거의 없다.
   const stabilityPool = cohort
     .map((c) => c.rankStddev)
     .filter((v): v is number => v !== null);
 
+  const build = (
+    key: HexagonAxisKey,
+    value: number | null,
+    pool: number[],
+    higherIsBetter: boolean,
+  ): HexagonAxis => {
+    const { percent, average } = axisPercent(value ?? average0(pool), pool, higherIsBetter);
+    return {
+      key,
+      label: HEXAGON_AXIS_LABELS[key],
+      // 값이 없으면 도형을 부풀리지도 쭈그러뜨리지도 않게 평균 자리에 놓는다.
+      percent: value === null ? HEXAGON_AVERAGE_PERCENT : percent,
+      valueText: value === null ? '기록 없음' : AXIS_FORMAT[key](value),
+      averageText: AXIS_FORMAT[key](average),
+    };
+  };
+
   return [
-    {
-      key: 'damage',
-      label: HEXAGON_AXIS_LABELS.damage,
-      ...axisPercentiles(target.avgDamage, cohort.map((c) => c.avgDamage), true),
-    },
-    {
-      key: 'kills',
-      label: HEXAGON_AXIS_LABELS.kills,
-      ...axisPercentiles(target.avgKills, cohort.map((c) => c.avgKills), true),
-    },
-    {
-      // 등수 축과 같이 **작은 값이 좋은 쪽**이다(higherIsBetter = false).
-      // 편차가 작다는 건 그날그날 결과가 덜 흔들린다는 뜻이다.
-      key: 'stability',
-      label: HEXAGON_AXIS_LABELS.stability,
-      percentile:
-        target.rankStddev === null ? 0 : percentile(target.rankStddev, stabilityPool, false),
-      averagePercentile: percentile(average(stabilityPool), stabilityPool, false),
-    },
-    {
-      key: 'survival',
-      label: HEXAGON_AXIS_LABELS.survival,
-      ...axisPercentiles(target.avgSurvival, cohort.map((c) => c.avgSurvival), true),
-    },
-    {
-      key: 'assists',
-      label: HEXAGON_AXIS_LABELS.assists,
-      ...axisPercentiles(target.avgAssists, cohort.map((c) => c.avgAssists), true),
-    },
-    {
-      key: 'rank',
-      label: HEXAGON_AXIS_LABELS.rank,
-      ...axisPercentiles(target.avgRank, cohort.map((c) => c.avgRank), false),
-    },
+    build('damage', target.avgDamage, cohort.map((c) => c.avgDamage), true),
+    build('kills', target.avgKills, cohort.map((c) => c.avgKills), true),
+    // 안정성은 등수 편차라 **작을수록 좋다** — 순위 축과 같은 방향이다.
+    build('stability', target.rankStddev, stabilityPool, false),
+    build('survival', target.avgSurvival, cohort.map((c) => c.avgSurvival), true),
+    build('assists', target.avgAssists, cohort.map((c) => c.avgAssists), true),
+    build('rank', target.avgRank, cohort.map((c) => c.avgRank), false),
   ];
+}
+
+// 값이 없는 축의 자리표시자 — 평균을 넣어 percent 계산이 NaN 으로 번지지 않게 한다.
+function average0(pool: number[]): number {
+  return mean(pool.filter((v) => Number.isFinite(v)));
 }
 
 export interface MemberSummary {

@@ -1,17 +1,23 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Hexagon, pointFor, polygonPoints } from './Hexagon';
 import type { HexagonAxis } from '@/lib/memberStats';
 
 afterEach(cleanup);
 
+const axis = (
+  key: HexagonAxis['key'],
+  label: string,
+  percent: number,
+): HexagonAxis => ({ key, label, percent, valueText: `${percent}값`, averageText: '평균값' });
+
 const axes: HexagonAxis[] = [
-  { key: 'damage', label: '딜량', percentile: 80, averagePercentile: 55 },
-  { key: 'kills', label: '킬', percentile: 60, averagePercentile: 45 },
-  { key: 'stability', label: '안정성', percentile: 40, averagePercentile: 50 },
-  { key: 'survival', label: '생존', percentile: 90, averagePercentile: 60 },
-  { key: 'assists', label: '어시', percentile: 20, averagePercentile: 35 },
-  { key: 'rank', label: '순위', percentile: 70, averagePercentile: 50 },
+  axis('damage', '딜량', 80),
+  axis('kills', '킬', 60),
+  axis('stability', '안정성', 40),
+  axis('survival', '생존', 90),
+  axis('assists', '어시', 20),
+  axis('rank', '순위', 70),
 ];
 
 describe('pointFor', () => {
@@ -53,7 +59,7 @@ describe('Hexagon', () => {
 
   it('접근성을 위한 role과 라벨을 갖는다', () => {
     render(<Hexagon axes={axes} />);
-    expect(screen.getByRole('img', { name: '6각형 지표' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /^6각형 지표/ })).toBeInTheDocument();
   });
 
   it('본인 도형은 실선, 코호트 평균 도형은 점선으로 겹쳐 그린다', () => {
@@ -67,11 +73,57 @@ describe('Hexagon', () => {
     expect(avg).toHaveAttribute('stroke-dasharray');
   });
 
-  it('두 도형이 서로 다른 percentile 값을 좌표에 반영한다', () => {
+  it('두 도형이 서로 다른 값을 좌표에 반영한다', () => {
     const { container } = render(<Hexagon axes={axes} />);
     const self = container.querySelector('[data-testid="hexagon-self"]');
     const avg = container.querySelector('[data-testid="hexagon-average"]');
     expect(self?.getAttribute('points')).not.toBe(avg?.getAttribute('points'));
+  });
+
+  it('평균 도형은 축마다 값이 달라도 정확한 정육각형이다', () => {
+    const { container } = render(<Hexagon axes={axes} />);
+    const avg = container.querySelector('[data-testid="hexagon-average"]');
+    // 여섯 꼭짓점이 모두 중심에서 같은 거리에 있으면 정육각형이다.
+    const distances = avg!
+      .getAttribute('points')!
+      .split(' ')
+      .map((pair) => {
+        const [x, y] = pair.split(',').map(Number);
+        return Math.hypot(x - 120, y - 120);
+      });
+    for (const d of distances) expect(d).toBeCloseTo(distances[0], 6);
+  });
+
+  it('두 도형의 선 굵기가 같다 — 굵기 차이가 안팎 비교를 흐린다', () => {
+    const { container } = render(<Hexagon axes={axes} />);
+    const self = container.querySelector('[data-testid="hexagon-self"]');
+    const avg = container.querySelector('[data-testid="hexagon-average"]');
+    expect(self?.getAttribute('stroke-width')).toBe(avg?.getAttribute('stroke-width'));
+  });
+
+  it('축에 마우스를 올리면 평균과 내 값을 두 줄로 띄운다', () => {
+    const { container } = render(<Hexagon axes={axes} />);
+    expect(container.querySelector('[data-testid="hexagon-tooltip"]')).toBeNull();
+
+    fireEvent.mouseEnter(container.querySelector('[data-testid="hexagon-hit-damage"]')!);
+    const tooltip = container.querySelector('[data-testid="hexagon-tooltip"]')!;
+    expect(tooltip.textContent).toContain('평균');
+    expect(tooltip.textContent).toContain('평균값');
+    expect(tooltip.textContent).toContain('80값');
+
+    fireEvent.mouseLeave(container.querySelector('[data-testid="hexagon-hit-damage"]')!);
+    expect(container.querySelector('[data-testid="hexagon-tooltip"]')).toBeNull();
+  });
+
+  it('마우스를 올린 축에 점 두 개를 찍고, 평균(흰 점)을 나중에 그려 위에 올린다', () => {
+    const { container } = render(<Hexagon axes={axes} />);
+    fireEvent.mouseEnter(container.querySelector('[data-testid="hexagon-hit-kills"]')!);
+
+    const dots = container.querySelectorAll('[data-testid="hexagon-hover-dots"] circle');
+    expect(dots).toHaveLength(2);
+    expect(dots[0]).toHaveAttribute('fill', '#FF9233');
+    // 나중에 그려진 것이 위에 온다 — 겹쳤을 때 흰 점이 보여야 한다.
+    expect(dots[1]).toHaveAttribute('fill', '#FFFFFF');
   });
 
   it('그리드 선은 어두운 검정 계열이 아니라 흰색 계열로 밝게 그린다', () => {

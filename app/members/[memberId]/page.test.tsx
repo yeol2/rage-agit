@@ -79,7 +79,7 @@ describe('MemberDetailPage', () => {
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
     expect(screen.getByRole('heading', { name: 'Ez_Alpha' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: '6각형 지표' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /^6각형 지표/ })).toBeInTheDocument();
   });
 
   it('제목도 명단 화면과 같은 방식으로 괄호 태그를 뗀다', async () => {
@@ -100,7 +100,7 @@ describe('MemberDetailPage', () => {
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
     expect(screen.getByText('아직 내전 기록이 없습니다.')).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: '6각형 지표' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /^6각형 지표/ })).not.toBeInTheDocument();
   });
 
   it('전적이 아예 없으면(기록 자체가 없음) 안내 문구를 보인다', async () => {
