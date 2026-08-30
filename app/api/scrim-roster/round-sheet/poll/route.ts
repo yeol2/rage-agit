@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { runPolling } from '@/supabase/functions/_shared/polling.mjs';
 import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
+import { revalidateRecordPages } from '@/lib/revalidateRecordPages';
 import { buildRoundSheet, latestScrimDate } from '@/lib/roundSheetData';
 import { formatManualPollMessage, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
 import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
@@ -126,6 +127,12 @@ export async function POST(request: Request) {
         revalidatePath('/dashboard');
       }
     }
+
+    // 리더보드를 뺀 나머지 기록 화면은 라운드가 하나 들어올 때마다 갱신한다 —
+    // 4라운드를 기다릴 이유가 없다. 평균등수도 깐부도 매치가 들어온 만큼 바뀌는
+    // 값이고, 리더보드처럼 스냅샷 시점과 맞출 필요가 없다.
+    // 잡은 게 없으면 바뀐 것도 없으므로 건드리지 않는다.
+    if (result.scrimsFound > 0) revalidateRecordPages();
 
     // 매치를 실제로 잡았을 때만 알린다 — 한 번 눌러두면 잡힐 때까지 수십 번
     // 두드리므로, 못 잡은 시도까지 보내면 알림이 무뎌진다.

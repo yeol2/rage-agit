@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { revalidateRecordPages } from '@/lib/revalidateRecordPages';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { buildRoundSheet } from '@/lib/roundSheetData';
 
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
 
   // 우승 횟수(뱃지 열·클랜원 화면)와 종합등수 줄이 바로 보여야 한다.
   revalidatePath('/dashboard');
-  revalidatePath('/members');
+  revalidateRecordPages();
 
   return NextResponse.json({
     scrimDate: sheet.scrimDate,
