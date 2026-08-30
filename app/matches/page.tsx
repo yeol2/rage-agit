@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
+import { LiveRefresh } from '@/components/LiveRefresh';
 import { Footer } from '@/components/Footer';
 import { RecentScrimsList } from '@/components/dashboard/RecentScrimsList';
 import { fetchScrimSessions } from '@/lib/scrimData';
@@ -22,6 +23,7 @@ export default async function MatchesPage() {
   return (
     <main className="min-h-screen">
       <Nav />
+      <LiveRefresh />
       <h1 className="sr-only">{siteConfig.matches.pageHeading}</h1>
       <RecentScrimsList sessions={sessions} />
       <Footer />

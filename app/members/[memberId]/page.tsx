@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Nav } from '@/components/Nav';
+import { LiveRefresh } from '@/components/LiveRefresh';
 import { Footer } from '@/components/Footer';
 import { Hexagon } from '@/components/members/Hexagon';
 import { MemberDashboard } from '@/components/members/MemberDashboard';
@@ -31,6 +32,11 @@ import {
   type PartnerStat,
 } from '@/lib/partnerStats';
 import { siteConfig } from '@/lib/siteConfig';
+
+// 다른 기록 화면들과 같은 기준이다(/members, /matches). 폴링·우승 확정이
+// revalidateRecordPages 로 즉시 지우지만, 크론 폴링처럼 그 라우트를 안 거치는
+// 경로도 있어서 시간 상한을 같이 둔다.
+export const revalidate = 300;
 
 export default async function MemberDetailPage({
   params,
@@ -85,6 +91,7 @@ export default async function MemberDetailPage({
   return (
     <main className="min-h-screen">
       <Nav />
+      <LiveRefresh />
       <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
         <div
           className="mx-auto max-w-[880px] rounded-2xl border px-6 py-10 text-center sm:px-8"
