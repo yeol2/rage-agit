@@ -32,12 +32,12 @@ async function notifyPollDone(args: {
   }
 }
 
-// 등수 스냅샷 캡처는 이 로스터가 참여한 내전 세션의 라운드가 몇 개나 기록됐는지
-// 봐야 한다. 시트가 세는 것과 반드시 같아야 하므로(어긋나면 "폴링해서 라운드가
-// 늘었다"고 판단해 놓고 시트는 그대로인 상태가 된다) 같은 함수를 쓴다.
-async function countRoundsForRoster(supabase: SupabaseClient, rosterId: string): Promise<number> {
+// 등수 스냅샷 캡처는 그 내전의 라운드가 몇 개나 기록됐는지 봐야 한다. 시트가
+// 세는 것과 반드시 같아야 하므로(어긋나면 "폴링해서 라운드가 늘었다"고 판단해
+// 놓고 시트는 그대로인 상태가 된다) 같은 함수를 쓴다.
+async function countRounds(supabase: SupabaseClient, scrimDate: string): Promise<number> {
   try {
-    return (await buildRoundSheet(supabase, rosterId)).roundCount;
+    return (await buildRoundSheet(supabase, scrimDate)).roundCount;
   } catch {
     return 0;
   }
@@ -111,10 +111,13 @@ export async function POST(request: Request) {
     // 저절로 안 바뀐다 — 딱 여기, 이 세션의 라운드 4개가 처음 확인된 순간에만
     // revalidatePath 로 갱신한다. 1~3매치만 폴링된 상태로는 리더보드 화면이
     // 전혀 안 바뀌어야 등수 변동(4매치 확인 후 스냅샷)과 타이밍이 맞는다.
+    // 라운드 수는 이번에 잡힌 매치의 날짜로 센다 — 시트가 보는 것과 같은 기준이다.
+    // 아무것도 못 잡았으면 셀 것도 없다(이 폴링으로는 아무것도 안 변했다).
     let roundCount = 0;
-    if (rosterId) {
-      roundCount = await countRoundsForRoster(supabase, rosterId);
-      if (roundCount >= 4) {
+    const polledDate = result.scrims[0]?.playedAt ? toKstDate(result.scrims[0].playedAt) : null;
+    if (polledDate) {
+      roundCount = await countRounds(supabase, polledDate);
+      if (roundCount >= 4 && rosterId) {
         await captureRankingSnapshotForRoster(supabase, rosterId).catch(() => {});
         revalidatePath('/dashboard');
       }

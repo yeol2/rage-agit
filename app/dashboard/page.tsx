@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
+import { LiveRefresh } from '@/components/LiveRefresh';
 import { Footer } from '@/components/Footer';
 import { TierRankingPodium } from '@/components/dashboard/TierRankingPodium';
 import { fetchRankingStats } from '@/lib/rankingStats';
@@ -35,6 +36,7 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen">
       <Nav />
+      <LiveRefresh />
       <h1 className="sr-only">{siteConfig.dashboard.pageHeading}</h1>
       <TierRankingPodium
         recent16={recent16}

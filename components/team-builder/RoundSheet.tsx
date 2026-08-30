@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { cleanDisplayName, stripTrailingKoreanTag } from '@/lib/memberStats';
+import { useScrimLive } from '@/lib/useScrimLive';
 
 interface RoundSheetRound {
   roundNo: number;
@@ -22,8 +23,15 @@ interface RoundSheetTeam {
 }
 
 interface RoundSheetResponse {
+  /** 이 시트가 그린 내전 날짜. 아직 한 번도 내전이 없으면 null. */
+  scrimDate: string | null;
   roundCount: number;
   teams: RoundSheetTeam[];
+  /**
+   * 세션 도중 PUBG 팀 번호가 바뀐 사람. 팀 번호를 team_id 로 삼는 전제가
+   * 깨졌다는 뜻이라, 조용히 이상한 시트를 보여주지 않고 여기서 알린다.
+   */
+  unstableTeamPlayers?: string[];
 }
 
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
@@ -111,18 +119,13 @@ async function interruptibleSleep(ms: number, cancelRef: { current: boolean }) {
 
 export function RoundSheet({
   rosterId,
-  teamsVersion,
 }: {
-  rosterId: string;
   /**
-   * 팀 배정을 바꾸는 조작(02의 팀 구성/리롤/되돌리기/스왑/VIP 정렬)이 성공할
-   * 때마다 부모(RosterBoard)가 하나씩 올려서 넘긴다. team_number 는 이
-   * roster 행을 UPDATE 하는 것이라 rosterId 자체는 안 바뀌므로, rosterId 만
-   * 보고 있으면 최초 한 번 불러온 뒤로 다시 안 불러온다 — 그러면 02에서 팀을
-   * 다시 짜도 01은 처음 열었을 때의 팀 그대로 남는다. 값 자체는 안 쓰고
-   * 의존성 배열에만 넣어 재조회를 트리거한다.
+   * 폴링 씨앗을 고르고 등수 스냅샷을 한 번만 찍기 위해 서버가 쓰는 값 —
+   * 시트 내용과는 무관하다(시트는 날짜만으로 만들어진다). 명단을 아직 안
+   * 올렸거나 "초기화"로 지운 뒤에는 없을 수 있고, 그때는 폴링 버튼만 잠긴다.
    */
-  teamsVersion?: number;
+  rosterId?: string;
 }) {
   const [data, setData] = useState<RoundSheetResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -134,9 +137,11 @@ export function RoundSheet({
   // 즉시 확인하려면 ref 로 따로 들고 있어야 한다.
   const cancelRef = useRef(false);
 
+  // 날짜를 안 넘기면 서버가 가장 최근 내전을 골라준다. 02에서 팀을 다시 짜도
+  // 이 시트는 영향을 안 받는다 — 계획이 아니라 실제 매치만 보기 때문이다.
   async function loadSheet() {
     try {
-      const response = await fetch(`/api/scrim-roster/round-sheet?rosterId=${rosterId}`);
+      const response = await fetch('/api/scrim-roster/round-sheet', { cache: 'no-store' });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? '시트를 불러오지 못했습니다.');
       setData(body as RoundSheetResponse);
@@ -149,7 +154,10 @@ export function RoundSheet({
   useEffect(() => {
     void loadSheet();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rosterId, teamsVersion]);
+  }, []);
+
+  // 라운드가 하나 들어오거나 우승이 확정되면 누가 폴링했든 모두의 화면이 따라간다.
+  useScrimLive(() => void loadSheet());
 
   // 누른 시각과 몇 번째 시도인지는 여기서만 안다 — 한 번 눌러두면 매치가
   // 잡힐 때까지 알아서 두드리므로, 서버는 매 요청을 따로 본다. 디스코드
@@ -214,7 +222,7 @@ export function RoundSheet({
       const response = await fetch('/api/scrim-roster/round-sheet/confirm-win', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rosterId }),
+        body: JSON.stringify({ scrimDate: data?.scrimDate }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? '우승 확정에 실패했습니다.');
@@ -238,8 +246,17 @@ export function RoundSheet({
   // 온 라운드는 "-"로 비워둔 채, 폴링될 때마다 그 칸이 채워지는 방식.
   const rounds = [1, 2, 3, 4] as const;
 
+  const unstable = data.unstableTeamPlayers ?? [];
+
   return (
     <div>
+      {unstable.length > 0 && (
+        <p className="mb-4 rounded-md border border-amber-400/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+          팀 번호가 라운드 중간에 바뀐 사람이 있습니다 ({unstable.map(cleanName).join(', ')}).
+          시트는 1라운드 번호를 기준으로 그렸으니, 이 팀들의 점수는 확정 전에 한 번
+          확인해주세요.
+        </p>
+      )}
       <div className="overflow-x-auto">
         <table
           aria-label="내전 시트"
@@ -377,7 +394,11 @@ export function RoundSheet({
       </div>
 
       <div className="mt-4 flex items-center justify-between" style={{ width: TABLE_WIDTH, maxWidth: '100%' }}>
-        <h3 className="hud text-xs text-menu">경기 {data.roundCount}개 기록됨</h3>
+        {/* 준비 중에는 지난 내전이 보이므로 어느 날짜인지 반드시 같이 띄운다 —
+            없으면 오늘 것으로 오해한다. */}
+        <h3 className="hud text-xs text-menu">
+          {data.scrimDate ? `${data.scrimDate} · ` : ''}경기 {data.roundCount}개 기록됨
+        </h3>
         <div className="flex items-center gap-2">
           {polling && (
             <button
@@ -402,7 +423,10 @@ export function RoundSheet({
           <button
             type="button"
             onClick={() => void handlePoll()}
-            disabled={polling}
+            // 폴링은 씨앗을 고르는 데 로스터가 필요하다(라운드 1은 아직 매치가
+            // 없어 참가자를 알 길이 없다). 명단이 없으면 누를 수 없다.
+            disabled={polling || !rosterId}
+            title={!rosterId ? '명단을 먼저 업로드해야 폴링할 수 있습니다' : undefined}
             className="rounded-md border border-accent bg-accent px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-40"
           >
             {polling ? `폴링 중… (${pollAttempt}번째 시도)` : '폴링'}

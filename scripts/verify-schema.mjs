@@ -564,20 +564,14 @@ check(
   '2026-08-16 재경기가 제외 표시돼 있다',
 );
 
-console.log('\n0027 — 내전 종합우승 기록');
+console.log('\n0027/0032 — 내전 종합우승 기록');
 
+// 0032 에서 지웠다. session_standings 의 standing = 1 이 그 자리를 대신한다.
+// 되살아나 있으면 우승 횟수의 출처가 둘로 갈렸다는 뜻이다.
 check(
   (await one(`select count(*) from information_schema.tables
-    where table_name = 'session_wins'`)) === 1,
-  'session_wins 테이블이 있다',
-);
-
-// 한 사람이 같은 세션에서 두 번 우승할 수는 없다. 이 제약이 없으면 임포터를
-// 두 번 돌렸을 때 우승 횟수가 조용히 두 배가 된다.
-check(
-  (await one(`select count(*) from pg_constraint
-    where conrelid = 'session_wins'::regclass and contype = 'u'`)) >= 1,
-  '(날짜, 세션번호, 클랜원) 유일 제약이 있다',
+    where table_name = 'session_wins'`)) === 0,
+  'session_wins 테이블이 없다 (0032 에서 지움)',
 );
 
 const winGrants = await client.query(`
@@ -592,15 +586,8 @@ for (const role of ['anon', 'authenticated']) {
   );
 }
 
-// 우승자가 한 세션에 5명 이상이면 팀번호나 이름을 잘못 짚었다는 뜻이다
-// (PUBG 스쿼드는 최대 4명).
-check(
-  (await one(`select count(*) from (
-    select scrim_date, session_number from session_wins
-    group by scrim_date, session_number having count(*) > 4
-  ) t`)) === 0,
-  '한 세션의 우승자가 4명을 넘지 않는다',
-);
+// (우승자가 4명을 넘지 않는지는 아래 0028 의 "같은 등수 4명" 검사가 standing = 1
+//  까지 함께 본다 — 따로 셀 필요가 없다.)
 
 console.log('\n0028 — 내전 세션 최종등수 1~16');
 
@@ -617,19 +604,9 @@ check(
   '(날짜, 세션번호, 클랜원) 유일 제약이 있다',
 );
 
-// 0027 의 우승 기록이 standing=1 로 다 넘어왔는지. 하나라도 빠지면 그 사람의
-// 트로피가 조용히 사라진다.
-check(
-  (await one(`select count(*) from session_wins w
-    where not exists (
-      select 1 from session_standings s
-      where s.scrim_date = w.scrim_date
-        and s.session_number = w.session_number
-        and s.member_id = w.member_id
-        and s.standing = 1
-    )`)) === 0,
-  'session_wins 의 우승 기록이 standing=1 로 다 옮겨졌다',
-);
+// (0027 의 우승 기록이 standing = 1 로 다 넘어왔는지는 0032 가 지우기 직전에
+//  따졌다 — 하나라도 안 옮겨졌으면 거기서 중단됐을 것이므로 여기서 다시 세지
+//  않는다. 표 자체가 이제 없다.)
 
 // 한 팀은 최대 4명이므로 같은 세션에 같은 등수가 5명 이상이면 팀을 잘못 묶은 것이다.
 check(

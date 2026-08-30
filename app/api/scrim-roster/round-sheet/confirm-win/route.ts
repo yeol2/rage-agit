@@ -22,16 +22,16 @@ const REQUIRED_ROUNDS = 4;
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
-  const rosterId = typeof body.rosterId === 'string' ? body.rosterId : null;
-  if (!rosterId) {
-    return NextResponse.json({ error: 'rosterId 가 필요합니다.' }, { status: 400 });
+  const scrimDate = typeof body.scrimDate === 'string' ? body.scrimDate : null;
+  if (!scrimDate) {
+    return NextResponse.json({ error: 'scrimDate 가 필요합니다.' }, { status: 400 });
   }
 
   const supabase = getSupabaseServer();
 
   let sheet;
   try {
-    sheet = await buildRoundSheet(supabase, rosterId);
+    sheet = await buildRoundSheet(supabase, scrimDate);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : '시트를 불러오지 못했습니다.' },

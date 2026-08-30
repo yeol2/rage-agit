@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
+import { LiveRefresh } from '@/components/LiveRefresh';
 import { Footer } from '@/components/Footer';
 import { MemberDirectory } from '@/components/members/MemberDirectory';
 import { fetchAllMembers } from '@/lib/memberStats';
@@ -19,6 +20,7 @@ export default async function MembersPage() {
   return (
     <main className="min-h-screen">
       <Nav />
+      <LiveRefresh />
       <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
         <div className="flex items-center gap-4">
           <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">{copy.eyebrow}</p>

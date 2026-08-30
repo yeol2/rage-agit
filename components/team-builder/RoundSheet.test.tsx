@@ -66,7 +66,7 @@ describe('RoundSheet', () => {
       expect.objectContaining({ method: 'POST' }),
     );
     await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith('/api/scrim-roster/round-sheet?rosterId=roster-1'),
+      expect(fetchMock).toHaveBeenCalledWith('/api/scrim-roster/round-sheet', { cache: 'no-store' }),
     );
   });
 
