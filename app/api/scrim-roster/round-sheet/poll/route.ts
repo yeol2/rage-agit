@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { runPolling } from '@/supabase/functions/_shared/polling.mjs';
 import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
-import { buildRoundSheet } from '@/lib/roundSheetData';
+import { buildRoundSheet, latestScrimDate } from '@/lib/roundSheetData';
 import { formatManualPollMessage, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
 import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
 
@@ -111,12 +111,16 @@ export async function POST(request: Request) {
     // 저절로 안 바뀐다 — 딱 여기, 이 세션의 라운드 4개가 처음 확인된 순간에만
     // revalidatePath 로 갱신한다. 1~3매치만 폴링된 상태로는 리더보드 화면이
     // 전혀 안 바뀌어야 등수 변동(4매치 확인 후 스냅샷)과 타이밍이 맞는다.
-    // 라운드 수는 이번에 잡힌 매치의 날짜로 센다 — 시트가 보는 것과 같은 기준이다.
-    // 아무것도 못 잡았으면 셀 것도 없다(이 폴링으로는 아무것도 안 변했다).
+    // 라운드 수는 시트와 같은 기준(날짜)으로 센다. 이번에 매치를 잡았으면 그
+    // 매치의 날짜를, 못 잡았으면 가장 최근 내전 날짜를 쓴다 — 못 잡았다고 건너뛰면
+    // 4번째 매치가 다른 경로(CLI 폴링 등)로 이미 들어간 뒤에 버튼을 눌렀을 때
+    // 스냅샷 캡처와 리더보드 갱신을 영영 놓친다.
     let roundCount = 0;
-    const polledDate = result.scrims[0]?.playedAt ? toKstDate(result.scrims[0].playedAt) : null;
-    if (polledDate) {
-      roundCount = await countRounds(supabase, polledDate);
+    const scrimDate = result.scrims[0]?.playedAt
+      ? toKstDate(result.scrims[0].playedAt)
+      : await latestScrimDate(supabase).catch(() => null);
+    if (scrimDate) {
+      roundCount = await countRounds(supabase, scrimDate);
       if (roundCount >= 4 && rosterId) {
         await captureRankingSnapshotForRoster(supabase, rosterId).catch(() => {});
         revalidatePath('/dashboard');
