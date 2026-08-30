@@ -9,15 +9,23 @@ const axis = (
   key: HexagonAxis['key'],
   label: string,
   percent: number,
-): HexagonAxis => ({ key, label, percent, valueText: `${percent}값`, averageText: '평균값' });
+  averagePercent: number,
+): HexagonAxis => ({
+  key,
+  label,
+  percent,
+  averagePercent,
+  valueText: `${percent}값`,
+  averageText: `${averagePercent}평균`,
+});
 
 const axes: HexagonAxis[] = [
-  axis('damage', '딜량', 80),
-  axis('kills', '킬', 60),
-  axis('stability', '안정성', 40),
-  axis('survival', '생존', 90),
-  axis('assists', '어시', 20),
-  axis('rank', '순위', 70),
+  axis('damage', '딜량', 80, 55),
+  axis('kills', '킬', 60, 45),
+  axis('stability', '안정성', 40, 50),
+  axis('survival', '생존', 90, 60),
+  axis('assists', '어시', 20, 35),
+  axis('rank', '순위', 70, 50),
 ];
 
 describe('pointFor', () => {
@@ -80,10 +88,9 @@ describe('Hexagon', () => {
     expect(self?.getAttribute('points')).not.toBe(avg?.getAttribute('points'));
   });
 
-  it('평균 도형은 축마다 값이 달라도 정확한 정육각형이다', () => {
+  it('평균 도형도 축마다 다른 자리에 찍힌다 — 티어 그룹 평균이라 사람마다 크기가 다르다', () => {
     const { container } = render(<Hexagon axes={axes} />);
     const avg = container.querySelector('[data-testid="hexagon-average"]');
-    // 여섯 꼭짓점이 모두 중심에서 같은 거리에 있으면 정육각형이다.
     const distances = avg!
       .getAttribute('points')!
       .split(' ')
@@ -91,7 +98,8 @@ describe('Hexagon', () => {
         const [x, y] = pair.split(',').map(Number);
         return Math.hypot(x - 120, y - 120);
       });
-    for (const d of distances) expect(d).toBeCloseTo(distances[0], 6);
+    // 55%와 45%는 다른 반지름이어야 한다(예전처럼 전부 50%로 고정되지 않는다).
+    expect(distances[0]).toBeGreaterThan(distances[1]);
   });
 
   it('두 도형의 선 굵기가 같다 — 굵기 차이가 안팎 비교를 흐린다', () => {
@@ -108,7 +116,7 @@ describe('Hexagon', () => {
     fireEvent.mouseEnter(container.querySelector('[data-testid="hexagon-hit-damage"]')!);
     const tooltip = container.querySelector('[data-testid="hexagon-tooltip"]')!;
     expect(tooltip.textContent).toContain('평균');
-    expect(tooltip.textContent).toContain('평균값');
+    expect(tooltip.textContent).toContain('55평균');
     expect(tooltip.textContent).toContain('80값');
 
     fireEvent.mouseLeave(container.querySelector('[data-testid="hexagon-hit-damage"]')!);

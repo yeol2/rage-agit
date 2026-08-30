@@ -183,38 +183,37 @@ export const HEXAGON_AXIS_LABELS: Record<HexagonAxisKey, string> = {
 export interface HexagonAxis {
   key: HexagonAxisKey;
   label: string;
-  /** 도형에서 이 축의 위치(%). 4~96 사이. */
+  /** 내 값의 위치(%). 4~96 사이. */
   percent: number;
+  /** 내 티어 그룹 평균의 위치(%). 축마다 다르다 — 아래 눈금 설명 참고. */
+  averagePercent: number;
   /** 내 값을 사람이 읽는 형태로. 툴팁이 그대로 적는다. */
   valueText: string;
   /** 티어 그룹 평균값. 〃 */
   averageText: string;
 }
 
-// 티어 그룹 평균이 놓이는 자리. **모든 축에서 같은 값**이라 평균 도형이 정확한
-// 정육각형이 된다.
+// 눈금은 **클랜 전체 기준 하나**다. 그래서 누구의 6각형이든 같은 자리가 같은
+// 값을 뜻하고, 두 사람의 그림을 나란히 놓고 그대로 비교할 수 있다.
 //
-// 예전에는 축마다 "평균이 그 그룹 안에서 몇 번째 백분위인가"를 따로 구해서 찍었다.
-// 그러면 분포가 한쪽으로 쏠린 축(딜량처럼 상위 몇 명이 평균을 끌어올리는 축)은
-// 평균이 45번째, 고른 축은 52번째에 찍혀서 점선이 찌그러진 육각형이 됐다. 같은
-// "평균"인데 축마다 다른 반지름에 있으면 안팎을 눈으로 비교할 수가 없다.
-export const HEXAGON_AVERAGE_PERCENT = 50;
+// 예전에는 사람마다 자기 티어 그룹 안에서 백분위를 매겼다. 그러면 0티어의
+// 6각형과 5티어의 6각형이 둘 다 그럴싸하게 커서, 그림만 봐서는 누가 잘하는지
+// 알 수 없었다. 이제 점선(자기 티어 그룹 평균)이 그룹마다 다른 크기로 그려져서
+// 자기가 어느 무리에 있는지가 그림에 남는다.
+//
+// 반지름 끝은 클랜 평균에서 2 표준편차다. 1 표준편차로 잡으면 절반 넘는 사람이
+// 상·하한에 붙어버려서 눈금이 좁다는 말이 나온다.
+export const HEXAGON_SPREAD_SIGMAS = 2;
 
 // 축 값을 도형 위 위치로 옮기는 자는 클랜원 대시보드의 막대와 같은 것을 쓴다
-// (lib/memberDashboard.ts 의 centeredPercent) — 그룹 평균이 언제나 한가운데고,
-// 거기서 몇 표준편차 떨어졌는지로 안팎이 정해진다. 같은 화면에 있는 두 그림이
-// 다른 자를 쓰면 "가운데보다 바깥"이라는 말이 두 뜻을 갖는다.
-function axisPercent(
-  value: number,
-  cohortValues: number[],
-  higherIsBetter: boolean,
-): { percent: number; average: number } {
-  const pool = cohortValues.filter((v) => Number.isFinite(v));
-  const average = mean(pool);
-  return {
-    percent: centeredPercent(value, average, stddev(pool, average), higherIsBetter),
-    average,
-  };
+// (lib/memberDashboard.ts 의 centeredPercent) — 가운데가 평균이고 거기서 몇
+// 표준편차 떨어졌는지로 안팎이 정해진다. 같은 화면에 있는 두 그림이 다른 자를
+// 쓰면 "가운데보다 바깥"이라는 말이 두 뜻을 갖는다.
+function axisScale(clanValues: number[], higherIsBetter: boolean) {
+  const pool = clanValues.filter((v) => Number.isFinite(v));
+  const clanAverage = mean(pool);
+  const spread = stddev(pool, clanAverage) * HEXAGON_SPREAD_SIGMAS;
+  return (value: number) => centeredPercent(value, clanAverage, spread, higherIsBetter);
 }
 
 // 툴팁에 적을 형식. 축마다 단위와 자릿수가 다르다.
@@ -228,49 +227,51 @@ const AXIS_FORMAT: Record<HexagonAxisKey, (value: number) => string> = {
   rank: (v) => `${v.toFixed(1)}등`,
 };
 
-
+/**
+ * 6각형 여섯 축.
+ *
+ * clan 은 눈금을 정하는 표본(집계 대상 전원)이고, group 은 점선으로 그릴 내
+ * 티어 그룹이다. 둘을 따로 받는 이유가 이 그림의 전부다 — 자는 모두에게 같고,
+ * 점선만 사람마다 다른 자리에 온다.
+ */
 export function buildHexagonAxes(
   target: MemberRecentStatsRow,
-  cohort: MemberRecentStatsRow[],
+  clan: MemberRecentStatsRow[],
+  group: MemberRecentStatsRow[],
 ): HexagonAxis[] {
-  // 안정성이 없는 사람(경기가 하나뿐이라 표준편차가 안 나오는 경우)은 비교
-  // 대상에서 뺀다 — null 을 숫자로 잘못 취급하면 축이 통째로 틀어진다. 6각형은
-  // 4경기부터 그리므로 실제로는 거의 없다.
-  const stabilityPool = cohort
-    .map((c) => c.rankStddev)
-    .filter((v): v is number => v !== null);
-
   const build = (
     key: HexagonAxisKey,
-    value: number | null,
-    pool: number[],
+    pick: (row: MemberRecentStatsRow) => number | null,
     higherIsBetter: boolean,
   ): HexagonAxis => {
-    const { percent, average } = axisPercent(value ?? average0(pool), pool, higherIsBetter);
+    // null 은 어디서도 숫자로 취급하지 않는다 — 안정성은 경기가 하나뿐이면 없다.
+    const clanValues = clan.map(pick).filter((v): v is number => v !== null);
+    const groupValues = group.map(pick).filter((v): v is number => v !== null);
+    const toPercent = axisScale(clanValues, higherIsBetter);
+
+    const groupAverage = mean(groupValues);
+    const value = pick(target);
+
     return {
       key,
       label: HEXAGON_AXIS_LABELS[key],
-      // 값이 없으면 도형을 부풀리지도 쭈그러뜨리지도 않게 평균 자리에 놓는다.
-      percent: value === null ? HEXAGON_AVERAGE_PERCENT : percent,
+      // 값이 없으면 도형을 부풀리지도 쭈그러뜨리지도 않게 그룹 평균 자리에 놓는다.
+      percent: value === null ? toPercent(groupAverage) : toPercent(value),
+      averagePercent: toPercent(groupAverage),
       valueText: value === null ? '기록 없음' : AXIS_FORMAT[key](value),
-      averageText: AXIS_FORMAT[key](average),
+      averageText: AXIS_FORMAT[key](groupAverage),
     };
   };
 
   return [
-    build('damage', target.avgDamage, cohort.map((c) => c.avgDamage), true),
-    build('kills', target.avgKills, cohort.map((c) => c.avgKills), true),
+    build('damage', (r) => r.avgDamage, true),
+    build('kills', (r) => r.avgKills, true),
     // 안정성은 등수 편차라 **작을수록 좋다** — 순위 축과 같은 방향이다.
-    build('stability', target.rankStddev, stabilityPool, false),
-    build('survival', target.avgSurvival, cohort.map((c) => c.avgSurvival), true),
-    build('assists', target.avgAssists, cohort.map((c) => c.avgAssists), true),
-    build('rank', target.avgRank, cohort.map((c) => c.avgRank), false),
+    build('stability', (r) => r.rankStddev, false),
+    build('survival', (r) => r.avgSurvival, true),
+    build('assists', (r) => r.avgAssists, true),
+    build('rank', (r) => r.avgRank, false),
   ];
-}
-
-// 값이 없는 축의 자리표시자 — 평균을 넣어 percent 계산이 NaN 으로 번지지 않게 한다.
-function average0(pool: number[]): number {
-  return mean(pool.filter((v) => Number.isFinite(v)));
 }
 
 export interface MemberSummary {
@@ -358,16 +359,16 @@ export async function fetchMemberRecentStats(memberId: string): Promise<MemberRe
   return toStatsRow(data);
 }
 
-// 같은 티어 그룹 전체의 표본을 한 번에 가져온다 — 백분위 비교 대상이다.
-// MIN_GAMES_FOR_HEXAGON 미만인 사람은 비교 대상에서 뺀다(본인이 그 미만이면
-// 애초에 6각형을 안 그리므로 이 함수까지 안 온다).
-export async function fetchTierCohortStats(tiers: number[]): Promise<MemberRecentStatsRow[]> {
+// 6각형이 볼 표본 — 집계 대상 전원이다. 눈금은 클랜 전체 기준 하나이고
+// (buildHexagonAxes 주석 참고), 티어 그룹은 이 목록에서 갈라 쓴다.
+// MIN_GAMES_FOR_HEXAGON 미만인 사람은 뺀다(본인이 그 미만이면 애초에 6각형을
+// 안 그리므로 이 함수까지 안 온다).
+export async function fetchHexagonCohort(): Promise<MemberRecentStatsRow[]> {
   const { data, error } = await getSupabase()
     .from('member_recent_stats')
     .select('member_id, tier, game_count, avg_damage, avg_kills, avg_survival, avg_assists, avg_rank, rank_stddev')
-    .in('tier', tiers)
     .gte('game_count', MIN_GAMES_FOR_HEXAGON);
-  if (error) throw new Error(`티어 그룹 전적을 불러오지 못했습니다: ${error.message}`);
+  if (error) throw new Error(`6각형 비교 표본을 불러오지 못했습니다: ${error.message}`);
 
   return (data ?? []).map(toStatsRow);
 }

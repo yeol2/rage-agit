@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { HEXAGON_AVERAGE_PERCENT, type HexagonAxis } from '@/lib/memberStats';
+import type { HexagonAxis } from '@/lib/memberStats';
 
 const SIZE = 240;
 const CENTER = SIZE / 2;
@@ -49,27 +49,26 @@ function wedgePoints(index: number): string {
 // 도형을 안 덮는다 — 전부 가운데 정렬로 두면 옆 축들에서 라벨 위에 얹힌다.
 // 순서는 12시부터 시계방향(pointFor 와 같다).
 const TOOLTIP_PLACEMENT: Array<{ radius: number; transform: string }> = [
-  { radius: 1.34, transform: 'translate(-50%, -100%)' }, // 위
-  { radius: 1.28, transform: 'translate(0, -60%)' }, // 오른쪽 위
-  { radius: 1.28, transform: 'translate(0, -40%)' }, // 오른쪽 아래
-  { radius: 1.34, transform: 'translate(-50%, 0)' }, // 아래
-  { radius: 1.28, transform: 'translate(-100%, -40%)' }, // 왼쪽 아래
-  { radius: 1.28, transform: 'translate(-100%, -60%)' }, // 왼쪽 위
+  { radius: 1.38, transform: 'translate(-50%, -100%)' }, // 위
+  { radius: 1.46, transform: 'translate(0, -60%)' }, // 오른쪽 위
+  { radius: 1.46, transform: 'translate(0, -40%)' }, // 오른쪽 아래
+  { radius: 1.38, transform: 'translate(-50%, 0)' }, // 아래
+  { radius: 1.46, transform: 'translate(-100%, -40%)' }, // 왼쪽 아래
+  { radius: 1.46, transform: 'translate(-100%, -60%)' }, // 왼쪽 위
 ];
 
 export function Hexagon({ axes }: { axes: HexagonAxis[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
 
   const fractions = axes.map((axis) => axis.percent / 100);
-  // 평균은 모든 축에서 같은 값이라 언제나 정확한 정육각형이다(HEXAGON_AVERAGE_PERCENT).
-  const averageFraction = HEXAGON_AVERAGE_PERCENT / 100;
-  const averageFractions = Array(AXIS_COUNT).fill(averageFraction);
+  // 점선은 내 티어 그룹의 평균이다. 눈금이 클랜 전체 기준 하나라서, 높은 티어
+  // 그룹일수록 이 도형이 크게 그려진다.
+  const averageFractions = axes.map((axis) => axis.averagePercent / 100);
 
   const hoveredAxis = hovered === null ? null : axes[hovered];
-  // 툴팁은 그 축의 바깥쪽에 띄운다. svg 좌표를 %로 바꿔 얹으므로 도형이 커지거나
-  // 작아져도 따라간다.
-  // 라벨(1.2)보다 바깥에 띄운다 — 라벨을 덮으면 어느 축을 보고 있는지가 가려진다.
-  const tooltipAt = hovered === null ? null : pointFor(hovered, 1.5);
+  // 툴팁은 그 축의 바깥쪽에 띄운다(라벨은 1.2). svg 좌표를 %로 바꿔 얹으므로
+  // 도형이 커지거나 작아져도 따라간다.
+  const tooltipAt = hovered === null ? null : pointFor(hovered, TOOLTIP_PLACEMENT[hovered].radius);
 
   return (
     <div className="relative w-full max-w-xs">
@@ -129,8 +128,8 @@ export function Hexagon({ axes }: { axes: HexagonAxis[] }) {
               strokeWidth={1.5}
             />
             <circle
-              cx={pointFor(hovered, averageFraction)[0]}
-              cy={pointFor(hovered, averageFraction)[1]}
+              cx={pointFor(hovered, averageFractions[hovered])[0]}
+              cy={pointFor(hovered, averageFractions[hovered])[1]}
               r={4}
               fill={AVERAGE_COLOR}
               stroke="#0E0B13"
@@ -177,14 +176,24 @@ export function Hexagon({ axes }: { axes: HexagonAxis[] }) {
           style={{
             left: `${(tooltipAt[0] / SIZE) * 100}%`,
             top: `${(tooltipAt[1] / SIZE) * 100}%`,
+            transform: TOOLTIP_PLACEMENT[hovered!].transform,
           }}
         >
-          <p className="tabular-nums text-menu">
-            <span style={{ color: AVERAGE_COLOR }}>평균</span> {hoveredAxis.averageText}
-          </p>
-          <p className="font-bold tabular-nums text-foreground">
-            <span style={{ color: SELF_COLOR }}>나</span> {hoveredAxis.valueText}
-          </p>
+          {/* 콜론을 자기 칸에 두면 두 줄의 ':' 가 세로로 딱 맞는다. 이름은 그
+              칸에 붙게 오른쪽 정렬, 값은 왼쪽 정렬이라 숫자도 같이 맞는다. */}
+          <div className="grid grid-cols-[auto_auto_auto] items-baseline gap-x-1 tabular-nums">
+            <span className="text-right" style={{ color: AVERAGE_COLOR }}>
+              평균
+            </span>
+            <span className="text-menu">:</span>
+            <span className="text-menu">{hoveredAxis.averageText}</span>
+
+            <span className="text-right font-bold" style={{ color: SELF_COLOR }}>
+              나
+            </span>
+            <span className="text-menu">:</span>
+            <span className="font-bold text-foreground">{hoveredAxis.valueText}</span>
+          </div>
         </div>
       )}
     </div>

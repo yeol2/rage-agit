@@ -12,7 +12,6 @@ import {
   tierNameplateSelectedStyle,
   tierNameplateStyle,
   type MemberRecentStatsRow,
-  HEXAGON_AVERAGE_PERCENT,
 } from './memberStats';
 
 function row(overrides: Partial<MemberRecentStatsRow>): MemberRecentStatsRow {
@@ -56,60 +55,77 @@ describe('tierGroupFor', () => {
 });
 
 describe('buildHexagonAxes', () => {
-  const target = row({ avgDamage: 200, avgKills: 2, rankStddev: 2, avgSurvival: 1200, avgAssists: 1, avgRank: 5 });
-  const cohort = [
-    target,
-    row({ memberId: 'm-2', avgDamage: 100, avgKills: 1, rankStddev: 5, avgSurvival: 600, avgAssists: 0, avgRank: 10 }),
+  // 클랜 전체 표본. 위아래 둘씩이라 축마다 평균과 표준편차가 딱 떨어진다
+  // (딜량 평균 200 편차 100, 순위 평균 8 편차 4 …).
+  const strong = { avgDamage: 300, avgKills: 3, rankStddev: 2, avgSurvival: 1500, avgAssists: 2, avgRank: 4 };
+  const weak = { avgDamage: 100, avgKills: 1, rankStddev: 6, avgSurvival: 900, avgAssists: 0, avgRank: 12 };
+  const clan = [
+    row({ memberId: 'c-1', ...strong }),
+    row({ memberId: 'c-2', ...strong }),
+    row({ memberId: 'c-3', ...weak }),
+    row({ memberId: 'c-4', ...weak }),
   ];
+  const middle = row({ avgDamage: 200, avgKills: 2, rankStddev: 4, avgSurvival: 1200, avgAssists: 1, avgRank: 8 });
 
   it('6축을 정해진 순서와 라벨로 낸다', () => {
-    const axes = buildHexagonAxes(target, cohort);
+    const axes = buildHexagonAxes(middle, clan, clan);
     expect(axes.map((a) => a.key)).toEqual(['damage', 'kills', 'stability', 'survival', 'assists', 'rank']);
     expect(axes.map((a) => a.label)).toEqual(['딜량', '킬', '안정성', '생존', '어시', '순위']);
   });
 
-  // 이 표본은 두 명이 평균에서 정확히 1 표준편차씩 떨어져 있어, 잘하는 쪽은
-  // 모든 축에서 같은 자리(상한 96%)에 놓인다.
-  it('본인이 코호트 중 전부 앞서면 모든 축이 바깥 끝이다', () => {
-    const axes = buildHexagonAxes(target, cohort);
-    expect(axes.every((a) => a.percent === 96)).toBe(true);
+  it('클랜 평균과 같은 값이면 한가운데다', () => {
+    const axes = buildHexagonAxes(middle, clan, clan);
+    expect(axes.every((a) => a.percent === 50)).toBe(true);
   });
 
-  it('평균과 같은 값이면 정확히 한가운데다 — 평균 도형이 정육각형인 근거', () => {
-    const middle = row({ avgDamage: 150, avgKills: 1.5, rankStddev: 3.5, avgSurvival: 900, avgAssists: 0.5, avgRank: 7.5 });
-    const axes = buildHexagonAxes(middle, cohort);
-    expect(axes.every((a) => a.percent === HEXAGON_AVERAGE_PERCENT)).toBe(true);
+  // 눈금 끝이 2 표준편차라, 1 표준편차 위인 사람은 딱 4분의 3 지점에 온다.
+  it('눈금은 클랜 평균 ±2 표준편차다', () => {
+    const axes = buildHexagonAxes(clan[0], clan, clan);
+    expect(axes.find((a) => a.key === 'damage')!.percent).toBe(75);
+    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(75);
   });
 
   it('안정성과 순위는 값이 작을수록 바깥이다', () => {
-    const steady = row({ ...target, rankStddev: 5, avgRank: 10 });
-    const axes = buildHexagonAxes(steady, cohort);
-    expect(axes.find((a) => a.key === 'stability')!.percent).toBe(4);
-    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(4);
+    const axes = buildHexagonAxes(clan[2], clan, clan);
+    expect(axes.find((a) => a.key === 'stability')!.percent).toBe(25);
+    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(25);
   });
 
-  it('툴팁에 쓸 내 값과 평균값을 단위까지 붙여 낸다', () => {
-    const axes = buildHexagonAxes(target, cohort);
+  // 이 그림의 핵심 — 자는 모두에게 같고, 점선만 티어 그룹에 따라 커지고 작아진다.
+  it('눈금은 클랜 전체 기준이고, 점선만 티어 그룹 평균 자리로 간다', () => {
+    const inStrong = buildHexagonAxes(middle, clan, [clan[0], clan[1]]);
+    const inWeak = buildHexagonAxes(middle, clan, [clan[2], clan[3]]);
+
+    // 같은 사람이므로 실선 자리는 그룹이 달라도 그대로다.
+    expect(inStrong.map((a) => a.percent)).toEqual(inWeak.map((a) => a.percent));
+    // 잘하는 그룹의 점선이 모든 축에서 더 바깥에 있다.
+    for (let i = 0; i < inStrong.length; i += 1) {
+      expect(inStrong[i].averagePercent).toBeGreaterThan(inWeak[i].averagePercent);
+    }
+  });
+
+  it('툴팁에 쓸 내 값과 그룹 평균값을 단위까지 붙여 낸다', () => {
+    const axes = buildHexagonAxes(clan[0], clan, [clan[0], clan[2]]);
     const damage = axes.find((a) => a.key === 'damage')!;
-    expect(damage.valueText).toBe('200딜');
-    expect(damage.averageText).toBe('150딜');
+    expect(damage.valueText).toBe('300딜');
+    expect(damage.averageText).toBe('200딜');
     // 생존은 초로 들어와 분으로 나간다.
-    expect(axes.find((a) => a.key === 'survival')!.valueText).toBe('20.0분');
-    expect(axes.find((a) => a.key === 'rank')!.averageText).toBe('7.5등');
+    expect(axes.find((a) => a.key === 'survival')!.valueText).toBe('25.0분');
+    expect(axes.find((a) => a.key === 'rank')!.averageText).toBe('8.0등');
   });
 
-  it('rankStddev 가 null 인 코호트 구성원은 안정성 비교 대상에서 뺀다', () => {
-    const withNull = [...cohort, row({ memberId: 'm-3', rankStddev: null })];
-    const axes = buildHexagonAxes(target, withNull);
-    // null 이 낀 것과 무관하게 [2, 5] 기준 그대로다.
-    expect(axes.find((a) => a.key === 'stability')!.averageText).toBe('±3.50등');
+  it('rankStddev 가 null 인 사람은 안정성 계산에서 빠진다', () => {
+    const withNull = [...clan, row({ memberId: 'c-5', rankStddev: null })];
+    const axes = buildHexagonAxes(middle, withNull, withNull);
+    // null 이 낀 것과 무관하게 [2, 2, 6, 6] 기준 그대로다.
+    expect(axes.find((a) => a.key === 'stability')!.averageText).toBe('±4.00등');
   });
 
-  it('본인의 rankStddev 가 null 이면 도형을 평균 자리에 놓고 기록 없음이라 적는다', () => {
+  it('본인의 rankStddev 가 null 이면 도형을 그룹 평균 자리에 놓고 기록 없음이라 적는다', () => {
     const nullTarget = row({ rankStddev: null });
-    const axes = buildHexagonAxes(nullTarget, [nullTarget, ...cohort]);
+    const axes = buildHexagonAxes(nullTarget, clan, clan);
     const stability = axes.find((a) => a.key === 'stability')!;
-    expect(stability.percent).toBe(HEXAGON_AVERAGE_PERCENT);
+    expect(stability.percent).toBe(stability.averagePercent);
     expect(stability.valueText).toBe('기록 없음');
   });
 });

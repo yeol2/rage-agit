@@ -19,7 +19,7 @@ import {
   fetchMember,
   fetchMemberRecentStats,
   fetchMemberWinCount,
-  fetchTierCohortStats,
+  fetchHexagonCohort,
   stripTrailingKoreanTag,
   tierColorRamp,
   tierGroupFor,
@@ -83,9 +83,12 @@ export default async function MemberDetailPage({
   const standingByDate = new Map(standings.map((row) => [row.scrimDate, row.standing]));
   const hasEnoughGames = stats !== null && stats.gameCount >= MIN_GAMES_FOR_HEXAGON;
 
+  // 눈금은 클랜 전체 기준 하나이고 점선만 티어 그룹 평균이다(buildHexagonAxes
+  // 주석 참고). 그래서 표본을 한 번만 받아 여기서 그룹을 갈라 넘긴다.
   const tierGroup = tierGroupFor(member.tier);
-  const cohort = hasEnoughGames && tierGroup ? await fetchTierCohortStats(tierGroup.tiers) : [];
-  const axes = hasEnoughGames && stats ? buildHexagonAxes(stats, cohort) : null;
+  const cohort = hasEnoughGames && tierGroup ? await fetchHexagonCohort() : [];
+  const groupCohort = tierGroup ? cohort.filter((row) => tierGroup.tiers.includes(row.tier)) : cohort;
+  const axes = hasEnoughGames && stats ? buildHexagonAxes(stats, cohort, groupCohort) : null;
   const ramp = tierColorRamp(member.tier);
 
   return (
