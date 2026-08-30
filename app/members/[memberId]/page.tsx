@@ -128,12 +128,28 @@ export default async function MemberDetailPage({
             />
           </div>
 
-          <div className="mt-10 flex justify-center">
-            {axes ? (
-              <Hexagon axes={axes} />
-            ) : (
-              <p className="text-menu">{siteConfig.memberDirectory.insufficientDataMessage}</p>
-            )}
+          {/* 깐부 칸과 선을 하나 긋고, 6각형 옆 빈자리에 이 그림이 무엇인지
+              적는다. 좁은 화면에서는 그림이 먼저 오고 설명이 그 아래로 내려간다. */}
+          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+            <p className="hud text-xs text-menu">{siteConfig.memberDirectory.hexagon.heading}</p>
+            <div className="mt-3.5 flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6">
+              <div className="order-2 min-w-0 flex-1 space-y-2 sm:order-1">
+                {siteConfig.memberDirectory.hexagon.lines.map((line) => (
+                  <p key={line} className="text-[13px] leading-relaxed text-menu">
+                    {line}
+                  </p>
+                ))}
+              </div>
+              <div className="order-1 flex w-full justify-center sm:order-2 sm:w-auto sm:shrink-0">
+                {axes ? (
+                  <Hexagon axes={axes} />
+                ) : (
+                  <p className="py-8 text-center text-menu">
+                    {siteConfig.memberDirectory.insufficientDataMessage}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </section>

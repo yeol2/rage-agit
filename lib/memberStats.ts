@@ -2,9 +2,8 @@
 // 여기 있는 함수들은 Supabase 없이 테스트한다.
 
 import { getSupabase } from './supabaseBrowser';
-// 축 값을 도형 위 위치로 옮기는 자를 클랜원 대시보드의 막대와 공유한다 —
-// 아래 axisPercent 주석 참고.
-import { centeredPercent, mean, stddev } from './memberDashboard';
+// 흩어진 정도를 재는 함수는 클랜원 대시보드와 같은 것을 쓴다.
+import { mean, stddev } from './memberDashboard';
 
 export interface MemberRecentStatsRow {
   memberId: string;
@@ -193,27 +192,38 @@ export interface HexagonAxis {
   averageText: string;
 }
 
-// 눈금은 **클랜 전체 기준 하나**다. 그래서 누구의 6각형이든 같은 자리가 같은
-// 값을 뜻하고, 두 사람의 그림을 나란히 놓고 그대로 비교할 수 있다.
+// 티어 그룹마다 점선이 놓이는 자리. **축과 무관하게 고정**이라 점선은 언제나
+// 정확한 정육각형이고, 높은 티어 그룹일수록 크다.
 //
-// 예전에는 사람마다 자기 티어 그룹 안에서 백분위를 매겼다. 그러면 0티어의
-// 6각형과 5티어의 6각형이 둘 다 그럴싸하게 커서, 그림만 봐서는 누가 잘하는지
-// 알 수 없었다. 이제 점선(자기 티어 그룹 평균)이 그룹마다 다른 크기로 그려져서
-// 자기가 어느 무리에 있는지가 그림에 남는다.
+// 값에서 계산하지 않고 박아두는 이유가 있다. 여섯 축 중 딜량·킬·어시만 티어를
+// 가르고, 순위·생존·안정성은 그룹끼리 거의 같다(순위 평균 8.51 / 8.66 / 8.65 /
+// 9.04). 팀을 티어로 맞춰 짜니 어느 그룹이든 팀 등수가 비슷하게 나오기 때문이다.
+// 그 값들을 그대로 반지름으로 옮기면 점선이 세 축만 튀어나온 찌그러진 모양이
+// 된다. 그래서 점선은 "내가 어느 무리에 있는가"를 나타내는 표식으로 삼고,
+// 실제 값은 실선과 툴팁 숫자가 말한다.
 //
-// 반지름 끝은 클랜 평균에서 2 표준편차다. 1 표준편차로 잡으면 절반 넘는 사람이
-// 상·하한에 붙어버려서 눈금이 좁다는 말이 나온다.
-export const HEXAGON_SPREAD_SIGMAS = 2;
+// 이 선택의 대가는 분명하다 — 같은 반지름이 티어 그룹마다 다른 값을 뜻한다.
+// 4~5티어의 점선 위에 붙은 실선과 0~1.5티어의 점선 위에 붙은 실선은 "우리 그룹
+// 평균만큼"이라는 같은 말이지 같은 딜량이 아니다.
+const TIER_RING_PERCENT: Record<string, number> = {
+  '0-1.5': 80,
+  '2-2.5': 65,
+  '3-3.5': 50,
+  '4-5': 35,
+};
 
-// 축 값을 도형 위 위치로 옮기는 자는 클랜원 대시보드의 막대와 같은 것을 쓴다
-// (lib/memberDashboard.ts 의 centeredPercent) — 가운데가 평균이고 거기서 몇
-// 표준편차 떨어졌는지로 안팎이 정해진다. 같은 화면에 있는 두 그림이 다른 자를
-// 쓰면 "가운데보다 바깥"이라는 말이 두 뜻을 갖는다.
-function axisScale(clanValues: number[], higherIsBetter: boolean) {
-  const pool = clanValues.filter((v) => Number.isFinite(v));
-  const clanAverage = mean(pool);
-  const spread = stddev(pool, clanAverage) * HEXAGON_SPREAD_SIGMAS;
-  return (value: number) => centeredPercent(value, clanAverage, spread, higherIsBetter);
+// 티어 그룹을 못 찾았을 때(배색표에 없는 티어) 쓰는 자리. 가운데 고리다.
+const DEFAULT_RING_PERCENT = 50;
+
+// 자기 그룹 평균에서 1 표준편차 떨어질 때마다 도형이 움직이는 폭. 티어 그룹
+// 사이 간격(15)과 같게 맞췄다 — "1 표준편차 위 = 한 그룹 위만큼"으로 읽힌다.
+// 표준편차는 클랜 전체에서 잰다. 그룹 안에서 재면 인원이 적은 그룹(0~1.5 는
+// 21명)에서 한두 명 때문에 눈금이 출렁인다.
+export const HEXAGON_SIGMA_STEP = 15;
+
+export function tierRingPercent(tier: number): number {
+  const group = tierGroupFor(tier);
+  return group ? (TIER_RING_PERCENT[group.id] ?? DEFAULT_RING_PERCENT) : DEFAULT_RING_PERCENT;
 }
 
 // 툴팁에 적을 형식. 축마다 단위와 자릿수가 다르다.
@@ -230,15 +240,17 @@ const AXIS_FORMAT: Record<HexagonAxisKey, (value: number) => string> = {
 /**
  * 6각형 여섯 축.
  *
- * clan 은 눈금을 정하는 표본(집계 대상 전원)이고, group 은 점선으로 그릴 내
- * 티어 그룹이다. 둘을 따로 받는 이유가 이 그림의 전부다 — 자는 모두에게 같고,
- * 점선만 사람마다 다른 자리에 온다.
+ * clan 은 흩어진 정도(표준편차)를 재는 표본이고, group 은 내 티어 그룹이다.
+ * 점선은 그룹의 고정 반지름에, 실선은 그 반지름에서 "우리 그룹 평균과 얼마나
+ * 떨어졌나"만큼 안팎으로 옮겨 찍는다.
  */
 export function buildHexagonAxes(
   target: MemberRecentStatsRow,
   clan: MemberRecentStatsRow[],
   group: MemberRecentStatsRow[],
 ): HexagonAxis[] {
+  const ringPercent = tierRingPercent(target.tier);
+
   const build = (
     key: HexagonAxisKey,
     pick: (row: MemberRecentStatsRow) => number | null,
@@ -247,17 +259,26 @@ export function buildHexagonAxes(
     // null 은 어디서도 숫자로 취급하지 않는다 — 안정성은 경기가 하나뿐이면 없다.
     const clanValues = clan.map(pick).filter((v): v is number => v !== null);
     const groupValues = group.map(pick).filter((v): v is number => v !== null);
-    const toPercent = axisScale(clanValues, higherIsBetter);
 
+    const clanAverage = mean(clanValues);
+    const spread = stddev(clanValues, clanAverage);
     const groupAverage = mean(groupValues);
     const value = pick(target);
+
+    const percent =
+      value === null || spread <= 0
+        ? ringPercent
+        : clamp(
+            ringPercent +
+              ((higherIsBetter ? value - groupAverage : groupAverage - value) / spread) *
+                HEXAGON_SIGMA_STEP,
+          );
 
     return {
       key,
       label: HEXAGON_AXIS_LABELS[key],
-      // 값이 없으면 도형을 부풀리지도 쭈그러뜨리지도 않게 그룹 평균 자리에 놓는다.
-      percent: value === null ? toPercent(groupAverage) : toPercent(value),
-      averagePercent: toPercent(groupAverage),
+      percent,
+      averagePercent: ringPercent,
       valueText: value === null ? '기록 없음' : AXIS_FORMAT[key](value),
       averageText: AXIS_FORMAT[key](groupAverage),
     };
@@ -272,6 +293,12 @@ export function buildHexagonAxes(
     build('assists', (r) => r.avgAssists, true),
     build('rank', (r) => r.avgRank, false),
   ];
+}
+
+// 도형이 중심에 뭉치거나 격자 밖으로 나가지 않게 묶는다. 0% 는 "기록 없음"으로
+// 오해되고 100% 는 라벨을 덮는다.
+function clamp(percent: number): number {
+  return Math.min(96, Math.max(4, percent));
 }
 
 export interface MemberSummary {

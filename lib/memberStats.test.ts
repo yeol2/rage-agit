@@ -73,35 +73,33 @@ describe('buildHexagonAxes', () => {
     expect(axes.map((a) => a.label)).toEqual(['딜량', '킬', '안정성', '생존', '어시', '순위']);
   });
 
-  it('클랜 평균과 같은 값이면 한가운데다', () => {
+  // clan 의 티어는 전부 2(row 기본값)라 티어 그룹은 2~2.5, 점선 반지름은 65% 다.
+  it('점선은 티어 그룹마다 정해진 반지름에 있다 — 축이 달라도 같은 값이라 정육각형이다', () => {
     const axes = buildHexagonAxes(middle, clan, clan);
-    expect(axes.every((a) => a.percent === 50)).toBe(true);
+    expect(axes.every((a) => a.averagePercent === 65)).toBe(true);
+
+    const topTier = buildHexagonAxes(row({ ...middle, tier: 0 }), clan, clan);
+    const bottomTier = buildHexagonAxes(row({ ...middle, tier: 5 }), clan, clan);
+    expect(topTier.every((a) => a.averagePercent === 80)).toBe(true);
+    expect(bottomTier.every((a) => a.averagePercent === 35)).toBe(true);
   });
 
-  // 눈금 끝이 2 표준편차라, 1 표준편차 위인 사람은 딱 4분의 3 지점에 온다.
-  it('눈금은 클랜 평균 ±2 표준편차다', () => {
+  it('우리 그룹 평균과 같은 값이면 실선이 점선 위에 정확히 얹힌다', () => {
+    const axes = buildHexagonAxes(middle, clan, clan);
+    expect(axes.every((a) => a.percent === a.averagePercent)).toBe(true);
+  });
+
+  // 1 표준편차마다 15%씩, 티어 그룹 한 칸과 같은 폭으로 움직인다.
+  it('그룹 평균에서 1 표준편차 떨어지면 한 그룹만큼 안팎으로 간다', () => {
     const axes = buildHexagonAxes(clan[0], clan, clan);
-    expect(axes.find((a) => a.key === 'damage')!.percent).toBe(75);
-    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(75);
+    expect(axes.find((a) => a.key === 'damage')!.percent).toBe(80);
+    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(80);
   });
 
   it('안정성과 순위는 값이 작을수록 바깥이다', () => {
     const axes = buildHexagonAxes(clan[2], clan, clan);
-    expect(axes.find((a) => a.key === 'stability')!.percent).toBe(25);
-    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(25);
-  });
-
-  // 이 그림의 핵심 — 자는 모두에게 같고, 점선만 티어 그룹에 따라 커지고 작아진다.
-  it('눈금은 클랜 전체 기준이고, 점선만 티어 그룹 평균 자리로 간다', () => {
-    const inStrong = buildHexagonAxes(middle, clan, [clan[0], clan[1]]);
-    const inWeak = buildHexagonAxes(middle, clan, [clan[2], clan[3]]);
-
-    // 같은 사람이므로 실선 자리는 그룹이 달라도 그대로다.
-    expect(inStrong.map((a) => a.percent)).toEqual(inWeak.map((a) => a.percent));
-    // 잘하는 그룹의 점선이 모든 축에서 더 바깥에 있다.
-    for (let i = 0; i < inStrong.length; i += 1) {
-      expect(inStrong[i].averagePercent).toBeGreaterThan(inWeak[i].averagePercent);
-    }
+    expect(axes.find((a) => a.key === 'stability')!.percent).toBe(50);
+    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(50);
   });
 
   it('툴팁에 쓸 내 값과 그룹 평균값을 단위까지 붙여 낸다', () => {
