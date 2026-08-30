@@ -1,7 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-// 내전 날짜를 한국시간으로 묶는 규칙은 폴링(Edge Function)과 같아야 한다 —
-// 어긋나면 같은 내전이 두 날짜로 갈린다. 그래서 그쪽 모듈을 그대로 쓴다.
-import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
 import {
   computeRoundSheet,
   computeTeamRoundResults,
@@ -30,8 +27,26 @@ export interface RoundSheetData {
   unstableTeamPlayers: string[];
 }
 
+/** 가장 최근에 매치가 잡힌 내전 날짜. 아직 한 번도 없으면 null. */
+export async function latestScrimDate(supabase: SupabaseClient): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('scrim_sessions')
+    .select('scrim_date')
+    .order('scrim_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error('내전 세션을 조회하지 못했습니다.');
+  return (data?.scrim_date as string | undefined) ?? null;
+}
+
 /**
- * 03 내전 시트 한 장을 만든다.
+ * 01 내전 시트 한 장을 만든다. 날짜 하나로만 만든다.
+ *
+ * 로스터(01 업로드 → 02 팀 구성)는 **일부러 안 본다.** 시트는 "실제로 이렇게
+ * 뛰었다"를 그리는 화면이고, 로스터는 "이렇게 나눌 계획이었다"라서 둘은 얼마든지
+ * 다를 수 있다 — 2026-08-27 은 계획 1팀 4명이 실제로는 1·5·9·13팀으로 흩어져
+ * 뛰었다. 예전에는 로스터의 업로드 시각에서 날짜를 뽑아 세션을 찾았는데, 그러면
+ * "초기화"로 로스터를 지우는 순간 멀쩡히 남아 있는 지난 내전 시트를 못 보게 됐다.
  *
  * 시트를 보여줄 때(GET)와 우승을 확정할 때(POST)가 **같은 값을 봐야 하므로**
  * 계산은 여기 한 곳에만 둔다. 확정 쪽이 클라이언트가 보낸 우승팀을 그대로
@@ -39,36 +54,8 @@ export interface RoundSheetData {
  */
 export async function buildRoundSheet(
   supabase: SupabaseClient,
-  rosterId: string,
+  scrimDate: string,
 ): Promise<RoundSheetData> {
-  const { data: entryRows, error: entriesError } = await supabase
-    .from('scrim_roster_entries')
-    .select('discord_nickname, tier_slot, team_number')
-    .eq('roster_id', rosterId)
-    .not('team_number', 'is', null)
-    .order('tier_slot', { ascending: true });
-  if (entriesError) throw new Error('로스터를 불러오지 못했습니다.');
-
-  const teamNumbers = [...new Set((entryRows ?? []).map((row) => row.team_number as number))].sort(
-    (a, b) => a - b,
-  );
-  const playersByTeam = new Map<number, string[]>();
-  for (const row of entryRows ?? []) {
-    const teamNumber = row.team_number as number;
-    const list = playersByTeam.get(teamNumber) ?? [];
-    list.push((row.discord_nickname as string | null) ?? '(닉네임 정보 없음)');
-    playersByTeam.set(teamNumber, list);
-  }
-
-  const { data: rosterRow, error: rosterFetchError } = await supabase
-    .from('scrim_rosters')
-    .select('fetched_at')
-    .eq('id', rosterId)
-    .maybeSingle();
-  if (rosterFetchError || !rosterRow) throw new Error('로스터를 불러오지 못했습니다.');
-
-  const scrimDate = toKstDate(rosterRow.fetched_at as string);
-
   const { data: session, error: sessionError } = await supabase
     .from('scrim_sessions')
     .select('id')
@@ -76,15 +63,13 @@ export async function buildRoundSheet(
     .maybeSingle();
   if (sessionError) throw new Error('내전 세션을 조회하지 못했습니다.');
 
-  // 아직 경기가 하나도 안 잡혔으면 팀 번호만 있는 빈 시트를 준다.
+  // 아직 그날 경기가 하나도 안 잡혔으면 빈 시트다. 팀도 선수도 매치에서만
+  // 나오므로, 계획을 대신 채워 넣지 않는다 — 그러면 첫 라운드가 들어오는
+  // 순간 화면이 통째로 뒤바뀌어 "폴링했더니 팀이 틀어졌다"로 보인다.
   const emptySheet = (): RoundSheetData => ({
     scrimDate: session ? scrimDate : null,
     roundCount: 0,
-    teams: computeRoundSheet([], teamNumbers).map((row) => ({
-      ...row,
-      players: playersByTeam.get(row.teamNumber) ?? [],
-      memberIds: [],
-    })),
+    teams: [],
     unstableTeamPlayers: [],
   });
 

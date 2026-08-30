@@ -29,7 +29,7 @@ function makeRoster(entries: RosterEntry[]): Roster {
   return { id: 'roster-1', fetchedAt: new Date().toISOString(), entries };
 }
 
-const ROUND_SHEET_GET_URL = '/api/scrim-roster/round-sheet?rosterId=roster-1';
+const ROUND_SHEET_GET_URL = '/api/scrim-roster/round-sheet';
 const EMPTY_ROUND_SHEET = { roundCount: 0, teams: [] };
 
 // 01(내전 시트)이 항상 같이 마운트돼서 모든 렌더가 이 GET을 한 번씩 부른다 —
@@ -468,26 +468,28 @@ describe('RosterBoard - 03 표 스왑 / VIP 정렬', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/scrim-roster/reroll', expect.anything());
   });
 
-  // team_number 를 바꾸는 UPDATE 는 같은 roster 행을 고치는 것이라 rosterId 는
-  // 안 바뀐다. 01(RoundSheet)이 rosterId 만 보고 있으면 최초 한 번 불러온 뒤로
-  // 다시 안 불러와서, 02에서 팀을 다시 짜도 01이 예전 팀 그대로 남는 버그가
-  // 실제로 있었다 — teamsVersion 을 의존성에 넣어 고쳤다.
-  it('리롤이 성공하면 01 시트도 team_number 를 다시 읽어온다', async () => {
+  // 예전에는 01 시트가 로스터의 team_number 를 읽어서, 팀을 다시 짤 때마다
+  // 시트도 같이 다시 불러와야 했다(teamsVersion). 지금은 시트가 실제 매치의
+  // PUBG team_id 만 보므로 팀 배정을 아무리 바꿔도 시트 내용이 달라지지 않는다.
+  // 여기서 보는 건 그 독립성이다 — 리롤이 시트 조회를 유발하지 않아야 하고,
+  // 조회 URL 에 rosterId 가 실려서도 안 된다.
+  it('리롤해도 01 시트는 다시 안 불러온다 (시트는 팀 배정과 무관하다)', async () => {
     const entries = makeFullEntries();
     const roster = makeRoster(entries);
     const rerolled = entries.map((entry) => (entry.id === 'a' ? { ...entry, teamNumber: 2 } : entry));
     const fetchMock = stubFetchForOtherCalls({ entries: rerolled });
-    const sheetCallCount = () =>
-      fetchMock.mock.calls.filter(([url]) => url === ROUND_SHEET_GET_URL).length;
+    const sheetCalls = () =>
+      fetchMock.mock.calls.filter(([url]) => String(url).startsWith(ROUND_SHEET_GET_URL));
 
     render(<RosterBoard roster={roster} />);
-    await waitFor(() => expect(sheetCallCount()).toBeGreaterThan(0));
-    const beforeReroll = sheetCallCount();
+    await waitFor(() => expect(sheetCalls().length).toBeGreaterThan(0));
+    const beforeReroll = sheetCalls().length;
 
     await userEvent.click(screen.getByRole('button', { name: '전체 리롤' }));
     await screen.findByRole('button', { name: '전체 리롤' });
 
-    await waitFor(() => expect(sheetCallCount()).toBeGreaterThan(beforeReroll));
+    expect(sheetCalls().length).toBe(beforeReroll);
+    for (const [url] of sheetCalls()) expect(String(url)).not.toContain('rosterId');
   });
 
   it('리롤 전에는 "리롤 되돌리기" 버튼이 비활성화돼 있다', async () => {

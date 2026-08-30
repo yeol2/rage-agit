@@ -204,12 +204,9 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
   // 01 네임플레이트에 보여줄 관리자 전용 최근 16매치 종합점수 — memberId 기준.
   const [scoreByMemberId, setScoreByMemberId] = useState<Record<string, number>>({});
   const [entries, setEntries] = useState<RosterEntry[]>(roster?.entries ?? []);
-  // team_number 를 바꾸는 조작(팀 구성/리롤/되돌리기/스왑/VIP 정렬)이 성공할
-  // 때마다 하나씩 올린다. RoundSheet 는 rosterId 가 그대로면 다시 안 부르므로
-  // (team_number 는 이 roster 행을 고치는 UPDATE 라 rosterId 자체는 안 바뀐다),
-  // 이 값을 같이 넘겨 "01 시트가 지금 몇 번째 팀 배정을 보고 있어야 하는지"를
-  // 알려준다 — 안 그러면 02에서 팀을 다시 짜도 01은 처음 열었을 때 팀 그대로 남는다.
-  const [teamsVersion, setTeamsVersion] = useState(0);
+  // (여기 있던 teamsVersion 카운터는 없앴다. 01 시트가 로스터의 team_number 를
+  //  읽던 시절엔 팀을 다시 짤 때마다 시트를 다시 불러와야 했지만, 이제 시트는
+  //  실제 매치만 보므로 팀 배정을 아무리 바꿔도 시트 내용이 달라지지 않는다.)
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<DropTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -265,10 +262,25 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
     };
   }, [isAdmin]);
 
+  // 명단이 없어도 01 시트는 보여준다 — 시트는 실제 매치만 보므로 로스터와
+  // 무관하다. "초기화"로 명단을 지우고 다음 내전을 준비하는 동안에도 지난
+  // 내전 결과를 계속 볼 수 있어야 한다.
   if (!roster) {
     return (
       <div>
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+          <span className="mr-3" style={{ color: '#322F36' }}>
+            01
+          </span>{' '}
+          내전 시트
+        </h2>
+        <div className="mt-10">
+          <RoundSheet />
+        </div>
+
+        <div aria-hidden="true" className="mt-16 border-t border-white/10" />
+
+        <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
           <span className="mr-3" style={{ color: '#322F36' }}>
             02
           </span>{' '}
@@ -374,7 +386,6 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       // 새로 배정된 팀 번호 기준으로 다시 시작 — 이전 배정을 향한 리롤 되돌리기
       // 스냅샷은 더 이상 의미가 없다.
       setRerollHistory([]);
-      setTeamsVersion((v) => v + 1);
     } catch (err) {
       setAssignError(err instanceof Error ? err.message : '팀 구성에 실패했습니다.');
     } finally {
@@ -433,7 +444,6 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         body: JSON.stringify({ entryIdA: source.id, entryIdB: targetEntry.id }),
       });
       if (!response.ok) throw new Error('저장 실패');
-      setTeamsVersion((v) => v + 1);
     } catch {
       setEntries(previous);
       setSwapError('팀 번호를 맞바꾸지 못했습니다. 다시 시도하세요.');
@@ -518,7 +528,6 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       if (!response.ok) throw new Error(body.error ?? 'VIP 정렬에 실패했습니다.');
 
       setEntries(body.entries as RosterEntry[]);
-      setTeamsVersion((v) => v + 1);
     } catch (err) {
       setVipSortError(err instanceof Error ? err.message : 'VIP 정렬에 실패했습니다.');
     } finally {
@@ -545,7 +554,6 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
       setEntries(body.entries as RosterEntry[]);
       setRerollHistory((history) => [...history, snapshot]);
-      setTeamsVersion((v) => v + 1);
     } catch (err) {
       setRerollError(err instanceof Error ? err.message : '리롤에 실패했습니다.');
     } finally {
@@ -595,7 +603,6 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       if (!response.ok) throw new Error(body.error ?? '되돌리기에 실패했습니다.');
 
       setEntries(body.entries as RosterEntry[]);
-      setTeamsVersion((v) => v + 1);
     } catch (err) {
       setEntries(previousEntries);
       setRerollHistory((history) => [...history, snapshot]);
@@ -663,7 +670,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         내전 시트
       </h2>
       <div className="mt-10">
-        <RoundSheet rosterId={rosterId} teamsVersion={teamsVersion} />
+        <RoundSheet rosterId={rosterId} />
       </div>
 
       <div aria-hidden="true" className="mt-16 border-t border-white/10" />
