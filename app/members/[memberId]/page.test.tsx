@@ -29,6 +29,16 @@ vi.mock('@/lib/memberDashboard', async (importOriginal) => {
   };
 });
 
+// 깐부/사대 칸도 같은 이유로 막는다 — 고르는 규칙은 partnerStats.test.ts 가 덮는다.
+vi.mock('@/lib/partnerStats', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/partnerStats')>();
+  return {
+    ...actual,
+    fetchPartnerStats: vi.fn().mockResolvedValue([]),
+    fetchPartnerNames: vi.fn().mockResolvedValue(new Map()),
+  };
+});
+
 // eslint-disable-next-line import/first
 import MemberDetailPage from './page';
 // eslint-disable-next-line import/first

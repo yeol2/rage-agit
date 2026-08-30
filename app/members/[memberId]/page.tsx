@@ -3,6 +3,7 @@ import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { Hexagon } from '@/components/members/Hexagon';
 import { MemberDashboard } from '@/components/members/MemberDashboard';
+import { PartnerChemistry } from '@/components/members/PartnerChemistry';
 import { WinTrophies } from '@/components/members/WinTrophies';
 import {
   buildWindowStats,
@@ -22,6 +23,12 @@ import {
   tierColorRamp,
   tierGroupFor,
 } from '@/lib/memberStats';
+import {
+  fetchPartnerNames,
+  fetchPartnerStats,
+  pickPartners,
+  type PartnerCard,
+} from '@/lib/partnerStats';
 import { siteConfig } from '@/lib/siteConfig';
 
 export default async function MemberDetailPage({
@@ -32,14 +39,33 @@ export default async function MemberDetailPage({
   const member = await fetchMember(params.memberId);
   if (!member) notFound();
 
-  const [stats, winCount, alltimeRows, recent16Rows, sessions, standings] = await Promise.all([
-    fetchMemberRecentStats(member.id),
-    fetchMemberWinCount(member.id),
-    fetchRankingStats('alltime'),
-    fetchRankingStats('recent16'),
-    fetchRecentSessions(),
-    fetchMemberStandings(member.id),
-  ]);
+  const [stats, winCount, alltimeRows, recent16Rows, sessions, standings, partnerRows] =
+    await Promise.all([
+      fetchMemberRecentStats(member.id),
+      fetchMemberWinCount(member.id),
+      fetchRankingStats('alltime'),
+      fetchRankingStats('recent16'),
+      fetchRecentSessions(),
+      fetchMemberStandings(member.id),
+      fetchPartnerStats(member.id),
+    ]);
+
+  // 깐부/사대는 양 끝 두 명만 이름이 필요하다 — 후보 전원을 조회하지 않는다.
+  const partners = pickPartners(partnerRows);
+  const partnerNames = await fetchPartnerNames(
+    [partners.best?.partnerId, partners.worst?.partnerId].filter(
+      (id): id is string => id !== undefined,
+    ),
+  );
+  const toPartnerCard = (stat: (typeof partners)['best']): PartnerCard | null => {
+    const name = stat === null ? undefined : partnerNames.get(stat.partnerId);
+    if (stat === null || !name) return null;
+    return {
+      ...stat,
+      displayName: stripTrailingKoreanTag(cleanDisplayName(name.discordNickname)),
+      tier: name.tier,
+    };
+  };
 
   const dashboardStats = {
     alltime: buildWindowStats(member.id, alltimeRows),
@@ -78,6 +104,14 @@ export default async function MemberDetailPage({
               sessions={sessions}
               standingByDate={standingByDate}
               ramp={ramp}
+            />
+          </div>
+
+          {/* 전적 요약(혼자 얼마나 잘했나) 다음에 "누구와 있을 때 잘했나"가 온다. */}
+          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+            <PartnerChemistry
+              best={toPartnerCard(partners.best)}
+              worst={toPartnerCard(partners.worst)}
             />
           </div>
 
