@@ -75,14 +75,16 @@ export async function buildRoundSheet(
 
   if (!session) return emptySheet();
 
-  // excluded_reason 이 붙은 매치(재경기 등)는 라운드로 세지 않는다. 이걸 안
-  // 걸러내면 2026-08-16 처럼 재경기가 4번째 자리를 차지해서, limit(4) 에
-  // 진짜 마지막 라운드가 잘려나간다.
+  // 재경기는 라운드로 세지 않는다. 이걸 안 걸러내면 2026-08-16 처럼 재경기가
+  // 4번째 자리를 차지해서, limit(4) 에 진짜 마지막 라운드가 잘려나간다.
+  //
+  // matches 가 아니라 countable_matches 를 읽는다(0037) — "세는 매치"의 판정이
+  // 거기 한 곳에 있다. 예전에는 여기서 제외 표시만 봤기 때문에, 사람이 표시를
+  // 달기 전까지 시트만 재경기를 라운드로 세는 상태가 있었다.
   const { data: matchRows, error: matchesError } = await supabase
-    .from('matches')
+    .from('countable_matches')
     .select('pubg_match_id')
     .eq('scrim_session_id', session.id)
-    .is('excluded_reason', null)
     .order('played_at', { ascending: true })
     .limit(4);
   if (matchesError) throw new Error('매치 목록을 불러오지 못했습니다.');
