@@ -32,7 +32,7 @@ describe('PartnerChemistry', () => {
     render(<PartnerChemistry best={[good]} worst={[bad]} />);
 
     const best = screen.getByTestId('partner-best');
-    expect(within(best).getByText('나의 사랑')).toBeInTheDocument();
+    expect(within(best).getByText('나의 깐부')).toBeInTheDocument();
     expect(within(best).getByText('Ez_Yellow')).toBeInTheDocument();
     expect(within(best).getByText(/6\.7등/)).toBeInTheDocument();
     expect(within(best).getByText(/내전 3회\(12경기\) 함께 · 평균 2\.4등/)).toBeInTheDocument();

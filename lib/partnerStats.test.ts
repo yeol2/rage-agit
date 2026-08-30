@@ -18,7 +18,7 @@ function ids(rows: PartnerStat[]): string[] {
 }
 
 describe('pickPartners', () => {
-  it('차이가 가장 큰 쪽이 사랑, 가장 작은 쪽이 다시는 보지 말자다', () => {
+  it('차이가 가장 큰 쪽이 깐부, 가장 작은 쪽이 다시는 보지 말자다', () => {
     const { best, worst } = pickPartners([
       stat({ partnerId: 'a', rankDelta: 1.2 }),
       stat({ partnerId: 'b', rankDelta: 3.4 }),

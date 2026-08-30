@@ -69,6 +69,22 @@ body {
   animation: trophy-sheen 4.5s ease-in-out infinite;
 }
 
+/* 깐부(천사) 칸의 후광과 반대편(악마) 칸의 잉걸불. 아주 느리게 밝기만
+   오르내린다 — 자리가 움직이면 그 위의 글자를 읽기 힘들어진다. */
+@keyframes partner-aura {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.partner-aura {
+  animation: partner-aura 6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vip-holographic {
     animation: none;
@@ -77,5 +93,9 @@ body {
   .trophy-sheen {
     animation: none;
     opacity: 0;
+  }
+
+  .partner-aura {
+    animation: none;
   }
 }
