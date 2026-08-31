@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
+import { WinBadge } from '@/components/WinBadge';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -93,63 +94,6 @@ const HEADER_TRAILING_SPACE = String.fromCharCode(160); // U+00A0
 // 뱃지 열 트로피가 쓰는 그라디언트. 표에 수십 줄이 깔리므로 정의는 문서에
 // 하나만 두고 모든 줄이 이 id 를 가리킨다.
 const RANKING_TROPHY_GOLD = 'ranking-trophy-gold';
-
-// 트로피 한 개짜리 svg. 시상대 배지(TrophySquare)는 자기 배경과 색을 따로
-// 쓰므로 글리프를 직접 그리고, 이쪽은 표·시상대의 우승 뱃지가 함께 쓴다.
-// 색은 문서에 하나만 둔 그라디언트(RANKING_TROPHY_GOLD)를 가리킨다 — 표에
-// 수십 줄이 깔려도 정의는 하나면 된다.
-function TrophyMark({ className }: { className: string }) {
-  return (
-    <svg viewBox={TROPHY_VIEWBOX} fill={`url(#${RANKING_TROPHY_GOLD})`} className={className} aria-hidden>
-      <TrophyPaths />
-    </svg>
-  );
-}
-
-/**
- * 내전 종합우승 뱃지 — 트로피 하나에 횟수를 숫자로 겹쳐 얹는다.
- *
- * 예전에는 횟수만큼 트로피를 늘어놓았다. 우승이 쌓일수록 가로로 길어져서 4위
- * 이하 표에서는 뱃지 칸을 넘겼고(모바일 48px 칸은 4개부터 잘린다), 그걸 막으려고
- * 화면 폭에 따라 "늘어놓기"와 "하나+숫자" 두 벌을 그려두고 CSS 로 골라 보였다.
- * 한 벌로 줄이면 폭이 횟수와 무관하게 고정되고, 몇 번인지도 한눈에 읽힌다 —
- * 트로피 여덟 개를 세는 것보다 숫자 '8' 이 빠르다.
- *
- * 크기는 바깥에서 글자 크기(className 의 text-*)로 정한다. 트로피와 숫자가 모두
- * em 단위라 하나만 바꾸면 둘이 같은 비율로 커진다.
- */
-function WinBadge({
-  count,
-  className,
-  none = null,
-}: {
-  count: number;
-  className: string;
-  none?: ReactNode;
-}) {
-  if (count <= 0) return <>{none}</>;
-
-  return (
-    <span
-      className={`relative inline-flex shrink-0 items-center justify-center ${className}`}
-      title={`종합우승 ${count}회`}
-      data-testid="win-badge"
-    >
-      <TrophyMark className="h-[1.55em] w-auto" />
-      {/* 트로피 아래쪽에 걸치게 내린다. 받침을 살짝 덮어야 트로피에 붙은 숫자로
-          읽히지, 옆에 놓인 별개의 숫자로 보이지 않는다. 배경 색은 표 줄 색과
-          같아서 트로피가 그 뒤로 자연스럽게 잘린다. */}
-      <span
-        aria-hidden="true"
-        className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 translate-y-[22%] rounded-full px-[0.22em] text-center text-[0.8em] font-bold leading-[1.3] tabular-nums text-[#FFD365]"
-        style={{ background: RANKING_ROW_BG, boxShadow: `0 0 0 1px ${RANKING_ROW_BG}` }}
-      >
-        {count}
-      </span>
-      <span className="sr-only">종합우승 {count}회</span>
-    </span>
-  );
-}
 
 // 티어를 맨 글자가 아니라 둥근 배지로 보여준다 — team-builder 네임플레이트와
 // 같은 배색 함수(tierNameplateStyle)를 그대로 가져다 쓴다(새 색을 만들지
@@ -918,7 +862,11 @@ export function TierRankingPodium({
                             트로피 하나뿐이라 비어 보일 수 있지만, 자리를 미리
                             잡아둬야 뱃지가 붙을 때 시상대 높이가 안 흔들린다. */}
                         <div className="mt-3 flex min-h-[1.25rem] items-center justify-center gap-1.5">
-                          <WinBadge count={member.winCount} className="text-[13px] sm:text-sm" />
+                          <WinBadge
+                            count={member.winCount}
+                            className="text-[13px] sm:text-sm"
+                            gradientId={RANKING_TROPHY_GOLD}
+                          />
                         </div>
                       </>
                     )}
@@ -1088,6 +1036,7 @@ export function TierRankingPodium({
                           count={member.winCount}
                           className="text-[13px] sm:text-[15px]"
                           none={<span className="text-sm text-menu">-</span>}
+                          gradientId={RANKING_TROPHY_GOLD}
                         />
                         <span className="text-right tabular-nums">
                           <MetricValue
