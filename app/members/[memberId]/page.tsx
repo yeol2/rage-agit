@@ -135,7 +135,7 @@ export default async function MemberDetailPage({
           <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
             <div className="relative">
               <div className="sm:absolute sm:left-0 sm:top-0 sm:max-w-[15rem]">
-                <p className="hud text-xs text-menu">
+                <p className="hud text-sm font-bold text-foreground">
                   {siteConfig.memberDirectory.hexagon.heading}
                 </p>
                 <div className="mt-2 space-y-1.5">

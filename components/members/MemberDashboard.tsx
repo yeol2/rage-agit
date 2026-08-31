@@ -113,7 +113,10 @@ export function MemberDashboard({
     <div data-testid="member-dashboard">
       {!compact && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="hud text-xs text-menu">전적 요약</p>
+          {/* 칸 제목은 세 칸(전적 요약·팀 궁합·6각형 지표)이 같은 모양이다. 예전엔
+              11px 회색이라 칸 안의 라벨들과 구분이 안 돼서, 어디서 어디까지가 한
+              칸인지 스크롤하며 세어야 했다. */}
+          <p className="hud text-sm font-bold text-foreground">전적 요약</p>
           <div
             role="tablist"
             aria-label="집계 창"

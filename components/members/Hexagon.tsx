@@ -72,7 +72,11 @@ const TOOLTIP_PLACEMENT: Array<{ radius: number; transform: string }> = [
 // 평균 꼬리표는 1시 방향(축과 축 사이)으로 뺀다. 축 위로 빼면 그 축의 라벨과
 // 겹치고, 축 사이라면 도형 어느 선도 가리지 않는다.
 const CALLOUT_INDEX = 0.5;
-const CALLOUT_END = 1.3;
+const CALLOUT_END = 1.24;
+// 대각선 끝에서 가로로 조금 더 빼고 거기에 글자를 붙인다. 기울어진 선 끝에
+// 글자를 바로 달면 글자가 선을 타고 올라가는 것처럼 보인다 — 가로 구간이
+// 받침 노릇을 해서 글자가 수평으로 놓인다.
+const CALLOUT_ELBOW = 26;
 
 // 안정성 축(2번, 4시 방향) 라벨 오른쪽에 붙는 물음표. 라벨 글자폭만큼 띄운다.
 const HELP_AXIS_INDEX = 2;
@@ -201,12 +205,16 @@ export function Hexagon({ axes, averageLabel, stabilityHelp }: HexagonProps) {
         {/* 점선이 무엇인지 그림 안에서 바로 말해준다. 선 하나를 1시 방향으로
             빼고 그 끝에 어느 무리의 평균인지 적는다 — 범례를 따로 두면 눈이
             그림과 범례를 왕복해야 한다. */}
-        <line
+        <polyline
           data-testid="hexagon-average-callout"
-          x1={pointFor(CALLOUT_INDEX, averageFractions[0] * Math.cos(Math.PI / 6))[0]}
-          y1={pointFor(CALLOUT_INDEX, averageFractions[0] * Math.cos(Math.PI / 6))[1]}
-          x2={pointFor(CALLOUT_INDEX, CALLOUT_END)[0]}
-          y2={pointFor(CALLOUT_INDEX, CALLOUT_END)[1]}
+          points={[
+            pointFor(CALLOUT_INDEX, averageFractions[0] * Math.cos(Math.PI / 6)),
+            pointFor(CALLOUT_INDEX, CALLOUT_END),
+            [pointFor(CALLOUT_INDEX, CALLOUT_END)[0] + CALLOUT_ELBOW, pointFor(CALLOUT_INDEX, CALLOUT_END)[1]],
+          ]
+            .map((point) => point.join(','))
+            .join(' ')}
+          fill="none"
           stroke={AVERAGE_COLOR}
           strokeWidth={1}
           opacity={0.5}
@@ -245,9 +253,9 @@ export function Hexagon({ axes, averageLabel, stabilityHelp }: HexagonProps) {
       <span
         className="pointer-events-none absolute whitespace-nowrap text-[10px] leading-none text-white/70"
         style={{
-          left: toPercent(pointFor(CALLOUT_INDEX, CALLOUT_END)[0]),
+          left: toPercent(pointFor(CALLOUT_INDEX, CALLOUT_END)[0] + CALLOUT_ELBOW),
           top: toPercent(pointFor(CALLOUT_INDEX, CALLOUT_END)[1]),
-          transform: 'translate(5px, -50%)',
+          transform: 'translate(4px, -50%)',
         }}
       >
         {averageLabel} 평균
@@ -256,11 +264,13 @@ export function Hexagon({ axes, averageLabel, stabilityHelp }: HexagonProps) {
       {helpOpen && (
         <div
           data-testid="hexagon-stability-tooltip"
-          className="pointer-events-none absolute z-10 w-[15rem] rounded-lg border border-white/10 bg-[#1B1B23] px-3 py-2 text-left text-xs leading-relaxed text-menu shadow-lg"
+          // 오른쪽으로 편다. 왼쪽으로 펴면 말풍선이 6각형을 통째로 덮어서,
+          // 설명을 읽는 동안 정작 설명 대상이 안 보인다.
+          className="pointer-events-none absolute z-10 w-[13rem] rounded-lg border border-white/10 bg-[#1B1B23] px-3 py-2 text-left text-xs leading-relaxed text-menu shadow-lg"
           style={{
             left: toPercent(pointFor(HELP_AXIS_INDEX, 1.2)[0] + HELP_OFFSET_X),
             top: toPercent(pointFor(HELP_AXIS_INDEX, 1.2)[1]),
-            transform: 'translate(-100%, 8px)',
+            transform: 'translate(12px, -50%)',
           }}
         >
           <b className="font-bold text-foreground">안정성</b> · {stabilityHelp}

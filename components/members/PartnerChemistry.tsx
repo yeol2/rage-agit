@@ -185,7 +185,7 @@ export function PartnerChemistry({ best, worst }: PartnerChemistryProps) {
   return (
     <div data-testid="partner-chemistry">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="hud text-xs text-menu">같은 팀일 때</p>
+        <p className="hud text-sm font-bold text-foreground">팀 궁합</p>
         {/* 표본이 얇은 지표라 자격선을 화면에 적어둔다 — 왜 저 사람이 뽑혔는지,
             왜 어떤 사람은 안 나오는지가 여기서 다 설명된다. */}
         <span className="text-[11px] text-subtext">
