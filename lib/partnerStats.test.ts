@@ -50,6 +50,43 @@ describe('pickPartners', () => {
     expect(ids(best).sort()).toEqual(['a', 'b']);
   });
 
+  // 2회짜리는 차이의 절반만 남고 6회짜리는 4분의 3이 남는다:
+  // 3.0 × 2/4 = 1.5 < 2.2 × 6/8 = 1.65.
+  it('표본이 얇으면 차이를 깎아서 센다 — 두 번 만나 크게 튄 사람이 자동으로 이기지 않는다', () => {
+    const { best } = pickPartners([
+      stat({ partnerId: 'thin', rankDelta: 3.0, sessionsTogether: 2 }),
+      stat({ partnerId: 'thick', rankDelta: 2.2, sessionsTogether: 6 }),
+    ]);
+    expect(ids(best)).toEqual(['thick']);
+  });
+
+  it('그래도 차이가 충분히 크면 얇은 표본이 이긴다', () => {
+    const { best } = pickPartners([
+      stat({ partnerId: 'thin', rankDelta: 6.0, sessionsTogether: 2 }),
+      stat({ partnerId: 'thick', rankDelta: 2.2, sessionsTogether: 6 }),
+    ]);
+    expect(ids(best)).toEqual(['thin']);
+  });
+
+  it('나빠진 쪽도 같은 보정을 받는다', () => {
+    const { worst } = pickPartners([
+      stat({ partnerId: 'thin', rankDelta: -3.0, sessionsTogether: 2 }),
+      stat({ partnerId: 'thick', rankDelta: -2.2, sessionsTogether: 6 }),
+    ]);
+    expect(ids(worst)).toEqual(['thick']);
+  });
+
+  // 화면에 적히는 차이는 보정 전 값이다 — 카드가 두 평균을 나란히 보여주므로
+  // 그 둘의 차이와 다른 수가 적히면 안 된다.
+  it('한 칸에 세우는 기준은 화면에 찍히는 숫자 그대로다', () => {
+    const { best } = pickPartners([
+      stat({ partnerId: 'a', rankDelta: 2.2, sessionsTogether: 6 }),
+      stat({ partnerId: 'b', rankDelta: 2.2, sessionsTogether: 2 }),
+      stat({ partnerId: 'c', rankDelta: 2.1, sessionsTogether: 4 }),
+    ]);
+    expect(ids(best)).toEqual(['a', 'b']);
+  });
+
   it('동률 안에서는 더 오래 함께한 사람이 위에 온다', () => {
     const { best } = pickPartners([
       stat({ partnerId: 'a', rankDelta: 2, sessionsTogether: 2 }),

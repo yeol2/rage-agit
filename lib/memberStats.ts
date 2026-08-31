@@ -2,6 +2,8 @@
 // 여기 있는 함수들은 Supabase 없이 테스트한다.
 
 import { getSupabase } from './supabaseBrowser';
+// 흩어진 정도를 재는 함수는 클랜원 대시보드와 같은 것을 쓴다.
+import { mean, stddev } from './memberDashboard';
 
 export interface MemberRecentStatsRow {
   memberId: string;
@@ -9,7 +11,8 @@ export interface MemberRecentStatsRow {
   gameCount: number;
   avgDamage: number;
   avgKills: number;
-  headshotRatio: number | null;
+  /** 최근 창 안에서 팀등수가 얼마나 흔들렸나(표본표준편차). 작을수록 안정적. */
+  rankStddev: number | null;
   avgSurvival: number;
   avgAssists: number;
   avgRank: number;
@@ -162,102 +165,140 @@ export function tierNameplateSelectedStyle(tier: number): NameplateStyle {
   };
 }
 
-// value 가 cohortValues 안에서 몇 번째 백분위인지. 자기 자신도 비교 대상에 포함된다
-// (표본이 자기 혼자면 100이 나오는데, 이건 의도된 동작이다).
-//
-// higherIsBetter=false 인 축(등수)은 방향을 뒤집는다 — "나보다 등수가 나쁜(숫자가 큰)
-// 사람이 몇 명인가"를 센다.
-export function percentile(value: number, cohortValues: number[], higherIsBetter: boolean): number {
-  const pool = cohortValues.filter((v) => Number.isFinite(v));
-  if (pool.length === 0) return 0;
-  const count = higherIsBetter
-    ? pool.filter((v) => v <= value).length
-    : pool.filter((v) => v >= value).length;
-  return Math.round((count / pool.length) * 100);
-}
-
-export type HexagonAxisKey = 'damage' | 'kills' | 'headshot' | 'survival' | 'assists' | 'rank';
+export type HexagonAxisKey = 'damage' | 'kills' | 'stability' | 'survival' | 'assists' | 'rank';
 
 // 대시보드 경기 표(ScrimSessionRow)가 이미 쓰는 용어와 맞춘다 —
 // '화력'·'결정력' 같은 추상적인 말보다 딜량·킬 그대로가 더 직관적이다.
 export const HEXAGON_AXIS_LABELS: Record<HexagonAxisKey, string> = {
   damage: '딜량',
   kills: '킬',
-  headshot: '헤드샷',
+  stability: '안정성',
   survival: '생존',
   assists: '어시',
   rank: '순위',
 };
 
+// 6각형 축 하나. 도형 위 위치와 툴팁에 적을 실제 값을 같이 들고 있다.
 export interface HexagonAxis {
   key: HexagonAxisKey;
   label: string;
-  percentile: number;
-  // 코호트 평균이 같은 코호트 안에서 몇 번째 백분위인지. 본인 도형(실선)
-  // 옆에 점선으로 겹쳐 그려서 "나는 평균보다 위인가 아래인가"를 보여준다.
-  averagePercentile: number;
+  /** 내 값의 위치(%). 4~96 사이. */
+  percent: number;
+  /** 내 티어 그룹 평균의 위치(%). 축마다 다르다 — 아래 눈금 설명 참고. */
+  averagePercent: number;
+  /** 내 값을 사람이 읽는 형태로. 툴팁이 그대로 적는다. */
+  valueText: string;
+  /** 티어 그룹 평균값. 〃 */
+  averageText: string;
 }
 
-function average(values: number[]): number {
-  const pool = values.filter((v) => Number.isFinite(v));
-  if (pool.length === 0) return 0;
-  return pool.reduce((sum, v) => sum + v, 0) / pool.length;
+// 티어 그룹마다 점선이 놓이는 자리. **축과 무관하게 고정**이라 점선은 언제나
+// 정확한 정육각형이고, 높은 티어 그룹일수록 크다.
+//
+// 값에서 계산하지 않고 박아두는 이유가 있다. 여섯 축 중 딜량·킬·어시만 티어를
+// 가르고, 순위·생존·안정성은 그룹끼리 거의 같다(순위 평균 8.51 / 8.66 / 8.65 /
+// 9.04). 팀을 티어로 맞춰 짜니 어느 그룹이든 팀 등수가 비슷하게 나오기 때문이다.
+// 그 값들을 그대로 반지름으로 옮기면 점선이 세 축만 튀어나온 찌그러진 모양이
+// 된다. 그래서 점선은 "내가 어느 무리에 있는가"를 나타내는 표식으로 삼고,
+// 실제 값은 실선과 툴팁 숫자가 말한다.
+//
+// 이 선택의 대가는 분명하다 — 같은 반지름이 티어 그룹마다 다른 값을 뜻한다.
+// 4~5티어의 점선 위에 붙은 실선과 0~1.5티어의 점선 위에 붙은 실선은 "우리 그룹
+// 평균만큼"이라는 같은 말이지 같은 딜량이 아니다.
+const TIER_RING_PERCENT: Record<string, number> = {
+  '0-1.5': 80,
+  '2-2.5': 65,
+  '3-3.5': 50,
+  '4-5': 35,
+};
+
+// 티어 그룹을 못 찾았을 때(배색표에 없는 티어) 쓰는 자리. 가운데 고리다.
+const DEFAULT_RING_PERCENT = 50;
+
+// 자기 그룹 평균에서 1 표준편차 떨어질 때마다 도형이 움직이는 폭. 티어 그룹
+// 사이 간격(15)과 같게 맞췄다 — "1 표준편차 위 = 한 그룹 위만큼"으로 읽힌다.
+// 표준편차는 클랜 전체에서 잰다. 그룹 안에서 재면 인원이 적은 그룹(0~1.5 는
+// 21명)에서 한두 명 때문에 눈금이 출렁인다.
+export const HEXAGON_SIGMA_STEP = 15;
+
+export function tierRingPercent(tier: number): number {
+  const group = tierGroupFor(tier);
+  return group ? (TIER_RING_PERCENT[group.id] ?? DEFAULT_RING_PERCENT) : DEFAULT_RING_PERCENT;
 }
 
-function axisPercentiles(
-  targetValue: number,
-  cohortValues: number[],
-  higherIsBetter: boolean,
-): { percentile: number; averagePercentile: number } {
-  return {
-    percentile: percentile(targetValue, cohortValues, higherIsBetter),
-    averagePercentile: percentile(average(cohortValues), cohortValues, higherIsBetter),
-  };
-}
+// 툴팁에 적을 형식. 축마다 단위와 자릿수가 다르다.
+const AXIS_FORMAT: Record<HexagonAxisKey, (value: number) => string> = {
+  damage: (v) => `${Math.round(v)}딜`,
+  kills: (v) => `${v.toFixed(2)}킬`,
+  // 안정성은 등수의 표준편차라 단위가 '등'이다 — 낮을수록 덜 흔들린다.
+  stability: (v) => `±${v.toFixed(2)}등`,
+  survival: (v) => `${(v / 60).toFixed(1)}분`,
+  assists: (v) => `${v.toFixed(2)}어시`,
+  rank: (v) => `${v.toFixed(1)}등`,
+};
 
+/**
+ * 6각형 여섯 축.
+ *
+ * clan 은 흩어진 정도(표준편차)를 재는 표본이고, group 은 내 티어 그룹이다.
+ * 점선은 그룹의 고정 반지름에, 실선은 그 반지름에서 "우리 그룹 평균과 얼마나
+ * 떨어졌나"만큼 안팎으로 옮겨 찍는다.
+ */
 export function buildHexagonAxes(
   target: MemberRecentStatsRow,
-  cohort: MemberRecentStatsRow[],
+  clan: MemberRecentStatsRow[],
+  group: MemberRecentStatsRow[],
 ): HexagonAxis[] {
-  // 헤드샷 비율이 없는 사람(킬이 0인 채로 4경기 이상 뛴 경우)은 정확도
-  // 비교 대상에서 뺀다 — null 을 숫자로 잘못 취급하면 백분위가 틀어진다.
-  const headshotPool = cohort
-    .map((c) => c.headshotRatio)
-    .filter((v): v is number => v !== null);
+  const ringPercent = tierRingPercent(target.tier);
+
+  const build = (
+    key: HexagonAxisKey,
+    pick: (row: MemberRecentStatsRow) => number | null,
+    higherIsBetter: boolean,
+  ): HexagonAxis => {
+    // null 은 어디서도 숫자로 취급하지 않는다 — 안정성은 경기가 하나뿐이면 없다.
+    const clanValues = clan.map(pick).filter((v): v is number => v !== null);
+    const groupValues = group.map(pick).filter((v): v is number => v !== null);
+
+    const clanAverage = mean(clanValues);
+    const spread = stddev(clanValues, clanAverage);
+    const groupAverage = mean(groupValues);
+    const value = pick(target);
+
+    const percent =
+      value === null || spread <= 0
+        ? ringPercent
+        : clamp(
+            ringPercent +
+              ((higherIsBetter ? value - groupAverage : groupAverage - value) / spread) *
+                HEXAGON_SIGMA_STEP,
+          );
+
+    return {
+      key,
+      label: HEXAGON_AXIS_LABELS[key],
+      percent,
+      averagePercent: ringPercent,
+      valueText: value === null ? '기록 없음' : AXIS_FORMAT[key](value),
+      averageText: AXIS_FORMAT[key](groupAverage),
+    };
+  };
 
   return [
-    {
-      key: 'damage',
-      label: HEXAGON_AXIS_LABELS.damage,
-      ...axisPercentiles(target.avgDamage, cohort.map((c) => c.avgDamage), true),
-    },
-    {
-      key: 'kills',
-      label: HEXAGON_AXIS_LABELS.kills,
-      ...axisPercentiles(target.avgKills, cohort.map((c) => c.avgKills), true),
-    },
-    {
-      key: 'headshot',
-      label: HEXAGON_AXIS_LABELS.headshot,
-      percentile: target.headshotRatio === null ? 0 : percentile(target.headshotRatio, headshotPool, true),
-      averagePercentile: percentile(average(headshotPool), headshotPool, true),
-    },
-    {
-      key: 'survival',
-      label: HEXAGON_AXIS_LABELS.survival,
-      ...axisPercentiles(target.avgSurvival, cohort.map((c) => c.avgSurvival), true),
-    },
-    {
-      key: 'assists',
-      label: HEXAGON_AXIS_LABELS.assists,
-      ...axisPercentiles(target.avgAssists, cohort.map((c) => c.avgAssists), true),
-    },
-    {
-      key: 'rank',
-      label: HEXAGON_AXIS_LABELS.rank,
-      ...axisPercentiles(target.avgRank, cohort.map((c) => c.avgRank), false),
-    },
+    build('damage', (r) => r.avgDamage, true),
+    build('kills', (r) => r.avgKills, true),
+    // 안정성은 등수 편차라 **작을수록 좋다** — 순위 축과 같은 방향이다.
+    build('stability', (r) => r.rankStddev, false),
+    build('survival', (r) => r.avgSurvival, true),
+    build('assists', (r) => r.avgAssists, true),
+    build('rank', (r) => r.avgRank, false),
   ];
+}
+
+// 도형이 중심에 뭉치거나 격자 밖으로 나가지 않게 묶는다. 0% 는 "기록 없음"으로
+// 오해되고 100% 는 라벨을 덮는다.
+function clamp(percent: number): number {
+  return Math.min(96, Math.max(4, percent));
 }
 
 export interface MemberSummary {
@@ -315,7 +356,7 @@ function toStatsRow(row: {
   game_count: number;
   avg_damage: number;
   avg_kills: number;
-  headshot_ratio: number | null;
+  rank_stddev: number | null;
   avg_survival: number;
   avg_assists: number;
   avg_rank: number;
@@ -326,7 +367,7 @@ function toStatsRow(row: {
     gameCount: row.game_count,
     avgDamage: Number(row.avg_damage),
     avgKills: Number(row.avg_kills),
-    headshotRatio: row.headshot_ratio === null ? null : Number(row.headshot_ratio),
+    rankStddev: row.rank_stddev === null ? null : Number(row.rank_stddev),
     avgSurvival: Number(row.avg_survival),
     avgAssists: Number(row.avg_assists),
     avgRank: Number(row.avg_rank),
@@ -336,7 +377,7 @@ function toStatsRow(row: {
 export async function fetchMemberRecentStats(memberId: string): Promise<MemberRecentStatsRow | null> {
   const { data, error } = await getSupabase()
     .from('member_recent_stats')
-    .select('member_id, tier, game_count, avg_damage, avg_kills, headshot_ratio, avg_survival, avg_assists, avg_rank')
+    .select('member_id, tier, game_count, avg_damage, avg_kills, avg_survival, avg_assists, avg_rank, rank_stddev')
     .eq('member_id', memberId)
     .maybeSingle();
   if (error) throw new Error(`최근 전적을 불러오지 못했습니다: ${error.message}`);
@@ -345,16 +386,16 @@ export async function fetchMemberRecentStats(memberId: string): Promise<MemberRe
   return toStatsRow(data);
 }
 
-// 같은 티어 그룹 전체의 표본을 한 번에 가져온다 — 백분위 비교 대상이다.
-// MIN_GAMES_FOR_HEXAGON 미만인 사람은 비교 대상에서 뺀다(본인이 그 미만이면
-// 애초에 6각형을 안 그리므로 이 함수까지 안 온다).
-export async function fetchTierCohortStats(tiers: number[]): Promise<MemberRecentStatsRow[]> {
+// 6각형이 볼 표본 — 집계 대상 전원이다. 눈금은 클랜 전체 기준 하나이고
+// (buildHexagonAxes 주석 참고), 티어 그룹은 이 목록에서 갈라 쓴다.
+// MIN_GAMES_FOR_HEXAGON 미만인 사람은 뺀다(본인이 그 미만이면 애초에 6각형을
+// 안 그리므로 이 함수까지 안 온다).
+export async function fetchHexagonCohort(): Promise<MemberRecentStatsRow[]> {
   const { data, error } = await getSupabase()
     .from('member_recent_stats')
-    .select('member_id, tier, game_count, avg_damage, avg_kills, headshot_ratio, avg_survival, avg_assists, avg_rank')
-    .in('tier', tiers)
+    .select('member_id, tier, game_count, avg_damage, avg_kills, avg_survival, avg_assists, avg_rank, rank_stddev')
     .gte('game_count', MIN_GAMES_FOR_HEXAGON);
-  if (error) throw new Error(`티어 그룹 전적을 불러오지 못했습니다: ${error.message}`);
+  if (error) throw new Error(`6각형 비교 표본을 불러오지 못했습니다: ${error.message}`);
 
   return (data ?? []).map(toStatsRow);
 }

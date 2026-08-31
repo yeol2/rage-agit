@@ -149,12 +149,21 @@ function PartnerSlot({ side, cards }: { side: Side; cards: PartnerCard[] }) {
                   >
                     {card.displayName}
                   </Link>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-menu tabular-nums">
+                  {/* 11px 에 subtext(#7B797D) 로 두니 어두운 카드 위에서 읽기
+                      힘들다는 말이 나왔다. 한 단계 키우고 색을 올리되, 아랫줄만
+                      한 톤 낮춰 두 줄의 순서는 남긴다. 등수는 이 줄에서 눈이
+                      찾는 값이라 굵게 뽑는다. */}
+                  <p className="mt-1 text-xs leading-relaxed tabular-nums text-white/80">
                     내전 {card.sessionsTogether}회({card.gamesTogether}경기) 함께 · 평균{' '}
-                    {card.avgRankTogether.toFixed(1)}등
+                    <span className="font-bold text-foreground">
+                      {card.avgRankTogether.toFixed(1)}등
+                    </span>
                     <br />
-                    <span className="text-subtext">
-                      같은 팀이 아닐 땐 {card.avgRankApart.toFixed(1)}등
+                    <span className="text-menu">
+                      같은 팀이 아닐 땐{' '}
+                      <span className="font-bold text-white/90">
+                        {card.avgRankApart.toFixed(1)}등
+                      </span>
                     </span>
                   </p>
                 </li>
@@ -176,7 +185,7 @@ export function PartnerChemistry({ best, worst }: PartnerChemistryProps) {
   return (
     <div data-testid="partner-chemistry">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="hud text-xs text-menu">같은 팀일 때</p>
+        <p className="hud text-sm font-bold text-foreground">팀 궁합</p>
         {/* 표본이 얇은 지표라 자격선을 화면에 적어둔다 — 왜 저 사람이 뽑혔는지,
             왜 어떤 사람은 안 나오는지가 여기서 다 설명된다. */}
         <span className="text-[11px] text-subtext">

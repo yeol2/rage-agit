@@ -19,7 +19,7 @@ import {
   fetchMember,
   fetchMemberRecentStats,
   fetchMemberWinCount,
-  fetchTierCohortStats,
+  fetchHexagonCohort,
   stripTrailingKoreanTag,
   tierColorRamp,
   tierGroupFor,
@@ -83,9 +83,12 @@ export default async function MemberDetailPage({
   const standingByDate = new Map(standings.map((row) => [row.scrimDate, row.standing]));
   const hasEnoughGames = stats !== null && stats.gameCount >= MIN_GAMES_FOR_HEXAGON;
 
+  // 눈금은 클랜 전체 기준 하나이고 점선만 티어 그룹 평균이다(buildHexagonAxes
+  // 주석 참고). 그래서 표본을 한 번만 받아 여기서 그룹을 갈라 넘긴다.
   const tierGroup = tierGroupFor(member.tier);
-  const cohort = hasEnoughGames && tierGroup ? await fetchTierCohortStats(tierGroup.tiers) : [];
-  const axes = hasEnoughGames && stats ? buildHexagonAxes(stats, cohort) : null;
+  const cohort = hasEnoughGames && tierGroup ? await fetchHexagonCohort() : [];
+  const groupCohort = tierGroup ? cohort.filter((row) => tierGroup.tiers.includes(row.tier)) : cohort;
+  const axes = hasEnoughGames && stats ? buildHexagonAxes(stats, cohort, groupCohort) : null;
   const ramp = tierColorRamp(member.tier);
 
   return (
@@ -125,12 +128,39 @@ export default async function MemberDetailPage({
             />
           </div>
 
-          <div className="mt-10 flex justify-center">
-            {axes ? (
-              <Hexagon axes={axes} />
-            ) : (
-              <p className="text-menu">{siteConfig.memberDirectory.insufficientDataMessage}</p>
-            )}
+          {/* 깐부 칸과 선을 하나 긋는다. 넓은 화면에서는 설명을 왼쪽 위 모서리에
+              띄우고(absolute) 6각형만 칸 한가운데에 둔다 — 설명을 흐름 안에 두면
+              그 폭만큼 그림이 오른쪽으로 밀려 가운데가 아니게 된다. 좁은 화면에서는
+              겹칠 자리가 없어 위아래로 쌓는다. */}
+          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+            <div className="relative">
+              <div className="sm:absolute sm:left-0 sm:top-0 sm:max-w-[15rem]">
+                <p className="hud text-sm font-bold text-foreground">
+                  {siteConfig.memberDirectory.hexagon.heading}
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {siteConfig.memberDirectory.hexagon.lines.map((line) => (
+                    <p key={line} className="text-xs leading-relaxed text-menu">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 flex justify-center sm:mt-0">
+                {axes ? (
+                  <Hexagon
+                    axes={axes}
+                    averageLabel={tierGroup?.label ?? '전체'}
+                    stabilityHelp={siteConfig.memberDirectory.hexagon.stabilityHelp}
+                  />
+                ) : (
+                  <p className="py-8 text-center text-menu">
+                    {siteConfig.memberDirectory.insufficientDataMessage}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </section>

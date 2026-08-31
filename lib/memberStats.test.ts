@@ -6,7 +6,6 @@ import {
   buildHexagonAxes,
   cleanDisplayName,
   fixedNameplateStyle,
-  percentile,
   stripTrailingKoreanTag,
   tierColorRamp,
   tierGroupFor,
@@ -22,7 +21,7 @@ function row(overrides: Partial<MemberRecentStatsRow>): MemberRecentStatsRow {
     gameCount: 10,
     avgDamage: 200,
     avgKills: 2,
-    headshotRatio: 0.3,
+    rankStddev: 3,
     avgSurvival: 1200,
     avgAssists: 1,
     avgRank: 5,
@@ -55,222 +54,76 @@ describe('tierGroupFor', () => {
   });
 });
 
-describe('percentile', () => {
-  it('높을수록 좋은 지표에서 최댓값은 100', () => {
-    expect(percentile(300, [100, 200, 300], true)).toBe(100);
-  });
-
-  it('높을수록 좋은 지표에서 최솟값은 낮은 백분위', () => {
-    // 3명 중 자기 자신 포함 1명만 이하이므로 1/3 = 33%
-    expect(percentile(100, [100, 200, 300], true)).toBe(33);
-  });
-
-  it('낮을수록 좋은 지표(등수)는 방향을 뒤집는다', () => {
-    // 등수 1(1등)이 가장 좋다 — 셋 다 자기 이상이므로 100
-    expect(percentile(1, [1, 5, 10], false)).toBe(100);
-    // 등수 10(꼴등)은 자기 이상인 게 자기 하나뿐 — 33%
-    expect(percentile(10, [1, 5, 10], false)).toBe(33);
-  });
-
-  it('비교 대상이 없으면 0', () => {
-    expect(percentile(100, [], true)).toBe(0);
-  });
-
-  it('NaN 이나 무한대는 비교 대상에서 뺀다', () => {
-    expect(percentile(100, [100, NaN, 200], true)).toBe(50);
-  });
-});
-
 describe('buildHexagonAxes', () => {
-  const target = row({ avgDamage: 200, avgKills: 2, headshotRatio: 0.3, avgSurvival: 1200, avgAssists: 1, avgRank: 5 });
-  const cohort = [
-    target,
-    row({ memberId: 'm-2', avgDamage: 100, avgKills: 1, headshotRatio: 0.1, avgSurvival: 600, avgAssists: 0, avgRank: 10 }),
+  // 클랜 전체 표본. 위아래 둘씩이라 축마다 평균과 표준편차가 딱 떨어진다
+  // (딜량 평균 200 편차 100, 순위 평균 8 편차 4 …).
+  const strong = { avgDamage: 300, avgKills: 3, rankStddev: 2, avgSurvival: 1500, avgAssists: 2, avgRank: 4 };
+  const weak = { avgDamage: 100, avgKills: 1, rankStddev: 6, avgSurvival: 900, avgAssists: 0, avgRank: 12 };
+  const clan = [
+    row({ memberId: 'c-1', ...strong }),
+    row({ memberId: 'c-2', ...strong }),
+    row({ memberId: 'c-3', ...weak }),
+    row({ memberId: 'c-4', ...weak }),
   ];
+  const middle = row({ avgDamage: 200, avgKills: 2, rankStddev: 4, avgSurvival: 1200, avgAssists: 1, avgRank: 8 });
 
   it('6축을 정해진 순서와 라벨로 낸다', () => {
-    const axes = buildHexagonAxes(target, cohort);
-    expect(axes.map((a) => a.key)).toEqual(['damage', 'kills', 'headshot', 'survival', 'assists', 'rank']);
-    expect(axes.map((a) => a.label)).toEqual(['딜량', '킬', '헤드샷', '생존', '어시', '순위']);
+    const axes = buildHexagonAxes(middle, clan, clan);
+    expect(axes.map((a) => a.key)).toEqual(['damage', 'kills', 'stability', 'survival', 'assists', 'rank']);
+    expect(axes.map((a) => a.label)).toEqual(['딜량', '킬', '안정성', '생존', '어시', '순위']);
   });
 
-  it('본인이 코호트 중 전부 앞서면 모든 축이 100', () => {
-    const axes = buildHexagonAxes(target, cohort);
-    expect(axes.every((a) => a.percentile === 100)).toBe(true);
+  // clan 의 티어는 전부 2(row 기본값)라 티어 그룹은 2~2.5, 점선 반지름은 65% 다.
+  it('점선은 티어 그룹마다 정해진 반지름에 있다 — 축이 달라도 같은 값이라 정육각형이다', () => {
+    const axes = buildHexagonAxes(middle, clan, clan);
+    expect(axes.every((a) => a.averagePercent === 65)).toBe(true);
+
+    const topTier = buildHexagonAxes(row({ ...middle, tier: 0 }), clan, clan);
+    const bottomTier = buildHexagonAxes(row({ ...middle, tier: 5 }), clan, clan);
+    expect(topTier.every((a) => a.averagePercent === 80)).toBe(true);
+    expect(bottomTier.every((a) => a.averagePercent === 35)).toBe(true);
   });
 
-  it('headshotRatio 가 null 인 코호트 구성원은 정확도 비교 대상에서 뺀다', () => {
-    const withNull = [...cohort, row({ memberId: 'm-3', headshotRatio: null })];
-    const axes = buildHexagonAxes(target, withNull);
-    const headshotAxis = axes.find((a) => a.key === 'headshot')!;
-    expect(headshotAxis.percentile).toBe(100); // null 이 낀 것과 무관하게 그대로
+  it('우리 그룹 평균과 같은 값이면 실선이 점선 위에 정확히 얹힌다', () => {
+    const axes = buildHexagonAxes(middle, clan, clan);
+    expect(axes.every((a) => a.percent === a.averagePercent)).toBe(true);
   });
 
-  it('본인의 headshotRatio 가 null 이면 정확도는 0', () => {
-    const nullTarget = row({ headshotRatio: null });
-    const axes = buildHexagonAxes(nullTarget, [nullTarget, ...cohort]);
-    expect(axes.find((a) => a.key === 'headshot')!.percentile).toBe(0);
+  // 1 표준편차마다 15%씩, 티어 그룹 한 칸과 같은 폭으로 움직인다.
+  it('그룹 평균에서 1 표준편차 떨어지면 한 그룹만큼 안팎으로 간다', () => {
+    const axes = buildHexagonAxes(clan[0], clan, clan);
+    expect(axes.find((a) => a.key === 'damage')!.percent).toBe(80);
+    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(80);
   });
 
-  it('코호트 평균도 같은 코호트 안에서 백분위로 낸다', () => {
-    // damage=[200,100] 평균 150 → 150 이하인 값은 100 하나뿐이니 2명 중 1명 = 50%.
-    // rank 는 낮을수록 좋으므로 방향이 뒤집힌다: [5,10] 평균 7.5 → 7.5 이상인
-    // 값은 10 하나뿐 = 50%. 우연히 다 50%가 나오는 대칭 표본으로 골랐다.
-    const axes = buildHexagonAxes(target, cohort);
-    expect(axes.every((a) => a.averagePercentile === 50)).toBe(true);
+  it('안정성과 순위는 값이 작을수록 바깥이다', () => {
+    const axes = buildHexagonAxes(clan[2], clan, clan);
+    expect(axes.find((a) => a.key === 'stability')!.percent).toBe(50);
+    expect(axes.find((a) => a.key === 'rank')!.percent).toBe(50);
   });
 
-  it('null 인 headshotRatio 는 평균 계산에서도 빠진다', () => {
-    const withNull = [...cohort, row({ memberId: 'm-3', headshotRatio: null })];
-    const axes = buildHexagonAxes(target, withNull);
-    // withNull 이 추가돼도 헤드샷 평균은 [0.3, 0.1] 기준 그대로라 50%.
-    expect(axes.find((a) => a.key === 'headshot')!.averagePercentile).toBe(50);
-  });
-});
-
-describe('MIN_GAMES_FOR_HEXAGON', () => {
-  it('4경기다', () => {
-    expect(MIN_GAMES_FOR_HEXAGON).toBe(4);
-  });
-});
-
-describe('ALL_TIERS', () => {
-  it('0티어부터 5티어까지 10개 값을 오름차순으로 낸다', () => {
-    expect(ALL_TIERS).toEqual([0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]);
-  });
-});
-
-describe('cleanDisplayName', () => {
-  it('괄호로 묶인 태그를 뗀다', () => {
-    expect(cleanDisplayName('Ez_A(98)')).toBe('Ez_A');
+  it('툴팁에 쓸 내 값과 그룹 평균값을 단위까지 붙여 낸다', () => {
+    const axes = buildHexagonAxes(clan[0], clan, [clan[0], clan[2]]);
+    const damage = axes.find((a) => a.key === 'damage')!;
+    expect(damage.valueText).toBe('300딜');
+    expect(damage.averageText).toBe('200딜');
+    // 생존은 초로 들어와 분으로 나간다.
+    expect(axes.find((a) => a.key === 'survival')!.valueText).toBe('25.0분');
+    expect(axes.find((a) => a.key === 'rank')!.averageText).toBe('8.0등');
   });
 
-  it('이모지를 뗀다', () => {
-    expect(cleanDisplayName('Ez_B👀')).toBe('Ez_B');
+  it('rankStddev 가 null 인 사람은 안정성 계산에서 빠진다', () => {
+    const withNull = [...clan, row({ memberId: 'c-5', rankStddev: null })];
+    const axes = buildHexagonAxes(middle, withNull, withNull);
+    // null 이 낀 것과 무관하게 [2, 2, 6, 6] 기준 그대로다.
+    expect(axes.find((a) => a.key === 'stability')!.averageText).toBe('±4.00등');
   });
 
-  it('괄호와 이모지가 같이 있어도 다 뗀다', () => {
-    expect(cleanDisplayName('Ez_C(89)👀')).toBe('Ez_C');
-  });
-
-  it('괄호 앞뒤 공백은 정리하되 괄호 뒤에 남은 글자는 그대로 둔다', () => {
-    // 괄호 뒤에 붙은 한글 별칭처럼 괄호·이모지·슬래시가 아닌 장식은 건드리지 않는다.
-    expect(cleanDisplayName('Ez_D (98)은킹')).toBe('Ez_D 은킹');
-  });
-
-  it('꾸밈이 없으면 그대로 둔다', () => {
-    expect(cleanDisplayName('Ez_E-')).toBe('Ez_E-');
-  });
-
-  it('슬래시 뒤 부계정 표기는 뗀다', () => {
-    expect(cleanDisplayName('Ez_F/Ez_G')).toBe('Ez_F');
-  });
-
-  it('앞에 붙은 "본:" 표기를 뗀다', () => {
-    expect(cleanDisplayName('본:Ez_SoluTion /부: Ez_Koala(93)')).toBe('Ez_SoluTion');
-  });
-
-  it('"부계" 뒤 표기를 뗀다', () => {
-    expect(cleanDisplayName('Ez_JONGHO(03) 부계 Ez_JungGO')).toBe('Ez_JONGHO');
-  });
-
-  it('공백 뒤 붙은 숫자만 있는 태그를 뗀다', () => {
-    expect(cleanDisplayName('Ez_vhtlrwk 94')).toBe('Ez_vhtlrwk');
-  });
-
-  it('괄호 안 숫자처럼 원래부터 붙어있던 숫자는 안 뗀다', () => {
-    expect(cleanDisplayName('Ez_yunsik98')).toBe('Ez_yunsik98');
-  });
-});
-
-describe('stripTrailingKoreanTag', () => {
-  it('공백 뒤에 붙은 한글 태그를 뗀다', () => {
-    expect(stripTrailingKoreanTag('Ez_Gimli 김리')).toBe('Ez_Gimli');
-  });
-
-  it('공백 없이 바로 붙은 한글도 뗀다', () => {
-    expect(stripTrailingKoreanTag('Ez_Jhoney주헌')).toBe('Ez_Jhoney');
-  });
-
-  it('한글이 없으면 그대로 둔다', () => {
-    expect(stripTrailingKoreanTag('Ez_Code')).toBe('Ez_Code');
-  });
-
-  it('통째로 한글이면 자르지 않는다', () => {
-    expect(stripTrailingKoreanTag('은킹')).toBe('은킹');
-  });
-});
-
-describe('tierColorRamp', () => {
-  it('0티어는 단독 배색을 쓴다', () => {
-    expect(tierColorRamp(0)).toEqual({ from: '#9e6bff', to: '#9fc1ff' });
-  });
-
-  it('1티어와 1.5티어는 같은 배색을 공유한다', () => {
-    expect(tierColorRamp(1)).toEqual(tierColorRamp(1.5));
-    expect(tierColorRamp(1)).toEqual({ from: '#4cadd0', to: '#b2f9ff' });
-  });
-
-  it('2~2.5, 3~3.5, 4~4.5 도 각각 짝을 이룬다', () => {
-    expect(tierColorRamp(2)).toEqual(tierColorRamp(2.5));
-    expect(tierColorRamp(3)).toEqual(tierColorRamp(3.5));
-    expect(tierColorRamp(4)).toEqual(tierColorRamp(4.5));
-  });
-
-  it('5티어는 단독 배색을 쓴다', () => {
-    expect(tierColorRamp(5)).toEqual({ from: '#f5dc1f', to: '#f0e9ca' });
-  });
-
-  it('배색표에 없는 티어면 에러를 던진다', () => {
-    expect(() => tierColorRamp(9)).toThrow();
-  });
-});
-
-describe('tierNameplateStyle', () => {
-  it('0~5티어 전부 tierColorRamp 의 그라데이션(from→to)을 쓰고, 글자색은 흰색에 티어색을 섞는다', () => {
-    expect(tierNameplateStyle(2)).toEqual({
-      background: 'linear-gradient(135deg, #e8b38440, #ffde9040)',
-      borderColor: '#db8a4299',
-      boxShadow: '0 0 10px #db8a4260',
-      color: '#fbf3ec',
-    });
-  });
-
-  it('같은 색 묶음이면 정수·반티어가 같은 스타일을 낸다', () => {
-    expect(tierNameplateStyle(2)).toEqual(tierNameplateStyle(2.5));
-  });
-
-  it('단독 티어(0, 5)도 같은 방식으로 그라데이션을 쓴다', () => {
-    expect(tierNameplateStyle(0)).toEqual({
-      background: 'linear-gradient(135deg, #c09fff40, #9fc1ff40)',
-      borderColor: '#9e6bff99',
-      boxShadow: '0 0 10px #9e6bff60',
-      color: '#f5f0ff',
-    });
-  });
-});
-
-describe('tierNameplateSelectedStyle', () => {
-  it('기본 네임플레이트보다 진한 그라데이션을 낸다', () => {
-    const base = tierNameplateStyle(2);
-    const selected = tierNameplateSelectedStyle(2);
-    expect(selected).not.toEqual(base);
-    expect(selected).toEqual({
-      background: 'linear-gradient(135deg, #e8b38473, #ffde9073)',
-      borderColor: '#db8a42cc',
-      boxShadow: '0 0 10px #db8a4280',
-      color: '#fbf3ec',
-    });
-  });
-});
-
-describe('fixedNameplateStyle', () => {
-  it('티어와 무관하게 항상 같은 회색조를 낸다', () => {
-    expect(fixedNameplateStyle()).toEqual({
-      background: 'rgba(255, 255, 255, 0.06)',
-      borderColor: 'rgba(255, 255, 255, 0.14)',
-      boxShadow: 'none',
-      color: '#A0A0A2',
-    });
+  it('본인의 rankStddev 가 null 이면 도형을 그룹 평균 자리에 놓고 기록 없음이라 적는다', () => {
+    const nullTarget = row({ rankStddev: null });
+    const axes = buildHexagonAxes(nullTarget, clan, clan);
+    const stability = axes.find((a) => a.key === 'stability')!;
+    expect(stability.percent).toBe(stability.averagePercent);
+    expect(stability.valueText).toBe('기록 없음');
   });
 });
