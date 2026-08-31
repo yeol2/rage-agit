@@ -2,14 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import {
-  TROPHY_SIZE,
-  TROPHY_VIEWBOX,
-  TROPHY_X,
-  TROPHY_Y,
-  TrophyGoldGradient,
-  TrophyPaths,
-} from '@/components/TrophyGlyph';
+import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -101,81 +94,57 @@ const HEADER_TRAILING_SPACE = String.fromCharCode(160); // U+00A0
 // 하나만 두고 모든 줄이 이 id 를 가리킨다.
 const RANKING_TROPHY_GOLD = 'ranking-trophy-gold';
 
-// 뱃지 칸에 트로피를 늘어놓는 간격·크기. 데스크탑 칸(10rem = 160px)에
-// MAX_WIN_GLYPHS 개가 들어가는 값이다: 8 × 14 + 7 × 2 = 126px.
-const WIN_GLYPH_STEP = 21.5; // svg 사용자 좌표(글리프 폭 18.8 + 여백)
-const MAX_WIN_GLYPHS = 8;
-
-// 트로피를 가로로 늘어놓는 svg. 낱개 svg 를 반복하지 않는 이유는 표 한 줄에
-// 여러 개가 들어가고 시상대에도 쓰여서다 — 요소 수를 줄이고 간격도 한 곳에서
-// 정한다. 색은 문서에 하나만 둔 그라디언트(RANKING_TROPHY_GOLD)를 가리킨다.
-function TrophyRow({ count, className }: { count: number; className: string }) {
-  const width = (count - 1) * WIN_GLYPH_STEP + TROPHY_SIZE;
+// 트로피 한 개짜리 svg. 시상대 배지(TrophySquare)는 자기 배경과 색을 따로
+// 쓰므로 글리프를 직접 그리고, 이쪽은 표·시상대의 우승 뱃지가 함께 쓴다.
+// 색은 문서에 하나만 둔 그라디언트(RANKING_TROPHY_GOLD)를 가리킨다 — 표에
+// 수십 줄이 깔려도 정의는 하나면 된다.
+function TrophyMark({ className }: { className: string }) {
   return (
-    <svg
-      viewBox={`0 0 ${width} ${TROPHY_SIZE}`}
-      fill={`url(#${RANKING_TROPHY_GOLD})`}
-      className={className}
-      aria-hidden
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <g key={i} transform={`translate(${i * WIN_GLYPH_STEP - TROPHY_X}, ${-TROPHY_Y})`}>
-          <TrophyPaths />
-        </g>
-      ))}
+    <svg viewBox={TROPHY_VIEWBOX} fill={`url(#${RANKING_TROPHY_GOLD})`} className={className} aria-hidden>
+      <TrophyPaths />
     </svg>
   );
 }
 
 /**
- * 내전 종합우승 뱃지 — 횟수만큼 트로피를 늘어놓는다.
+ * 내전 종합우승 뱃지 — 트로피 하나에 횟수를 숫자로 겹쳐 얹는다.
  *
- * 표와 시상대가 크기와 '우승 0회' 처리만 다르다. 표는 빈 칸을 '-' 로 채워
- * 열이 비어 보이지 않게 하고, 시상대는 뱃지 칸 자체가 min-h 로 자리를 잡고
- * 있어서 아무것도 안 그려도 높이가 안 흔들린다.
+ * 예전에는 횟수만큼 트로피를 늘어놓았다. 우승이 쌓일수록 가로로 길어져서 4위
+ * 이하 표에서는 뱃지 칸을 넘겼고(모바일 48px 칸은 4개부터 잘린다), 그걸 막으려고
+ * 화면 폭에 따라 "늘어놓기"와 "하나+숫자" 두 벌을 그려두고 CSS 로 골라 보였다.
+ * 한 벌로 줄이면 폭이 횟수와 무관하게 고정되고, 몇 번인지도 한눈에 읽힌다 —
+ * 트로피 여덟 개를 세는 것보다 숫자 '8' 이 빠르다.
  *
- * 광택(sheen)은 넣지 않는다 — 수십 줄이 동시에 번쩍이면 표를 훑기 어렵다.
- * 그건 칸이 넉넉한 클랜원 상세 화면에서만 한다(components/members/WinTrophies.tsx).
+ * 크기는 바깥에서 글자 크기(className 의 text-*)로 정한다. 트로피와 숫자가 모두
+ * em 단위라 하나만 바꾸면 둘이 같은 비율로 커진다.
  */
 function WinBadge({
   count,
   className,
   none = null,
-  dense = false,
 }: {
   count: number;
   className: string;
   none?: ReactNode;
-  /**
-   * 좁은 칸(4위 이하 표의 모바일 뱃지 칸 = 48px)에서는 트로피를 늘어놓을 수
-   * 없다 — 4개만 돼도 62px 라 잘린다. 칸을 넓히면 이번엔 닉네임이 눌리므로,
-   * 모바일에서만 트로피 하나에 숫자를 붙여 줄인다. 넓어지면(sm~) 원래대로
-   * 늘어놓는다. 시상대는 칸이 넉넉해서 이 옵션을 안 쓴다.
-   */
-  dense?: boolean;
 }) {
   if (count <= 0) return <>{none}</>;
 
-  const glyphs = Math.min(count, MAX_WIN_GLYPHS);
-
   return (
-    // 칸을 넘칠 만큼 많아져도 표가 밀리지 않게 자른다. 정확한 횟수는 title 에 있다.
-    <span className="flex min-w-0 items-center gap-1 overflow-hidden" title={`종합우승 ${count}회`}>
-      {dense && (
-        <span data-testid="win-badge-dense" className="flex items-center gap-0.5 sm:hidden">
-          <TrophyRow count={1} className={className} />
-          <span className="text-xs font-bold tabular-nums text-foreground">{count}</span>
-        </span>
-      )}
+    <span
+      className={`relative inline-flex shrink-0 items-center justify-center ${className}`}
+      title={`종합우승 ${count}회`}
+      data-testid="win-badge"
+    >
+      <TrophyMark className="h-[1.55em] w-auto" />
+      {/* 트로피 아래쪽에 걸치게 내린다. 받침을 살짝 덮어야 트로피에 붙은 숫자로
+          읽히지, 옆에 놓인 별개의 숫자로 보이지 않는다. 배경 색은 표 줄 색과
+          같아서 트로피가 그 뒤로 자연스럽게 잘린다. */}
       <span
-        data-testid="win-badge-full"
-        className={`items-center gap-1 ${dense ? 'hidden sm:flex' : 'flex'}`}
+        aria-hidden="true"
+        className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 translate-y-[22%] rounded-full px-[0.22em] text-center text-[0.8em] font-bold leading-[1.3] tabular-nums text-[#FFD365]"
+        style={{ background: RANKING_ROW_BG, boxShadow: `0 0 0 1px ${RANKING_ROW_BG}` }}
       >
-        <TrophyRow count={glyphs} className={className} />
-        {/* 그림으로 다 못 보여줄 만큼 많아지면 나머지는 숫자가 받는다 */}
-        {count > MAX_WIN_GLYPHS && (
-          <span className="text-xs font-bold tabular-nums text-menu">+{count - MAX_WIN_GLYPHS}</span>
-        )}
+        {count}
       </span>
       <span className="sr-only">종합우승 {count}회</span>
     </span>
@@ -949,7 +918,7 @@ export function TierRankingPodium({
                             트로피 하나뿐이라 비어 보일 수 있지만, 자리를 미리
                             잡아둬야 뱃지가 붙을 때 시상대 높이가 안 흔들린다. */}
                         <div className="mt-3 flex min-h-[1.25rem] items-center justify-center gap-1.5">
-                          <WinBadge count={member.winCount} className="h-4 w-auto sm:h-[18px]" />
+                          <WinBadge count={member.winCount} className="text-[13px] sm:text-sm" />
                         </div>
                       </>
                     )}
@@ -1117,9 +1086,8 @@ export function TierRankingPodium({
                         <TierBadge tier={member.tier} className="justify-self-start" />
                         <WinBadge
                           count={member.winCount}
-                          className="h-3.5 w-auto shrink-0"
+                          className="text-[13px] sm:text-[15px]"
                           none={<span className="text-sm text-menu">-</span>}
-                          dense
                         />
                         <span className="text-right tabular-nums">
                           <MetricValue
