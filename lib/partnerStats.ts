@@ -47,6 +47,25 @@ export function displayedDelta(rankDelta: number): number {
   return Math.round(rankDelta * 10) / 10;
 }
 
+// 표본이 얇을수록 차이를 0 쪽으로 당기는 정도. 클수록 세게 당긴다.
+//
+// 이게 없으면 카드는 늘 **가장 적게 함께한 사람**을 뽑는다. 자격을 통과한 817개
+// 조합 중 664개가 딱 2회짜리이고, 두 번만 같이 하면 그날 운이 그대로 평균이 돼서
+// ±3~6등이 예사로 나온다. 반대로 9회를 함께한 조합(Ez_JuHyuN ↔ Ez_Hyuk9)은
+// 차이가 1.25등뿐이다 — 경기가 쌓이면 진짜 값으로 수렴하기 때문이다. 그대로
+// 두면 "가장 잘 맞는 사람"이 아니라 "표본이 가장 얇아 튄 사람"이 뽑힌다.
+//
+// 2를 쓰면 2회는 차이의 절반만, 3회는 60%, 4회는 3분의 2, 9회는 82%가 남는다.
+// 얇은 표본이 두꺼운 표본을 이기려면 그만큼 더 큰 차이를 보여야 한다.
+const SHRINK_SESSIONS = 2;
+
+// 뽑을 때 쓰는 값. 화면에 적히는 숫자는 이게 아니라 실제 차이(rankDelta)다 —
+// 카드는 두 평균을 나란히 보여주므로, 그 둘의 차이와 다른 수를 적으면 읽는
+// 사람이 뺄셈을 해보고 틀렸다고 생각한다. 보정은 순서를 정하는 데만 쓴다.
+export function shrunkDelta(row: PartnerStat): number {
+  return (row.rankDelta * row.sessionsTogether) / (row.sessionsTogether + SHRINK_SESSIONS);
+}
+
 // 양 끝을 고른다. **동률이면 전원**이다(예: 둘 다 ▲3.0등이면 둘 다 보여준다).
 //
 // 부호를 지킨다: 좋아지지 않은 사람은 깐부 자리에 오지 않고, 나빠지지 않은
@@ -63,10 +82,20 @@ function extremes(rows: PartnerStat[], direction: 1 | -1): PartnerStat[] {
   const candidates = rows.filter((row) => displayedDelta(row.rankDelta) * direction > 0);
   if (candidates.length === 0) return [];
 
-  const peak = Math.max(...candidates.map((row) => displayedDelta(row.rankDelta) * direction));
+  // 순서는 보정값으로 정하고,
+  const winner = candidates.reduce((best, row) =>
+    shrunkDelta(row) * direction > shrunkDelta(best) * direction ||
+    (shrunkDelta(row) === shrunkDelta(best) && row.sessionsTogether > best.sessionsTogether)
+      ? row
+      : best,
+  );
+
+  // 한 칸에 세우는 기준은 **화면에 찍히는 숫자**다. 차이는 칸 위에 한 번만
+  // 적으므로, 같은 숫자로 보이는 사람이 빠져 있으면 그 표는 틀린 표가 된다.
+  const shown = displayedDelta(winner.rankDelta);
 
   return candidates
-    .filter((row) => displayedDelta(row.rankDelta) * direction === peak)
+    .filter((row) => displayedDelta(row.rankDelta) === shown)
     // 같은 값이면 더 오래 함께한 사람을 위에 둔다 — 표본이 두꺼운 쪽이 덜 우연이다.
     .sort((a, b) => b.sessionsTogether - a.sessionsTogether || b.gamesTogether - a.gamesTogether);
 }
