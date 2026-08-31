@@ -139,18 +139,19 @@ export default async function MemberDetailPage({
             />
           </div>
 
-          {/* 전적 요약(혼자 얼마나 잘했나) 다음에 "누구와 있을 때 잘했나"가 온다. */}
+          {/* 혼자 얼마나 잘했나(전적 요약) 다음은 **어디서** 잘했나다 — 같은
+              사람의 성적을 맵으로 쪼갠 것이라 바로 이어 읽힌다. 라운드 순서대로. */}
+          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+            <MapRecords stats={mapStats} badges={myMapBadges} />
+          </div>
+
+          {/* 그다음이 **누구와** 잘했나다. 여기서부터는 자기 기록만으로는 안
+              나오는 이야기라, 혼자짜리 지표들을 다 보고 난 뒤에 온다. */}
           <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
             <PartnerChemistry
               best={toPartnerCards(partners.best)}
               worst={toPartnerCards(partners.worst)}
             />
-          </div>
-
-          {/* 맵별 기록 — 라운드 순서대로. 6각형이 "어떤 선수인가"라면 이쪽은
-              "어디서 잘하나"라, 6각형 바로 앞에 둔다. */}
-          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
-            <MapRecords stats={mapStats} badges={myMapBadges} />
           </div>
 
           {/* 깐부 칸과 선을 하나 긋는다. 넓은 화면에서는 설명을 왼쪽 위 모서리에

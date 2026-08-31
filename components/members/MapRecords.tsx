@@ -81,17 +81,27 @@ export function MapRecords({ stats, badges }: MapRecordsProps) {
 
   return (
     <div data-testid="map-records">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="hud text-sm font-bold text-foreground">맵별 기록</p>
-        <span className="text-[11px] text-subtext">가운데선 = 내 다른 맵 평균</span>
-      </div>
+      <p className="hud text-sm font-bold text-foreground">맵별 기록</p>
 
       {stats.length === 0 ? (
         <p className="mt-3.5 rounded-2xl border border-white/[0.06] bg-[#1B1B23] px-4 py-8 text-center text-sm text-menu">
           아직 맵별로 나눠 볼 기록이 없습니다.
         </p>
       ) : (
-        <ul className="mt-3.5 space-y-3 rounded-2xl border border-white/[0.06] bg-[#1B1B23] px-4 py-4">
+        <ul className="mt-3.5 space-y-3 rounded-2xl border border-white/[0.06] bg-[#1B1B23] px-4 pb-4 pt-2.5">
+          {/* 가운데선이 무엇인지는 선 바로 위에 적는다. 칸 밖에 "가운데선 =
+              내 다른 맵 평균"이라고 적어두면 읽는 사람이 그 문장과 선을 눈으로
+              이어붙여야 하는데, 라벨을 선 위에 놓으면 그 일이 사라진다. */}
+          <li aria-hidden="true" className="grid grid-cols-[3.5rem_1fr_auto] items-end gap-3">
+            <span />
+            <span className="relative block h-3">
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] leading-none text-menu">
+                평균
+              </span>
+            </span>
+            <span className="text-right text-[10px] leading-none text-subtext">내 다른 맵</span>
+          </li>
+
           {stats.map((stat) => (
             <MapRow key={stat.mapName} stat={stat} badge={badgeByMap.get(stat.mapName)} />
           ))}
