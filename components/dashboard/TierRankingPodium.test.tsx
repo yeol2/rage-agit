@@ -159,7 +159,8 @@ describe('TierRankingPodium — 뱃지(종합우승)', () => {
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const row4 = screen.getByTestId('ranking-row-4');
-    expect(within(row4).getByTitle('종합우승 3회')).toBeInTheDocument();
+    // 마우스를 올리면 뜨는 말풍선(과 스크린리더용 글)이 횟수를 말한다.
+    expect(badge(row4).textContent).toContain('종합우승 3회');
     expect(badge(row4).querySelectorAll('svg')).toHaveLength(1);
     expect(within(badge(row4)).getByText('3')).toBeInTheDocument();
   });
@@ -172,7 +173,22 @@ describe('TierRankingPodium — 뱃지(종합우승)', () => {
     const row4 = screen.getByTestId('ranking-row-4');
     expect(badge(row4).querySelectorAll('svg')).toHaveLength(1);
     expect(within(badge(row4)).getByText('11')).toBeInTheDocument();
-    expect(within(row4).getByTitle('종합우승 11회')).toBeInTheDocument();
+    expect(badge(row4).textContent).toContain('종합우승 11회');
+  });
+
+  // 말풍선은 CSS 로만 열고 닫는다(group-hover) — 상태를 두지 않아 표 수십 줄에
+  // 리렌더가 번지지 않는다. jsdom 에는 hover 가 없으므로 클래스로 확인한다.
+  it('뱃지에 마우스를 올리면 뜨는 말풍선과 테두리를 갖고 있다', () => {
+    const withWins = RECENT16.map((r) => ({ ...r, winCount: 2 }));
+    render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
+
+    const el = badge(screen.getByTestId('ranking-row-4'));
+    expect(el.className).toContain('group');
+    expect(el.className).toContain('hover:border-');
+
+    const bubble = within(el).getByTestId('win-badge-tooltip');
+    expect(bubble.className).toContain('group-hover:opacity-100');
+    expect(bubble.textContent).toBe('종합우승 2회');
   });
 
   it('우승이 없으면 뱃지 칸이 - 로 남는다', () => {

@@ -37,6 +37,9 @@ export interface WinBadgeProps {
 
 const DEFAULT_CHIP_COLOR = '#1B1B23';
 
+// 말풍선 바탕. 리더보드 물음표 말풍선과 같은 색이다.
+const TOOLTIP_BG = '#1B1B23';
+
 // 광택 띠의 폭(svg 사용자 좌표). 좁을수록 날카롭게 반짝인다.
 const SHEEN_WIDTH = 7;
 
@@ -57,58 +60,76 @@ export function WinBadge({
 
   return (
     <span
-      className={`relative inline-flex shrink-0 items-center justify-center ${className}`}
-      title={`종합우승 ${count}회`}
+      className={`group relative inline-flex w-fit shrink-0 items-center justify-center rounded-lg border border-transparent px-[0.14em] py-[0.08em] transition-[border-color,box-shadow] hover:border-[rgba(255,211,101,0.55)] hover:shadow-[0_0_10px_0_rgba(255,211,101,0.3)] ${className}`}
       data-testid="win-badge"
     >
-      <svg viewBox={TROPHY_VIEWBOX} className="h-[1.55em] w-auto" aria-hidden>
-        <defs>
-          {gradientId === undefined && <TrophyGoldGradient id={goldId} />}
-          {sheen && (
-            <>
-              <linearGradient id={sheenId} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />
-                <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-              </linearGradient>
-              {/* 광택이 트로피 밖으로 삐져나오지 않게 모양대로 자른다. */}
-              <clipPath id={clipId}>
-                <TrophyPaths />
-              </clipPath>
-            </>
-          )}
-        </defs>
+      {/* 트로피와 숫자를 한 덩어리로 묶는다. 숫자 자리는 트로피 기준이라,
+          바깥 상자에 붙은 여백(테두리가 트로피에 닿지 않게 두는 여백)에
+          휘둘리면 안 된다. */}
+      <span className="relative inline-flex">
+        <svg viewBox={TROPHY_VIEWBOX} className="h-[1.55em] w-auto" aria-hidden>
+          <defs>
+            {gradientId === undefined && <TrophyGoldGradient id={goldId} />}
+            {sheen && (
+              <>
+                <linearGradient id={sheenId} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />
+                  <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                </linearGradient>
+                {/* 광택이 트로피 밖으로 삐져나오지 않게 모양대로 자른다. */}
+                <clipPath id={clipId}>
+                  <TrophyPaths />
+                </clipPath>
+              </>
+            )}
+          </defs>
 
-        <g fill={`url(#${goldId})`}>
-          <TrophyPaths />
-        </g>
-
-        {sheen && (
-          <g clipPath={`url(#${clipId})`}>
-            <rect
-              className="trophy-sheen"
-              style={{ '--sheen-start': `${-SHEEN_WIDTH}px`, '--sheen-end': '24px' } as React.CSSProperties}
-              x={0}
-              y={0}
-              width={SHEEN_WIDTH}
-              height={24}
-              fill={`url(#${sheenId})`}
-            />
+          <g fill={`url(#${goldId})`}>
+            <TrophyPaths />
           </g>
-        )}
-      </svg>
 
-      {/* 트로피 몸통 아래쪽(기둥 자리)에 얹는다. 받침 바로 위에서 멈춰서
-          받침은 그대로 보이고, 숫자는 트로피 안쪽에 박힌 것처럼 읽힌다 —
-          받침보다 더 내려가면 트로피 옆에 놓인 별개의 숫자로 보이고, 더
-          올라가면 컵을 덮어 트로피가 뭔지 알아보기 어려워진다. */}
-      <span
-        aria-hidden="true"
-        className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 -translate-y-[18%] rounded-full px-[0.22em] text-center text-[0.72em] font-bold leading-[1.35] tabular-nums text-[#FFD365]"
-        style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
-      >
-        {count}
+          {sheen && (
+            <g clipPath={`url(#${clipId})`}>
+              <rect
+                className="trophy-sheen"
+                style={
+                  { '--sheen-start': `${-SHEEN_WIDTH}px`, '--sheen-end': '24px' } as React.CSSProperties
+                }
+                x={0}
+                y={0}
+                width={SHEEN_WIDTH}
+                height={24}
+                fill={`url(#${sheenId})`}
+              />
+            </g>
+          )}
+        </svg>
+
+        {/* 트로피 몸통 아래쪽에 얹는다. 받침 위에서 멈춰서 받침은 그대로 보이고,
+            숫자는 트로피 안쪽에 박힌 것처럼 읽힌다 — 더 내려가면 받침을 먹어
+            트로피가 잘린 것처럼 보이고, 더 올라가면 컵을 덮어 작은 크기에서
+            트로피인지 알아보기 어려워진다. */}
+        <span
+          aria-hidden="true"
+          className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 -translate-y-[26%] rounded-full px-[0.22em] text-center text-[0.72em] font-bold leading-[1.35] tabular-nums text-[#FFD365]"
+          style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
+        >
+          {count}
+        </span>
       </span>
+
+      {/* 리더보드 물음표와 같은 말풍선이다 — 같은 성격의 안내는 같은 모양으로
+          뜨는 편이 배울 것이 적다. 위로 펴는 이유도 같다: 아래로 펴면 표에서
+          바로 다음 줄을 가린다. */}
+      <span
+        data-testid="win-badge-tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-max -translate-x-1/2 rounded-lg border border-white/10 px-3 py-2 text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
+        style={{ background: TOOLTIP_BG }}
+      >
+        종합우승 <b className="font-bold text-foreground">{count}회</b>
+      </span>
+
       <span className="sr-only">종합우승 {count}회</span>
     </span>
   );

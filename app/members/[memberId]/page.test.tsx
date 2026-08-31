@@ -124,8 +124,8 @@ describe('MemberDetailPage', () => {
     const badge = screen.getByTestId('win-badge');
     expect(badge.querySelectorAll('svg')).toHaveLength(1);
     expect(within(badge).getByText('3')).toBeInTheDocument();
-    // 횟수는 뱃지가 말하므로 옆 글자에는 숫자를 또 적지 않는다.
-    expect(screen.getByText('종합우승')).toBeInTheDocument();
+    // 횟수는 뱃지가 말하므로 뱃지 옆 글자에는 숫자를 또 적지 않는다.
+    expect(badge.closest('p')!.textContent!.endsWith('종합우승')).toBe(true);
   });
 
   it('우승이 없으면 트로피 줄을 아예 안 그린다', async () => {

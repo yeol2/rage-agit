@@ -1034,7 +1034,7 @@ export function TierRankingPodium({
                         <TierBadge tier={member.tier} className="justify-self-start" />
                         <WinBadge
                           count={member.winCount}
-                          className="text-[13px] sm:text-[15px]"
+                          className="justify-self-center text-[13px] sm:text-[15px]"
                           none={<span className="text-sm text-menu">-</span>}
                           gradientId={RANKING_TROPHY_GOLD}
                         />
