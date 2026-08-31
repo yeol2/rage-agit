@@ -178,13 +178,12 @@ describe('TierRankingPodium — 뱃지(종합우승)', () => {
 
   // 말풍선은 CSS 로만 열고 닫는다(group-hover) — 상태를 두지 않아 표 수십 줄에
   // 리렌더가 번지지 않는다. jsdom 에는 hover 가 없으므로 클래스로 확인한다.
-  it('뱃지에 마우스를 올리면 뜨는 말풍선과 테두리를 갖고 있다', () => {
+  it('뱃지에 마우스를 올리면 뜨는 말풍선을 갖고 있다', () => {
     const withWins = RECENT16.map((r) => ({ ...r, winCount: 2 }));
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const el = badge(screen.getByTestId('ranking-row-4'));
     expect(el.className).toContain('group');
-    expect(el.className).toContain('hover:border-');
 
     const bubble = within(el).getByTestId('win-badge-tooltip');
     expect(bubble.className).toContain('group-hover:opacity-100');

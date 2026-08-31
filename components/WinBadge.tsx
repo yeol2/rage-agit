@@ -60,12 +60,11 @@ export function WinBadge({
 
   return (
     <span
-      className={`group relative inline-flex w-fit shrink-0 items-center justify-center rounded-lg border border-transparent px-[0.14em] py-[0.08em] transition-[border-color,box-shadow] hover:border-[rgba(255,211,101,0.55)] hover:shadow-[0_0_10px_0_rgba(255,211,101,0.3)] ${className}`}
+      className={`group relative inline-flex w-fit shrink-0 items-center justify-center ${className}`}
       data-testid="win-badge"
     >
-      {/* 트로피와 숫자를 한 덩어리로 묶는다. 숫자 자리는 트로피 기준이라,
-          바깥 상자에 붙은 여백(테두리가 트로피에 닿지 않게 두는 여백)에
-          휘둘리면 안 된다. */}
+      {/* 트로피와 숫자를 한 덩어리로 묶는다 — 숫자 자리는 바깥 상자가 아니라
+          트로피 기준이어야 한다. */}
       <span className="relative inline-flex">
         <svg viewBox={TROPHY_VIEWBOX} className="h-[1.55em] w-auto" aria-hidden>
           <defs>

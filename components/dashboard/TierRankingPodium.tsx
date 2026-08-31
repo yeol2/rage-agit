@@ -73,10 +73,15 @@ const PEDESTAL_TOP_COLOR = '#2B2B33';
 // (화면 375 − 섹션 좌우 40 − 행 좌우 32)인데, 고정 칸과 칸사이간격을 합치면
 // 그만큼을 다 먹어버려서 1fr 인 닉네임이 0 으로 눌린다 — 닉네임이 아예 안 보였다.
 // 그래서 모바일에서만 고정 칸을 조이고 간격도 좁힌다.
-//   24 + 52 + 48 + 64 + 24 = 212, 간격 5 × 4 = 20 → 232 (닉네임 71px 확보)
+//   24 + 52 + 36 + 64 + 24 = 200, 간격 5 × 4 = 20 → 220 (닉네임 83px 확보)
 // 티어 칸 52px 는 배지 실측폭(51px)에서 나온 값이라 더는 못 줄인다.
+//
+// 뱃지 칸은 트로피 하나 폭이다(데스크탑 44px / 모바일 36px). 예전엔 우승
+// 횟수만큼 트로피를 늘어놓느라 여덟 개가 들어갈 160px 을 잡아뒀는데, 뱃지가
+// 트로피 하나로 바뀌면서 그 폭이 통째로 빈 자리가 됐다 — 그만큼 닉네임 칸이
+// 넓어진다.
 const RANKING_GRID =
-  'grid grid-cols-[1.5rem_1fr_3.25rem_3rem_4rem_1.5rem] items-center gap-1 sm:grid-cols-[3rem_1fr_5rem_10rem_8.25rem_1.75rem] sm:gap-3';
+  'grid grid-cols-[1.5rem_1fr_3.25rem_2.25rem_4rem_1.5rem] items-center gap-1 sm:grid-cols-[3rem_1fr_5rem_2.75rem_8.25rem_1.75rem] sm:gap-3';
 
 // 변동은 종합점수에서만 계산한다. 평균등수/평균킬 탭에서는 변동 칸을 아예 만들지
 // 않고 **마지막 두 칸을 하나로 합쳐** 점수가 박스 오른쪽 끝까지 쓰게 한다.
@@ -85,7 +90,7 @@ const RANKING_GRID =
 //   데스크탑: 8.25rem + 12px + 1.75rem = 10.75rem
 //   모바일  : 4rem    +  4px + 1.5rem  =  5.75rem
 const RANKING_GRID_NO_CHANGE =
-  'grid grid-cols-[1.5rem_1fr_3.25rem_3rem_5.75rem] items-center gap-1 sm:grid-cols-[3rem_1fr_5rem_10rem_10.75rem] sm:gap-3';
+  'grid grid-cols-[1.5rem_1fr_3.25rem_2.25rem_5.75rem] items-center gap-1 sm:grid-cols-[3rem_1fr_5rem_2.75rem_10.75rem] sm:gap-3';
 
 // 점수 헤더를 칸 오른쪽 끝에서 살짝 띄우는 공백. 일반 공백은 HTML 이 줄 끝에서
 // 지워버리므로 non-breaking space 를 쓴다.
@@ -1034,7 +1039,7 @@ export function TierRankingPodium({
                         <TierBadge tier={member.tier} className="justify-self-start" />
                         <WinBadge
                           count={member.winCount}
-                          className="justify-self-center text-[13px] sm:text-[15px]"
+                          className="text-[13px] sm:text-[15px]"
                           none={<span className="text-sm text-menu">-</span>}
                           gradientId={RANKING_TROPHY_GOLD}
                         />
