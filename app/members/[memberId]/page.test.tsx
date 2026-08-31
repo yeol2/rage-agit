@@ -6,7 +6,7 @@ vi.mock('@/lib/memberStats', async (importOriginal) => {
   return {
     ...actual,
     fetchMember: vi.fn(),
-    fetchMemberRecentStats: vi.fn(),
+    fetchMemberHexagonStats: vi.fn(),
     fetchMemberWinCount: vi.fn(),
     fetchHexagonCohort: vi.fn(),
   };
@@ -44,7 +44,7 @@ import MemberDetailPage from './page';
 // eslint-disable-next-line import/first
 import {
   fetchMember,
-  fetchMemberRecentStats,
+  fetchMemberHexagonStats,
   fetchMemberWinCount,
   fetchHexagonCohort,
 } from '@/lib/memberStats';
@@ -61,7 +61,7 @@ const member = { id: 'm-1', discordNickname: 'Ez_Alpha', tier: 2, vipRank: null 
 const stats = {
   memberId: 'm-1',
   tier: 2,
-  gameCount: 10,
+  gameCount: 16,
   avgDamage: 200,
   avgKills: 2,
   rankStddev: 3,
@@ -73,7 +73,7 @@ const stats = {
 describe('MemberDetailPage', () => {
   it('충분한 표본이 있으면 6각형을 그린다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
-    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
@@ -84,7 +84,7 @@ describe('MemberDetailPage', () => {
 
   it('제목도 명단 화면과 같은 방식으로 괄호 태그를 뗀다', async () => {
     vi.mocked(fetchMember).mockResolvedValue({ ...member, discordNickname: 'Ez_Alpha(98)' });
-    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
@@ -92,9 +92,9 @@ describe('MemberDetailPage', () => {
     expect(screen.getByRole('heading', { name: 'Ez_Alpha' })).toBeInTheDocument();
   });
 
-  it('표본이 4경기 미만이면 6각형 대신 안내 문구를 보인다', async () => {
+  it('통산 내전 4회(16경기) 미만이면 6각형 대신 안내 문구를 보인다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
-    vi.mocked(fetchMemberRecentStats).mockResolvedValue({ ...stats, gameCount: 2 });
+    vi.mocked(fetchMemberHexagonStats).mockResolvedValue({ ...stats, gameCount: 12 });
     vi.mocked(fetchHexagonCohort).mockResolvedValue([]);
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
@@ -105,7 +105,7 @@ describe('MemberDetailPage', () => {
 
   it('전적이 아예 없으면(기록 자체가 없음) 안내 문구를 보인다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
-    vi.mocked(fetchMemberRecentStats).mockResolvedValue(null);
+    vi.mocked(fetchMemberHexagonStats).mockResolvedValue(null);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([]);
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
@@ -115,7 +115,7 @@ describe('MemberDetailPage', () => {
 
   it('우승 횟수를 트로피 하나에 숫자로 얹는다 — 리더보드 뱃지와 같은 모양이다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
-    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
     vi.mocked(fetchMemberWinCount).mockResolvedValue(3);
 
@@ -130,7 +130,7 @@ describe('MemberDetailPage', () => {
 
   it('우승이 없으면 트로피 줄을 아예 안 그린다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
-    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
     vi.mocked(fetchMemberWinCount).mockResolvedValue(0);
 
@@ -141,7 +141,7 @@ describe('MemberDetailPage', () => {
 
   it('우승이 아무리 많아도 트로피는 하나다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
-    vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
+    vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
     vi.mocked(fetchMemberWinCount).mockResolvedValue(12);
 

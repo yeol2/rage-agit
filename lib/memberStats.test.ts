@@ -11,10 +11,10 @@ import {
   tierGroupFor,
   tierNameplateSelectedStyle,
   tierNameplateStyle,
-  type MemberRecentStatsRow,
+  type MemberHexagonStatsRow,
 } from './memberStats';
 
-function row(overrides: Partial<MemberRecentStatsRow>): MemberRecentStatsRow {
+function row(overrides: Partial<MemberHexagonStatsRow>): MemberHexagonStatsRow {
   return {
     memberId: 'm-1',
     tier: 2,

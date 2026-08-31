@@ -17,7 +17,7 @@ import {
   buildHexagonAxes,
   cleanDisplayName,
   fetchMember,
-  fetchMemberRecentStats,
+  fetchMemberHexagonStats,
   fetchMemberWinCount,
   fetchHexagonCohort,
   stripTrailingKoreanTag,
@@ -48,7 +48,7 @@ export default async function MemberDetailPage({
 
   const [stats, winCount, alltimeRows, recent16Rows, sessions, standings, partnerRows] =
     await Promise.all([
-      fetchMemberRecentStats(member.id),
+      fetchMemberHexagonStats(member.id),
       fetchMemberWinCount(member.id),
       fetchRankingStats('alltime'),
       fetchRankingStats('recent16'),
