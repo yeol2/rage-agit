@@ -98,12 +98,13 @@ export function WinBadge({
         )}
       </svg>
 
-      {/* 트로피 바로 아래에 걸친다. 살짝만 겹쳐야 받침이 보이면서도 트로피에
-          붙은 숫자로 읽힌다 — 깊이 겹치면 받침을 통째로 덮어 트로피가 잘린
-          것처럼 보인다. */}
+      {/* 트로피 몸통 아래쪽(기둥 자리)에 얹는다. 받침 바로 위에서 멈춰서
+          받침은 그대로 보이고, 숫자는 트로피 안쪽에 박힌 것처럼 읽힌다 —
+          받침보다 더 내려가면 트로피 옆에 놓인 별개의 숫자로 보이고, 더
+          올라가면 컵을 덮어 트로피가 뭔지 알아보기 어려워진다. */}
       <span
         aria-hidden="true"
-        className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 translate-y-[52%] rounded-full px-[0.22em] text-center text-[0.72em] font-bold leading-[1.35] tabular-nums text-[#FFD365]"
+        className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 -translate-y-[18%] rounded-full px-[0.22em] text-center text-[0.72em] font-bold leading-[1.35] tabular-nums text-[#FFD365]"
         style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
       >
         {count}
