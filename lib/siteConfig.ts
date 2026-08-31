@@ -172,9 +172,6 @@ export const siteConfig = {
     heading: '클랜원 목록',
     searchPlaceholder: '닉네임 검색',
     insufficientDataMessage: '아직 내전 기록이 없습니다.',
-    wins: {
-      label: (count: number) => `종합우승 ${count}회`,
-    },
     // 클랜원 상세 화면의 6각형 옆에 놓는 안내. 그림만 봐서는 점선이 무엇인지,
     // 어느 시기 경기가 들어가는지 알 수 없어서 짧게 적어둔다.
     hexagon: {

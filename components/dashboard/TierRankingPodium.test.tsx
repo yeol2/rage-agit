@@ -150,7 +150,7 @@ describe('TierRankingPodium — 관리자 검색', () => {
   });
 });
 
-describe('TierRankingPodium — 뱃지(종합우승)', () => {
+describe('TierRankingPodium — 뱃지(내전우승)', () => {
   // 뱃지 열은 4위 이하 표에만 있다(1~3위는 시상대라 열 자체가 없다).
   const badge = (row: HTMLElement) => within(row).getByTestId('win-badge');
 
@@ -160,7 +160,7 @@ describe('TierRankingPodium — 뱃지(종합우승)', () => {
 
     const row4 = screen.getByTestId('ranking-row-4');
     // 마우스를 올리면 뜨는 말풍선(과 스크린리더용 글)이 횟수를 말한다.
-    expect(badge(row4).textContent).toContain('종합우승 3회');
+    expect(badge(row4).textContent).toContain('내전우승 3회');
     expect(badge(row4).querySelectorAll('svg')).toHaveLength(1);
     expect(within(badge(row4)).getByText('3')).toBeInTheDocument();
   });
@@ -173,7 +173,7 @@ describe('TierRankingPodium — 뱃지(종합우승)', () => {
     const row4 = screen.getByTestId('ranking-row-4');
     expect(badge(row4).querySelectorAll('svg')).toHaveLength(1);
     expect(within(badge(row4)).getByText('11')).toBeInTheDocument();
-    expect(badge(row4).textContent).toContain('종합우승 11회');
+    expect(badge(row4).textContent).toContain('내전우승 11회');
   });
 
   // 말풍선은 CSS 로만 열고 닫는다(group-hover) — 상태를 두지 않아 표 수십 줄에
@@ -187,14 +187,14 @@ describe('TierRankingPodium — 뱃지(종합우승)', () => {
 
     const bubble = within(el).getByTestId('win-badge-tooltip');
     expect(bubble.className).toContain('group-hover:opacity-100');
-    expect(bubble.textContent).toBe('종합우승 2회');
+    expect(bubble.textContent).toBe('내전우승 2회');
   });
 
   it('우승이 없으면 뱃지 칸이 - 로 남는다', () => {
     render(<TierRankingPodium recent16={RECENT16} alltime={ALLTIME} snapshots={[]} />);
     const row4 = screen.getByTestId('ranking-row-4');
     expect(within(row4).getByText('-')).toBeInTheDocument();
-    expect(within(row4).queryByTitle(/종합우승/)).not.toBeInTheDocument();
+    expect(within(row4).queryByTitle(/내전우승/)).not.toBeInTheDocument();
   });
 });
 

@@ -4,7 +4,7 @@ import { useId, type ReactNode } from 'react';
 import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
 
 /**
- * 내전 종합우승 뱃지 — 트로피 하나에 횟수를 숫자로 겹쳐 얹는다.
+ * 내전우승 뱃지 — 트로피 하나에 횟수를 숫자로 겹쳐 얹는다.
  *
  * 예전에는 횟수만큼 트로피를 늘어놓았다. 우승이 쌓일수록 가로로 길어져서 4위
  * 이하 표에서는 뱃지 칸을 넘겼고(모바일 48px 칸은 4개부터 잘린다), 그걸 막으려고
@@ -126,10 +126,10 @@ export function WinBadge({
         className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-max -translate-x-1/2 rounded-lg border border-white/10 px-3 py-2 text-xs leading-relaxed text-menu opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
         style={{ background: TOOLTIP_BG }}
       >
-        종합우승 <b className="font-bold text-foreground">{count}회</b>
+        내전우승 <b className="font-bold text-foreground">{count}회</b>
       </span>
 
-      <span className="sr-only">종합우승 {count}회</span>
+      <span className="sr-only">내전우승 {count}회</span>
     </span>
   );
 }
