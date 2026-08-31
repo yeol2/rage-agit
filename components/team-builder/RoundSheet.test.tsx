@@ -145,7 +145,7 @@ describe('RoundSheet — 우승 확정', () => {
     // 같이 보여야 매칭이 덜 된 채로 확정한 걸 알아챌 수 있다.
     expect(
       await screen.findByText(
-        '종합우승 확정 — Alpha / Bravo / Charlie / Delta (20점) · 종합등수 16팀 63명 저장',
+        '내전우승 확정 — Alpha / Bravo / Charlie / Delta (20점) · 종합등수 16팀 63명 저장',
       ),
     ).toBeInTheDocument();
   });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 
 vi.mock('@/lib/memberStats', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/memberStats')>();
@@ -113,21 +113,19 @@ describe('MemberDetailPage', () => {
     expect(screen.getByText('아직 내전 기록이 없습니다.')).toBeInTheDocument();
   });
 
-  // 트로피는 svg 라 글자로 셀 수 없다. 광택을 잘라내는 clipPath 안에 트로피가
-  // 하나씩 들어가므로 그걸 센다.
-  const trophyCount = (container: HTMLElement) =>
-    container.querySelectorAll('#win-trophy-clip > g').length;
-
-  it('우승 횟수만큼 트로피를 보인다', async () => {
+  it('우승 횟수를 트로피 하나에 숫자로 얹는다 — 리더보드 뱃지와 같은 모양이다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
     vi.mocked(fetchMemberWinCount).mockResolvedValue(3);
 
-    const { container } = render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
+    render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
-    expect(screen.getByText('종합우승 3회')).toBeInTheDocument();
-    expect(trophyCount(container)).toBe(3);
+    const badge = screen.getByTestId('win-badge');
+    expect(badge.querySelectorAll('svg')).toHaveLength(1);
+    expect(within(badge).getByText('3')).toBeInTheDocument();
+    // 횟수는 뱃지가 말하므로 뱃지 옆 글자에는 숫자를 또 적지 않는다.
+    expect(badge.closest('p')!.textContent!.endsWith('내전우승')).toBe(true);
   });
 
   it('우승이 없으면 트로피 줄을 아예 안 그린다', async () => {
@@ -138,19 +136,20 @@ describe('MemberDetailPage', () => {
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
-    expect(screen.queryByText(/종합우승/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/내전우승/)).not.toBeInTheDocument();
   });
 
-  it('트로피가 너무 많아져도 8개까지만 그리고 숫자는 그대로 센다', async () => {
+  it('우승이 아무리 많아도 트로피는 하나다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberRecentStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
     vi.mocked(fetchMemberWinCount).mockResolvedValue(12);
 
-    const { container } = render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
+    render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
-    expect(screen.getByText('종합우승 12회')).toBeInTheDocument();
-    expect(trophyCount(container)).toBe(8);
+    const badge = screen.getByTestId('win-badge');
+    expect(badge.querySelectorAll('svg')).toHaveLength(1);
+    expect(within(badge).getByText('12')).toBeInTheDocument();
   });
 
   it('없는 멤버 id 면 404 처리한다', async () => {

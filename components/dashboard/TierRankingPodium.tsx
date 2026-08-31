@@ -2,14 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import {
-  TROPHY_SIZE,
-  TROPHY_VIEWBOX,
-  TROPHY_X,
-  TROPHY_Y,
-  TrophyGoldGradient,
-  TrophyPaths,
-} from '@/components/TrophyGlyph';
+import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
+import { WinBadge } from '@/components/WinBadge';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -81,6 +75,11 @@ const PEDESTAL_TOP_COLOR = '#2B2B33';
 // 그래서 모바일에서만 고정 칸을 조이고 간격도 좁힌다.
 //   24 + 52 + 48 + 64 + 24 = 212, 간격 5 × 4 = 20 → 232 (닉네임 71px 확보)
 // 티어 칸 52px 는 배지 실측폭(51px)에서 나온 값이라 더는 못 줄인다.
+//
+// 뱃지 칸(데스크탑 160px)은 지금 트로피 하나에 비하면 넓다. 일부러 그렇게
+// 둔다 — 이 표가 클랜에서 뱃지가 가장 많이 붙는 자리라, 내전우승 말고 다른
+// 뱃지가 생기면 이 칸에 왼쪽부터 하나씩 채워진다. 칸을 트로피 하나에 맞춰
+// 조였다가 뱃지가 늘 때마다 다시 넓히면 그때마다 표 전체가 흔들린다.
 const RANKING_GRID =
   'grid grid-cols-[1.5rem_1fr_3.25rem_3rem_4rem_1.5rem] items-center gap-1 sm:grid-cols-[3rem_1fr_5rem_10rem_8.25rem_1.75rem] sm:gap-3';
 
@@ -100,87 +99,6 @@ const HEADER_TRAILING_SPACE = String.fromCharCode(160); // U+00A0
 // 뱃지 열 트로피가 쓰는 그라디언트. 표에 수십 줄이 깔리므로 정의는 문서에
 // 하나만 두고 모든 줄이 이 id 를 가리킨다.
 const RANKING_TROPHY_GOLD = 'ranking-trophy-gold';
-
-// 뱃지 칸에 트로피를 늘어놓는 간격·크기. 데스크탑 칸(10rem = 160px)에
-// MAX_WIN_GLYPHS 개가 들어가는 값이다: 8 × 14 + 7 × 2 = 126px.
-const WIN_GLYPH_STEP = 21.5; // svg 사용자 좌표(글리프 폭 18.8 + 여백)
-const MAX_WIN_GLYPHS = 8;
-
-// 트로피를 가로로 늘어놓는 svg. 낱개 svg 를 반복하지 않는 이유는 표 한 줄에
-// 여러 개가 들어가고 시상대에도 쓰여서다 — 요소 수를 줄이고 간격도 한 곳에서
-// 정한다. 색은 문서에 하나만 둔 그라디언트(RANKING_TROPHY_GOLD)를 가리킨다.
-function TrophyRow({ count, className }: { count: number; className: string }) {
-  const width = (count - 1) * WIN_GLYPH_STEP + TROPHY_SIZE;
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${TROPHY_SIZE}`}
-      fill={`url(#${RANKING_TROPHY_GOLD})`}
-      className={className}
-      aria-hidden
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <g key={i} transform={`translate(${i * WIN_GLYPH_STEP - TROPHY_X}, ${-TROPHY_Y})`}>
-          <TrophyPaths />
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-/**
- * 내전 종합우승 뱃지 — 횟수만큼 트로피를 늘어놓는다.
- *
- * 표와 시상대가 크기와 '우승 0회' 처리만 다르다. 표는 빈 칸을 '-' 로 채워
- * 열이 비어 보이지 않게 하고, 시상대는 뱃지 칸 자체가 min-h 로 자리를 잡고
- * 있어서 아무것도 안 그려도 높이가 안 흔들린다.
- *
- * 광택(sheen)은 넣지 않는다 — 수십 줄이 동시에 번쩍이면 표를 훑기 어렵다.
- * 그건 칸이 넉넉한 클랜원 상세 화면에서만 한다(components/members/WinTrophies.tsx).
- */
-function WinBadge({
-  count,
-  className,
-  none = null,
-  dense = false,
-}: {
-  count: number;
-  className: string;
-  none?: ReactNode;
-  /**
-   * 좁은 칸(4위 이하 표의 모바일 뱃지 칸 = 48px)에서는 트로피를 늘어놓을 수
-   * 없다 — 4개만 돼도 62px 라 잘린다. 칸을 넓히면 이번엔 닉네임이 눌리므로,
-   * 모바일에서만 트로피 하나에 숫자를 붙여 줄인다. 넓어지면(sm~) 원래대로
-   * 늘어놓는다. 시상대는 칸이 넉넉해서 이 옵션을 안 쓴다.
-   */
-  dense?: boolean;
-}) {
-  if (count <= 0) return <>{none}</>;
-
-  const glyphs = Math.min(count, MAX_WIN_GLYPHS);
-
-  return (
-    // 칸을 넘칠 만큼 많아져도 표가 밀리지 않게 자른다. 정확한 횟수는 title 에 있다.
-    <span className="flex min-w-0 items-center gap-1 overflow-hidden" title={`종합우승 ${count}회`}>
-      {dense && (
-        <span data-testid="win-badge-dense" className="flex items-center gap-0.5 sm:hidden">
-          <TrophyRow count={1} className={className} />
-          <span className="text-xs font-bold tabular-nums text-foreground">{count}</span>
-        </span>
-      )}
-      <span
-        data-testid="win-badge-full"
-        className={`items-center gap-1 ${dense ? 'hidden sm:flex' : 'flex'}`}
-      >
-        <TrophyRow count={glyphs} className={className} />
-        {/* 그림으로 다 못 보여줄 만큼 많아지면 나머지는 숫자가 받는다 */}
-        {count > MAX_WIN_GLYPHS && (
-          <span className="text-xs font-bold tabular-nums text-menu">+{count - MAX_WIN_GLYPHS}</span>
-        )}
-      </span>
-      <span className="sr-only">종합우승 {count}회</span>
-    </span>
-  );
-}
 
 // 티어를 맨 글자가 아니라 둥근 배지로 보여준다 — team-builder 네임플레이트와
 // 같은 배색 함수(tierNameplateStyle)를 그대로 가져다 쓴다(새 색을 만들지
@@ -945,11 +863,15 @@ export function TierRankingPodium({
                           )}
                         </p>
 
-                        {/* 뱃지 칸 — 앞으로 뱃지가 늘어날 자리다. 지금은 종합우승
+                        {/* 뱃지 칸 — 앞으로 뱃지가 늘어날 자리다. 지금은 내전우승
                             트로피 하나뿐이라 비어 보일 수 있지만, 자리를 미리
                             잡아둬야 뱃지가 붙을 때 시상대 높이가 안 흔들린다. */}
                         <div className="mt-3 flex min-h-[1.25rem] items-center justify-center gap-1.5">
-                          <WinBadge count={member.winCount} className="h-4 w-auto sm:h-[18px]" />
+                          <WinBadge
+                            count={member.winCount}
+                            className="text-[13px] sm:text-sm"
+                            gradientId={RANKING_TROPHY_GOLD}
+                          />
                         </div>
                       </>
                     )}
@@ -1115,12 +1037,16 @@ export function TierRankingPodium({
                           <span className="truncate">{member.discordNickname}</span>
                         </span>
                         <TierBadge tier={member.tier} className="justify-self-start" />
-                        <WinBadge
-                          count={member.winCount}
-                          className="h-3.5 w-auto shrink-0"
-                          none={<span className="text-sm text-menu">-</span>}
-                          dense
-                        />
+                        {/* 뱃지 줄 — 왼쪽부터 하나씩 채운다. 뱃지가 늘어도 앞의
+                            것들 자리는 그대로다. */}
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <WinBadge
+                            count={member.winCount}
+                            className="text-[13px] sm:text-[15px]"
+                            none={<span className="text-sm text-menu">-</span>}
+                            gradientId={RANKING_TROPHY_GOLD}
+                          />
+                        </span>
                         <span className="text-right tabular-nums">
                           <MetricValue
                             metric={activeMetric}
