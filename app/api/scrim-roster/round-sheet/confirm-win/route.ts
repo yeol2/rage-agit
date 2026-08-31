@@ -4,7 +4,7 @@ import { revalidateRecordPages } from '@/lib/revalidateRecordPages';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { buildRoundSheet } from '@/lib/roundSheetData';
 
-// 종합우승은 그날 라운드를 다 치른 뒤에야 정해진다. 한두 라운드만 기록된 상태로
+// 내전우승은 그날 라운드를 다 치른 뒤에야 정해진다. 한두 라운드만 기록된 상태로
 // 확정하면 그때까지 앞서 있던 팀이 우승으로 박힌다.
 const REQUIRED_ROUNDS = 4;
 

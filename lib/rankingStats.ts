@@ -28,7 +28,7 @@ export interface RankingStatsRow {
   avgPlacementPoints: number;
   avgRank: number;
   lastPlayedAt: string;
-  // 내전 종합우승 횟수. 랭킹 계산에는 안 쓰고 뱃지 열에만 보인다.
+  // 내전우승 횟수. 랭킹 계산에는 안 쓰고 뱃지 열에만 보인다.
   winCount: number;
 }
 

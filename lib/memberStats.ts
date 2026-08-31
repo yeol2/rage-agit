@@ -339,7 +339,7 @@ export async function fetchMember(memberId: string): Promise<MemberSummary | nul
   return { id: data.id, discordNickname: data.discord_nickname, tier: data.tier, vipRank: data.vip_rank };
 }
 
-// 내전 종합우승 횟수. 우승 기록이 한 번도 없으면 뷰에 행 자체가 없으므로 0 이다.
+// 내전우승 횟수. 우승 기록이 한 번도 없으면 뷰에 행 자체가 없으므로 0 이다.
 export async function fetchMemberWinCount(memberId: string): Promise<number> {
   const { data, error } = await getSupabase()
     .from('member_win_counts')

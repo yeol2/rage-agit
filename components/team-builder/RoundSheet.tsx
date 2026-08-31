@@ -229,7 +229,7 @@ export function RoundSheet({
       // 저장되는 건 우승팀만이 아니라 1~16위 전부다(0028) — 몇 팀·몇 명이
       // 들어갔는지 같이 보여줘야 매칭이 덜 된 채로 확정한 걸 알아챌 수 있다.
       setPollMessage(
-        `종합우승 확정 — ${body.players.map(cleanName).join(' / ')} (${body.totalScore}점)` +
+        `내전우승 확정 — ${body.players.map(cleanName).join(' / ')} (${body.totalScore}점)` +
           ` · 종합등수 ${body.savedTeams}팀 ${body.savedMembers}명 저장`,
       );
     } catch (err) {
@@ -409,7 +409,7 @@ export function RoundSheet({
               중단
             </button>
           )}
-          {/* 4경기가 다 기록돼야 종합우승이 정해진다 — 그 전에는 눌러도
+          {/* 4경기가 다 기록돼야 내전우승이 정해진다 — 그 전에는 눌러도
               서버가 막지만, 버튼부터 잠가 헛클릭을 줄인다. */}
           <button
             type="button"
