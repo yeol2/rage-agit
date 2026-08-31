@@ -5,6 +5,8 @@ import type { HexagonAxis } from '@/lib/memberStats';
 
 afterEach(cleanup);
 
+const HELP = '최근 10경기 팀등수가 얼마나 흔들렸는지입니다.';
+
 const axis = (
   key: HexagonAxis['key'],
   label: string,
@@ -27,6 +29,8 @@ const axes: HexagonAxis[] = [
   axis('assists', '어시', 20, 35),
   axis('rank', '순위', 70, 50),
 ];
+
+const props = { axes, averageLabel: '2~2.5티어', stabilityHelp: HELP };
 
 describe('pointFor', () => {
   it('0번 축은 12시 방향(중심보다 y가 작다)에 놓인다', () => {
@@ -59,19 +63,19 @@ describe('polygonPoints', () => {
 
 describe('Hexagon', () => {
   it('6개 축 라벨을 전부 그린다', () => {
-    render(<Hexagon axes={axes} />);
+    render(<Hexagon {...props} />);
     for (const axis of axes) {
       expect(screen.getByText(axis.label)).toBeInTheDocument();
     }
   });
 
   it('접근성을 위한 role과 라벨을 갖는다', () => {
-    render(<Hexagon axes={axes} />);
+    render(<Hexagon {...props} />);
     expect(screen.getByRole('img', { name: /^6각형 지표/ })).toBeInTheDocument();
   });
 
   it('본인 도형은 실선, 코호트 평균 도형은 점선으로 겹쳐 그린다', () => {
-    const { container } = render(<Hexagon axes={axes} />);
+    const { container } = render(<Hexagon {...props} />);
     const self = container.querySelector('[data-testid="hexagon-self"]');
     const avg = container.querySelector('[data-testid="hexagon-average"]');
     expect(self).not.toBeNull();
@@ -82,14 +86,14 @@ describe('Hexagon', () => {
   });
 
   it('두 도형이 서로 다른 값을 좌표에 반영한다', () => {
-    const { container } = render(<Hexagon axes={axes} />);
+    const { container } = render(<Hexagon {...props} />);
     const self = container.querySelector('[data-testid="hexagon-self"]');
     const avg = container.querySelector('[data-testid="hexagon-average"]');
     expect(self?.getAttribute('points')).not.toBe(avg?.getAttribute('points'));
   });
 
   it('평균 도형도 축마다 다른 자리에 찍힌다 — 티어 그룹 평균이라 사람마다 크기가 다르다', () => {
-    const { container } = render(<Hexagon axes={axes} />);
+    const { container } = render(<Hexagon {...props} />);
     const avg = container.querySelector('[data-testid="hexagon-average"]');
     const distances = avg!
       .getAttribute('points')!
@@ -103,14 +107,14 @@ describe('Hexagon', () => {
   });
 
   it('두 도형의 선 굵기가 같다 — 굵기 차이가 안팎 비교를 흐린다', () => {
-    const { container } = render(<Hexagon axes={axes} />);
+    const { container } = render(<Hexagon {...props} />);
     const self = container.querySelector('[data-testid="hexagon-self"]');
     const avg = container.querySelector('[data-testid="hexagon-average"]');
     expect(self?.getAttribute('stroke-width')).toBe(avg?.getAttribute('stroke-width'));
   });
 
   it('축에 마우스를 올리면 평균과 내 값을 두 줄로 띄운다', () => {
-    const { container } = render(<Hexagon axes={axes} />);
+    const { container } = render(<Hexagon {...props} />);
     expect(container.querySelector('[data-testid="hexagon-tooltip"]')).toBeNull();
 
     fireEvent.mouseEnter(container.querySelector('[data-testid="hexagon-hit-damage"]')!);
@@ -124,7 +128,7 @@ describe('Hexagon', () => {
   });
 
   it('마우스를 올린 축에 점 두 개를 찍고, 평균(흰 점)을 나중에 그려 위에 올린다', () => {
-    const { container } = render(<Hexagon axes={axes} />);
+    const { container } = render(<Hexagon {...props} />);
     fireEvent.mouseEnter(container.querySelector('[data-testid="hexagon-hit-kills"]')!);
 
     const dots = container.querySelectorAll('[data-testid="hexagon-hover-dots"] circle');
@@ -134,8 +138,25 @@ describe('Hexagon', () => {
     expect(dots[1]).toHaveAttribute('fill', '#FFFFFF');
   });
 
+  it('점선이 어느 무리의 평균인지 꼬리표로 적는다', () => {
+    const { container } = render(<Hexagon {...props} />);
+    expect(container.querySelector('[data-testid="hexagon-average-callout"]')).not.toBeNull();
+    expect(screen.getByText('2~2.5티어 평균')).toBeInTheDocument();
+  });
+
+  it('안정성 물음표에 마우스를 올리면 설명이 뜬다', () => {
+    const { container } = render(<Hexagon {...props} />);
+    expect(container.querySelector('[data-testid="hexagon-stability-tooltip"]')).toBeNull();
+
+    fireEvent.mouseEnter(container.querySelector('[data-testid="hexagon-stability-help"]')!);
+    expect(container.querySelector('[data-testid="hexagon-stability-tooltip"]')!.textContent).toContain(HELP);
+
+    fireEvent.mouseLeave(container.querySelector('[data-testid="hexagon-stability-help"]')!);
+    expect(container.querySelector('[data-testid="hexagon-stability-tooltip"]')).toBeNull();
+  });
+
   it('그리드 선은 어두운 검정 계열이 아니라 흰색 계열로 밝게 그린다', () => {
-    const { container } = render(<Hexagon axes={axes} />);
+    const { container } = render(<Hexagon {...props} />);
     const ring = container.querySelector('[data-testid="hexagon-grid-ring"]');
     expect(ring).toHaveAttribute('stroke', expect.stringContaining('255,255,255'));
     // 기존의 거의 안 보이던 0.08 수준보다 뚜렷하게 밝아야 한다.

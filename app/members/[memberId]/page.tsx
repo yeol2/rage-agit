@@ -128,21 +128,32 @@ export default async function MemberDetailPage({
             />
           </div>
 
-          {/* 깐부 칸과 선을 하나 긋고, 6각형 옆 빈자리에 이 그림이 무엇인지
-              적는다. 좁은 화면에서는 그림이 먼저 오고 설명이 그 아래로 내려간다. */}
+          {/* 깐부 칸과 선을 하나 긋는다. 넓은 화면에서는 설명을 왼쪽 위 모서리에
+              띄우고(absolute) 6각형만 칸 한가운데에 둔다 — 설명을 흐름 안에 두면
+              그 폭만큼 그림이 오른쪽으로 밀려 가운데가 아니게 된다. 좁은 화면에서는
+              겹칠 자리가 없어 위아래로 쌓는다. */}
           <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
-            <p className="hud text-xs text-menu">{siteConfig.memberDirectory.hexagon.heading}</p>
-            <div className="mt-3.5 flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6">
-              <div className="order-2 min-w-0 flex-1 space-y-2 sm:order-1">
-                {siteConfig.memberDirectory.hexagon.lines.map((line) => (
-                  <p key={line} className="text-[13px] leading-relaxed text-menu">
-                    {line}
-                  </p>
-                ))}
+            <div className="relative">
+              <div className="sm:absolute sm:left-0 sm:top-0 sm:max-w-[15rem]">
+                <p className="hud text-xs text-menu">
+                  {siteConfig.memberDirectory.hexagon.heading}
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {siteConfig.memberDirectory.hexagon.lines.map((line) => (
+                    <p key={line} className="text-xs leading-relaxed text-menu">
+                      {line}
+                    </p>
+                  ))}
+                </div>
               </div>
-              <div className="order-1 flex w-full justify-center sm:order-2 sm:w-auto sm:shrink-0">
+
+              <div className="mt-5 flex justify-center sm:mt-0">
                 {axes ? (
-                  <Hexagon axes={axes} />
+                  <Hexagon
+                    axes={axes}
+                    averageLabel={tierGroup?.label ?? '전체'}
+                    stabilityHelp={siteConfig.memberDirectory.hexagon.stabilityHelp}
+                  />
                 ) : (
                   <p className="py-8 text-center text-menu">
                     {siteConfig.memberDirectory.insufficientDataMessage}

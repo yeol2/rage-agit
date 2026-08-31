@@ -5,6 +5,18 @@ import type { HexagonAxis } from '@/lib/memberStats';
 
 const SIZE = 240;
 const CENTER = SIZE / 2;
+
+// 그림 자체는 240 짜리 정사각형이지만, 축 라벨과 물음표·평균 꼬리표가 그 밖으로
+// 나간다. viewBox 를 사방으로 똑같이 넓혀서 잘리지 않게 한다 — 상하좌우를 같은
+// 값으로 넓혀야 6각형이 계속 정가운데에 있는다.
+const PAD = 26;
+const VIEW_MIN = -PAD;
+const VIEW_SIZE = SIZE + PAD * 2;
+
+// svg 좌표를 겹쳐 놓은 HTML 요소의 위치(%)로 옮긴다.
+function toPercent(coordinate: number): string {
+  return `${((coordinate - VIEW_MIN) / VIEW_SIZE) * 100}%`;
+}
 const RADIUS = 90;
 const AXIS_COUNT = 6;
 const GRID_RINGS = [0.25, 0.5, 0.75, 1];
@@ -57,8 +69,26 @@ const TOOLTIP_PLACEMENT: Array<{ radius: number; transform: string }> = [
   { radius: 1.46, transform: 'translate(-100%, -60%)' }, // 왼쪽 위
 ];
 
-export function Hexagon({ axes }: { axes: HexagonAxis[] }) {
+// 평균 꼬리표는 1시 방향(축과 축 사이)으로 뺀다. 축 위로 빼면 그 축의 라벨과
+// 겹치고, 축 사이라면 도형 어느 선도 가리지 않는다.
+const CALLOUT_INDEX = 0.5;
+const CALLOUT_END = 1.3;
+
+// 안정성 축(2번, 4시 방향) 라벨 오른쪽에 붙는 물음표. 라벨 글자폭만큼 띄운다.
+const HELP_AXIS_INDEX = 2;
+const HELP_OFFSET_X = 26;
+
+export interface HexagonProps {
+  axes: HexagonAxis[];
+  /** 점선이 어느 무리의 평균인지. 꼬리표에 그대로 적는다(예: '3~3.5티어'). */
+  averageLabel: string;
+  /** 안정성 축 물음표에 뜨는 설명. */
+  stabilityHelp: string;
+}
+
+export function Hexagon({ axes, averageLabel, stabilityHelp }: HexagonProps) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const fractions = axes.map((axis) => axis.percent / 100);
   // 점선은 내 티어 그룹의 평균이다. 눈금이 클랜 전체 기준 하나라서, 높은 티어
@@ -73,7 +103,7 @@ export function Hexagon({ axes }: { axes: HexagonAxis[] }) {
   return (
     <div className="relative w-full max-w-xs">
       <svg
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        viewBox={`${VIEW_MIN} ${VIEW_MIN} ${VIEW_SIZE} ${VIEW_SIZE}`}
         role="img"
         aria-label={`6각형 지표 — ${axes
           .map((axis) => `${axis.label} 나 ${axis.valueText}, 평균 ${axis.averageText}`)
@@ -167,15 +197,86 @@ export function Hexagon({ axes }: { axes: HexagonAxis[] }) {
             onMouseLeave={() => setHovered((current) => (current === index ? null : current))}
           />
         ))}
+
+        {/* 점선이 무엇인지 그림 안에서 바로 말해준다. 선 하나를 1시 방향으로
+            빼고 그 끝에 어느 무리의 평균인지 적는다 — 범례를 따로 두면 눈이
+            그림과 범례를 왕복해야 한다. */}
+        <line
+          data-testid="hexagon-average-callout"
+          x1={pointFor(CALLOUT_INDEX, averageFractions[0] * Math.cos(Math.PI / 6))[0]}
+          y1={pointFor(CALLOUT_INDEX, averageFractions[0] * Math.cos(Math.PI / 6))[1]}
+          x2={pointFor(CALLOUT_INDEX, CALLOUT_END)[0]}
+          y2={pointFor(CALLOUT_INDEX, CALLOUT_END)[1]}
+          stroke={AVERAGE_COLOR}
+          strokeWidth={1}
+          opacity={0.5}
+        />
+
+        {/* 안정성 물음표. 부채꼴보다 나중에 그려야 마우스가 여기로 들어온다. */}
+        <g
+          data-testid="hexagon-stability-help"
+          onMouseEnter={() => setHelpOpen(true)}
+          onMouseLeave={() => setHelpOpen(false)}
+          style={{ cursor: 'default' }}
+        >
+          <circle
+            cx={pointFor(HELP_AXIS_INDEX, 1.2)[0] + HELP_OFFSET_X}
+            cy={pointFor(HELP_AXIS_INDEX, 1.2)[1]}
+            r={7}
+            fill="transparent"
+            stroke={helpOpen ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)'}
+          />
+          <text
+            x={pointFor(HELP_AXIS_INDEX, 1.2)[0] + HELP_OFFSET_X}
+            y={pointFor(HELP_AXIS_INDEX, 1.2)[1]}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={9}
+            fontWeight="bold"
+            fill={helpOpen ? '#FFFFFF' : 'rgba(255,255,255,0.5)'}
+          >
+            ?
+          </text>
+        </g>
       </svg>
+
+      {/* 꼬리표 글자. svg 안에 두면 viewBox 를 더 넓혀야 하고, 그만큼 6각형이
+          작아진다. */}
+      <span
+        className="pointer-events-none absolute whitespace-nowrap text-[10px] leading-none text-white/70"
+        style={{
+          left: toPercent(pointFor(CALLOUT_INDEX, CALLOUT_END)[0]),
+          top: toPercent(pointFor(CALLOUT_INDEX, CALLOUT_END)[1]),
+          transform: 'translate(5px, -50%)',
+        }}
+      >
+        {averageLabel} 평균
+      </span>
+
+      {helpOpen && (
+        <div
+          data-testid="hexagon-stability-tooltip"
+          className="pointer-events-none absolute z-10 w-[15rem] rounded-lg border border-white/10 bg-[#1B1B23] px-3 py-2 text-left text-xs leading-relaxed text-menu shadow-lg"
+          style={{
+            left: toPercent(pointFor(HELP_AXIS_INDEX, 1.2)[0] + HELP_OFFSET_X),
+            top: toPercent(pointFor(HELP_AXIS_INDEX, 1.2)[1]),
+            transform: 'translate(-100%, 8px)',
+          }}
+        >
+          <b className="font-bold text-foreground">안정성</b> · {stabilityHelp}
+        </div>
+      )}
+
+      {/* 마우스를 못 쓰는 경우에도 설명이 남아 있어야 한다. */}
+      <span className="sr-only">안정성: {stabilityHelp}</span>
 
       {hoveredAxis && tooltipAt && (
         <div
           data-testid="hexagon-tooltip"
           className="pointer-events-none absolute z-10 whitespace-nowrap rounded-lg border border-white/10 bg-[#1B1B23] px-2.5 py-1.5 text-[11px] leading-relaxed shadow-lg"
           style={{
-            left: `${(tooltipAt[0] / SIZE) * 100}%`,
-            top: `${(tooltipAt[1] / SIZE) * 100}%`,
+            left: toPercent(tooltipAt[0]),
+            top: toPercent(tooltipAt[1]),
             transform: TOOLTIP_PLACEMENT[hovered!].transform,
           }}
         >
