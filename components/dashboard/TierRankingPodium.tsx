@@ -26,15 +26,16 @@ import {
 } from '@/lib/memberDashboard';
 import { tierColorRamp, tierNameplateStyle } from '@/lib/memberStats';
 import { siteConfig } from '@/lib/siteConfig';
+import { ACTIVE_WITHIN_MONTHS, MIN_SCRIMS_FOR_RANKING, RECENT_WINDOW_SCRIMS, SCRIM_LABEL, matchesFor } from '@/lib/scrimCounting';
 import { useAdmin } from '@/components/admin/AdminProvider';
 
 // 사용자에게 보여줄 집계 기준 — 소프트맥스/z-score 같은 계산 방식은 여기 안 적는다.
 const AGGREGATION_RULES = [
-  '통산 16경기(내전 4회) 이상 참가한 클랜원만 집계',
-  '최근 3개월 이내 내전 참가 기록이 없으면 제외',
+  `통산 ${SCRIM_LABEL.minToRank} (${matchesFor(MIN_SCRIMS_FOR_RANKING)}경기) 한 클랜원만 집계`,
+  `최근 ${ACTIVE_WITHIN_MONTHS}개월 이내 내전 참가 기록이 없으면 제외`,
   '종합점수: 매치당 등수점수+킬 합산 성적을 같은 티어 그룹 안에서 상대평가 (그룹 평균 = 50점)',
   '평균킬·평균등수: 매치당 평균 (부계정 포함)',
-  '최근 16매치 = 본인이 참여한 가장 최근 내전 4회, 역대 전체 = 40시즌부터 통산 전체 경기',
+  `${SCRIM_LABEL.recentWindow} = 본인이 참여한 가장 최근 내전 ${RECENT_WINDOW_SCRIMS}회, ${SCRIM_LABEL.allTime} = 40시즌부터 통산 전체 경기`,
 ];
 
 // 시상대 3개는 크기가 완전히 같고, 1위만 통째로 위로 올라가 있다 —
@@ -238,14 +239,14 @@ const METRIC_OPTIONS: Array<{ id: Metric; label: string }> = [
 ];
 
 const WINDOW_OPTIONS: Array<{ id: Window; label: string }> = [
-  { id: 'alltime', label: '역대 전체' },
-  { id: 'recent16', label: '최근 16매치' },
+  { id: 'alltime', label: SCRIM_LABEL.allTime },
+  { id: 'recent16', label: SCRIM_LABEL.recentWindow },
 ];
 
 // 집계 창 토글 옆 물음표 아이콘에 띄울 설명. 문구만 고치면 말풍선에 그대로 반영된다.
 const WINDOW_HELP: Array<{ term: string; desc: string }> = [
-  { term: '역대 전체', desc: '40시즌부터 현재까지' },
-  { term: '최근 16매치', desc: '최근 내전 4회 (본인이 참여한)' },
+  { term: SCRIM_LABEL.allTime, desc: '40시즌부터 현재까지' },
+  { term: SCRIM_LABEL.recentWindow, desc: `본인이 참여한 가장 최근 내전 ${RECENT_WINDOW_SCRIMS}회 (${matchesFor(RECENT_WINDOW_SCRIMS)}경기)` },
 ];
 
 // "종합점수" 탭 옆 물음표 아이콘에 띄울 설명. 한 줄에 한 문장 — 배열 순서대로

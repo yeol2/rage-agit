@@ -4,6 +4,7 @@
 import { getSupabase } from './supabaseBrowser';
 // 흩어진 정도를 재는 함수는 클랜원 대시보드와 같은 것을 쓴다.
 import { mean, stddev } from './memberDashboard';
+import { matchesFor } from './scrimCounting';
 
 export interface MemberRecentStatsRow {
   memberId: string;
@@ -18,9 +19,11 @@ export interface MemberRecentStatsRow {
   avgRank: number;
 }
 
-// 4경기(내전 하루치) 미만이면 6각형을 그리지 않는다.
-// 1~2경기짜리 우연을 실력처럼 보여주는 걸 막는다.
-export const MIN_GAMES_FOR_HEXAGON = 4;
+// 6각형을 그리기 위한 최소 표본. 리더보드 자격(내전 4회)과 달리 1회부터
+// 그린다 — 리더보드는 등수를 매기는 자리라 얇은 표본이 남을 앞지르면 안 되지만,
+// 6각형은 자기 기록을 보는 자리라 한 번 나온 사람에게도 보여줄 것이 있다.
+export const MIN_SCRIMS_FOR_HEXAGON = 1;
+export const MIN_GAMES_FOR_HEXAGON = matchesFor(MIN_SCRIMS_FOR_HEXAGON);
 
 export interface TierCohortGroup {
   id: string;

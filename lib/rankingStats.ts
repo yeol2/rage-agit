@@ -4,15 +4,13 @@
 import { getSupabase } from './supabaseBrowser';
 import { cleanDisplayName, fetchAllMembers, stripTrailingKoreanTag } from './memberStats';
 import { TIER_GROUPS } from './dashboardData';
+import { ACTIVE_WITHIN_MONTHS, MIN_SCRIMS_FOR_RANKING, matchesFor } from './scrimCounting';
 
-// 내전 4회(하루 4경기 기준 16경기) 미만이면 랭킹에서 뺀다.
-// 1~2경기짜리 우연을 실력처럼 보여주는 걸 막는다.
-export const MIN_GAMES_FOR_RANKING = 16;
+// 자격은 내전 회차로 정하고(lib/scrimCounting.ts), 경기 수는 거기서 파생한다 —
+// DB 가 세는 단위가 경기라서 비교할 때만 환산한다.
+const MIN_GAMES_FOR_RANKING = matchesFor(MIN_SCRIMS_FOR_RANKING);
 
-// 최근 이 개월 수 안에 참가한 적이 없으면 랭킹에서 뺀다.
-// 통산 경기 수 자격만으로는 예전에 많이 뛰고 지금은 접은 사람이 계속
-// 최상위권에 남는 문제가 있었다.
-export const ACTIVE_WITHIN_MONTHS = 3;
+export { ACTIVE_WITHIN_MONTHS };
 
 // z-score를 0~100 RAGE Score로 눌러 담는 로지스틱 곡선의 기울기.
 // 클수록 평균에서 조금만 벗어나도 점수가 0/100 쪽으로 빨리 붙는다.

@@ -1,7 +1,8 @@
+import { MIN_SCRIMS_FOR_RANKING, matchesFor } from './scrimCounting';
 import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_WITHIN_MONTHS,
-  MIN_GAMES_FOR_RANKING,
+  
   RAGE_SCORE_STEEPNESS,
   TIER_KILL_WEIGHTS,
   TIER_SCORE_BANDS,
@@ -32,9 +33,12 @@ function row(overrides: Partial<RankingStatsRow> = {}): RankingStatsRow {
   };
 }
 
-describe('MIN_GAMES_FOR_RANKING', () => {
-  it('16경기(내전 4회)다', () => {
-    expect(MIN_GAMES_FOR_RANKING).toBe(16);
+describe('집계 자격', () => {
+  // 자격은 내전 회차로 정하고 경기 수는 거기서 파생한다(lib/scrimCounting.ts).
+  // 화면이 "내전 4회"라고 적어놓고 코드가 다른 수를 세는 일이 없게 묶어둔다.
+  it('내전 4회 = 16경기다', () => {
+    expect(MIN_SCRIMS_FOR_RANKING).toBe(4);
+    expect(matchesFor(MIN_SCRIMS_FOR_RANKING)).toBe(16);
   });
 });
 
