@@ -35,7 +35,9 @@ describe('PartnerChemistry', () => {
     expect(within(best).getByText('나의 깐부')).toBeInTheDocument();
     expect(within(best).getByText('Ez_Yellow')).toBeInTheDocument();
     expect(within(best).getByText(/6\.7등/)).toBeInTheDocument();
-    expect(within(best).getByText(/내전 3회\(12경기\) 함께 · 평균 2\.4등/)).toBeInTheDocument();
+    // 등수를 굵게 뽑느라 줄이 여러 요소로 쪼개져 있어 칸 전체 글자로 확인한다.
+    expect(best.textContent).toContain('내전 3회(12경기) 함께 · 평균 2.4등');
+    expect(best.textContent).toContain('같은 팀이 아닐 땐 9.1등');
 
     const worst = screen.getByTestId('partner-worst');
     expect(within(worst).getByText('다시는 보지 말자')).toBeInTheDocument();
