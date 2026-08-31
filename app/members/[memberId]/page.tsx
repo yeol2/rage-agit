@@ -112,12 +112,15 @@ export default async function MemberDetailPage({
       <Nav />
       <LiveRefresh />
       <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
+        {/* 카드에는 색을 깔지 않는다. 안에 이미 색이 많다 — 티어 배지, 메달 칩,
+            깐부/사대 두 칸, 맵 막대, 6각형까지. 거기에 티어색 바탕까지 깔면
+            무엇이 값이고 무엇이 장식인지 구분이 안 된다.
+            티어는 테두리 하나로만 말한다. 은은한 바깥 광까지가 전부다. */}
         <div
           className="mx-auto max-w-[880px] rounded-2xl border px-6 py-10 text-center sm:px-8"
           style={{
-            background: `linear-gradient(160deg, ${ramp.from}1f, ${ramp.to}1f)`,
-            borderColor: `${ramp.from}66`,
-            boxShadow: `0 0 24px ${ramp.from}33`,
+            borderColor: `${ramp.from}59`,
+            boxShadow: `0 0 28px 0 ${ramp.from}26`,
           }}
         >
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
