@@ -18,6 +18,12 @@ vi.mock('@/lib/memberDashboard', async (importOriginal) => ({
   fetchSessionStandings: vi.fn().mockResolvedValue([]),
 }));
 
+// 맵 뱃지도 같은 이유로 막는다 — 뽑는 규칙은 mapStats.test.ts 가 덮는다.
+vi.mock('@/lib/mapStats', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/mapStats')>()),
+  fetchMapBadges: vi.fn().mockResolvedValue([]),
+}));
+
 // eslint-disable-next-line import/first
 import DashboardPage from './page';
 

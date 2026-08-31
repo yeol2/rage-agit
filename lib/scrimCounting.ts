@@ -33,6 +33,20 @@ export const RECENT_WINDOW_SCRIMS = 4;
 /** 최근 이 개월 수 안에 참가한 적이 없으면 집계에서 뺀다. */
 export const ACTIVE_WITHIN_MONTHS = 3;
 
+/**
+ * 표본이 얇을수록 차이를 0 쪽으로 당기는 정도(내전 회차 단위).
+ *
+ * 깐부와 맵 기록이 같은 함정을 갖는다 — 두 번만 겹친 기록은 그날 운이 그대로
+ * 평균이 돼서 차이가 크게 벌어지고, 그대로 순서를 매기면 늘 표본이 가장 얇은
+ * 쪽이 1등을 한다. 2를 쓰면 2회는 차이의 절반, 4회는 3분의 2, 12회는 86%가
+ * 남는다. 얇은 표본이 이기려면 그만큼 더 큰 차이를 보여야 한다.
+ */
+export const SHRINK_SCRIMS = 2;
+
+export function shrink(delta: number, scrims: number): number {
+  return (delta * scrims) / (scrims + SHRINK_SCRIMS);
+}
+
 /** 화면에 쓰는 말. 숫자와 단위를 한 곳에서 만든다. */
 export const SCRIM_LABEL = {
   recentWindow: `최근 내전 ${RECENT_WINDOW_SCRIMS}회`,

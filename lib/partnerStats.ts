@@ -4,6 +4,7 @@
 // 걸고 양 끝을 고른다. 순수 함수가 위, 네트워크는 아래에만 있다.
 
 import { getSupabase } from './supabaseBrowser';
+import { shrink } from './scrimCounting';
 
 // 같은 팀으로 최소 몇 **번의 내전**을 함께해야 후보인가. 경기 수로 세지 않는
 // 이유는 0035 주석에 있다 — 그날 라운드가 3판이냐 5판이냐에 따라 같은 두 번이
@@ -47,23 +48,17 @@ export function displayedDelta(rankDelta: number): number {
   return Math.round(rankDelta * 10) / 10;
 }
 
-// 표본이 얇을수록 차이를 0 쪽으로 당기는 정도. 클수록 세게 당긴다.
-//
-// 이게 없으면 카드는 늘 **가장 적게 함께한 사람**을 뽑는다. 자격을 통과한 817개
-// 조합 중 664개가 딱 2회짜리이고, 두 번만 같이 하면 그날 운이 그대로 평균이 돼서
-// ±3~6등이 예사로 나온다. 반대로 9회를 함께한 조합(Ez_JuHyuN ↔ Ez_Hyuk9)은
-// 차이가 1.25등뿐이다 — 경기가 쌓이면 진짜 값으로 수렴하기 때문이다. 그대로
-// 두면 "가장 잘 맞는 사람"이 아니라 "표본이 가장 얇아 튄 사람"이 뽑힌다.
-//
-// 2를 쓰면 2회는 차이의 절반만, 3회는 60%, 4회는 3분의 2, 9회는 82%가 남는다.
-// 얇은 표본이 두꺼운 표본을 이기려면 그만큼 더 큰 차이를 보여야 한다.
-const SHRINK_SESSIONS = 2;
+// 표본 보정은 맵 기록과 같은 것을 쓴다(lib/scrimCounting.ts 의 shrink).
+// 두 지표가 같은 함정을 갖고 있어서다 — 두 번만 겹친 기록은 그날 운이 그대로
+// 평균이 된다. 자격을 통과한 817개 조합 중 664개가 딱 2회짜리이고, 두 번만 같이
+// 하면 ±3~6등이 예사로 나온다. 반대로 9회를 함께한 조합(Ez_JuHyuN ↔ Ez_Hyuk9)은
+// 차이가 1.25등뿐이다 — 경기가 쌓이면 진짜 값으로 수렴하기 때문이다.
 
 // 뽑을 때 쓰는 값. 화면에 적히는 숫자는 이게 아니라 실제 차이(rankDelta)다 —
 // 카드는 두 평균을 나란히 보여주므로, 그 둘의 차이와 다른 수를 적으면 읽는
 // 사람이 뺄셈을 해보고 틀렸다고 생각한다. 보정은 순서를 정하는 데만 쓴다.
 export function shrunkDelta(row: PartnerStat): number {
-  return (row.rankDelta * row.sessionsTogether) / (row.sessionsTogether + SHRINK_SESSIONS);
+  return shrink(row.rankDelta, row.sessionsTogether);
 }
 
 // 양 끝을 고른다. **동률이면 전원**이다(예: 둘 다 ▲3.0등이면 둘 다 보여준다).

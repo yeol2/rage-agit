@@ -39,6 +39,16 @@ vi.mock('@/lib/partnerStats', async (importOriginal) => {
   };
 });
 
+// 맵 기록도 같은 이유로 막는다 — 뽑는 규칙은 mapStats.test.ts 가 덮는다.
+vi.mock('@/lib/mapStats', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/mapStats')>();
+  return {
+    ...actual,
+    fetchMemberMapStats: vi.fn().mockResolvedValue([]),
+    fetchMapBadges: vi.fn().mockResolvedValue([]),
+  };
+});
+
 // eslint-disable-next-line import/first
 import MemberDetailPage from './page';
 // eslint-disable-next-line import/first
@@ -125,7 +135,7 @@ describe('MemberDetailPage', () => {
     expect(badge.querySelectorAll('svg')).toHaveLength(1);
     expect(within(badge).getByText('3')).toBeInTheDocument();
     // 횟수는 뱃지가 말하므로 뱃지 옆 글자에는 숫자를 또 적지 않는다.
-    expect(badge.closest('p')!.textContent!.endsWith('내전우승')).toBe(true);
+    expect(badge.parentElement!.textContent!.endsWith('내전우승')).toBe(true);
   });
 
   it('우승이 없으면 트로피 줄을 아예 안 그린다', async () => {
