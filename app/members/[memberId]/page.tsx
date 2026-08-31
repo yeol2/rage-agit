@@ -32,7 +32,7 @@ import {
   type PartnerCard,
   type PartnerStat,
 } from '@/lib/partnerStats';
-import { fetchMapBadges, fetchMemberMapStats } from '@/lib/mapStats';
+import { fetchMemberMapStats } from '@/lib/mapStats';
 import { siteConfig } from '@/lib/siteConfig';
 
 // 다른 기록 화면들과 같은 기준이다(/members, /matches). 폴링·우승 확정이
@@ -57,7 +57,6 @@ export default async function MemberDetailPage({
     standings,
     partnerRows,
     mapStats,
-    mapBadges,
   ] = await Promise.all([
     fetchMemberHexagonStats(member.id),
     fetchMemberWinCount(member.id),
@@ -67,11 +66,7 @@ export default async function MemberDetailPage({
     fetchMemberStandings(member.id),
     fetchPartnerStats(member.id),
     fetchMemberMapStats(member.id),
-    fetchMapBadges(),
   ]);
-
-  // 맵 뱃지는 클랜 전체에서 맵마다 한 명씩 뽑힌다 — 그중 이 사람 것만 남긴다.
-  const myMapBadges = mapBadges.filter((badge) => badge.memberId === member.id);
 
   // 양 끝에 선 사람들만 이름이 필요하다 — 후보 전원을 조회하지 않는다.
   // 동률이면 한 칸에 여러 명이 서므로 개수는 정해져 있지 않다.
@@ -127,7 +122,7 @@ export default async function MemberDetailPage({
             {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
           </h1>
           <p className="mt-2 text-sm text-menu">{member.tier}티어</p>
-          <WinTrophies count={winCount} mapBadges={myMapBadges} />
+          <WinTrophies count={winCount} />
 
           {/* 숫자를 먼저 보고 6각형으로 넘어가는 흐름 — 대시보드가 6각형 위에 온다. */}
           <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
@@ -142,7 +137,7 @@ export default async function MemberDetailPage({
           {/* 혼자 얼마나 잘했나(전적 요약) 다음은 **어디서** 잘했나다 — 같은
               사람의 성적을 맵으로 쪼갠 것이라 바로 이어 읽힌다. 라운드 순서대로. */}
           <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
-            <MapRecords stats={mapStats} badges={myMapBadges} />
+            <MapRecords stats={mapStats} />
           </div>
 
           {/* 그다음이 **누구와** 잘했나다. 여기서부터는 자기 기록만으로는 안

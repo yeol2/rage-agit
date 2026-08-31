@@ -4,8 +4,6 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
 import { WinBadge } from '@/components/WinBadge';
-import { MapBadge } from '@/components/MapBadge';
-import type { MapBadge as MapBadgeData } from '@/lib/mapStats';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -375,8 +373,6 @@ export interface TierRankingPodiumProps {
    */
   sessions?: RecentSession[];
   standings?: SessionStanding[];
-  /** 맵마다 한 명씩 뽑힌 신/똥. 없으면 우승 뱃지만 보인다. */
-  mapBadges?: MapBadgeData[];
 }
 
 function formatMetricValue(
@@ -499,17 +495,8 @@ export function TierRankingPodium({
   snapshots,
   sessions = [],
   standings = [],
-  mapBadges = [],
 }: TierRankingPodiumProps) {
   const { isAdmin } = useAdmin();
-  // 맵 뱃지는 여덟 개뿐이지만 표는 수십 줄이라, 줄마다 훑지 않게 한 번만 묶는다.
-  const mapBadgesByMember = useMemo(() => {
-    const byMember = new Map<string, MapBadgeData[]>();
-    for (const badge of mapBadges) {
-      byMember.set(badge.memberId, [...(byMember.get(badge.memberId) ?? []), badge]);
-    }
-    return byMember;
-  }, [mapBadges]);
   const [activeMetric, setActiveMetric] = useState<Metric>('rageScore');
   const [activeWindow, setActiveWindow] = useState<Window>('recent16');
   const [activeGroupId, setActiveGroupId] = useState<TierGroup['id']>(TIER_GROUPS[0].id);
@@ -886,13 +873,6 @@ export function TierRankingPodium({
                             className="text-[13px] sm:text-sm"
                             gradientId={RANKING_TROPHY_GOLD}
                           />
-                          {mapBadgesByMember.get(member.memberId)?.map((badge) => (
-                            <MapBadge
-                              key={`${badge.mapName}-${badge.kind}`}
-                              badge={badge}
-                              className="text-[13px] sm:text-sm"
-                            />
-                          ))}
                         </div>
                       </>
                     )}
@@ -1064,20 +1044,9 @@ export function TierRankingPodium({
                           <WinBadge
                             count={member.winCount}
                             className="text-[13px] sm:text-[15px]"
-                            none={
-                              (mapBadgesByMember.get(member.memberId)?.length ?? 0) > 0 ? null : (
-                                <span className="text-sm text-menu">-</span>
-                              )
-                            }
+                            none={<span className="text-sm text-menu">-</span>}
                             gradientId={RANKING_TROPHY_GOLD}
                           />
-                          {mapBadgesByMember.get(member.memberId)?.map((badge) => (
-                            <MapBadge
-                              key={`${badge.mapName}-${badge.kind}`}
-                              badge={badge}
-                              className="text-[13px] sm:text-[15px]"
-                            />
-                          ))}
                         </span>
                         <span className="text-right tabular-nums">
                           <MetricValue
