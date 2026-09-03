@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
 import { Nav } from '@/components/Nav';
+import { TierBadge } from '@/components/TierBadge';
 import { LiveRefresh } from '@/components/LiveRefresh';
 import { Footer } from '@/components/Footer';
 import { Hexagon } from '@/components/members/Hexagon';
 import { MemberDashboard } from '@/components/members/MemberDashboard';
+import { MapRecords } from '@/components/members/MapRecords';
 import { PartnerChemistry } from '@/components/members/PartnerChemistry';
 import { WinTrophies } from '@/components/members/WinTrophies';
 import {
@@ -17,7 +19,7 @@ import {
   buildHexagonAxes,
   cleanDisplayName,
   fetchMember,
-  fetchMemberRecentStats,
+  fetchMemberHexagonStats,
   fetchMemberWinCount,
   fetchHexagonCohort,
   stripTrailingKoreanTag,
@@ -31,6 +33,7 @@ import {
   type PartnerCard,
   type PartnerStat,
 } from '@/lib/partnerStats';
+import { fetchMemberMapStats } from '@/lib/mapStats';
 import { siteConfig } from '@/lib/siteConfig';
 
 // 다른 기록 화면들과 같은 기준이다(/members, /matches). 폴링·우승 확정이
@@ -46,16 +49,25 @@ export default async function MemberDetailPage({
   const member = await fetchMember(params.memberId);
   if (!member) notFound();
 
-  const [stats, winCount, alltimeRows, recent16Rows, sessions, standings, partnerRows] =
-    await Promise.all([
-      fetchMemberRecentStats(member.id),
-      fetchMemberWinCount(member.id),
-      fetchRankingStats('alltime'),
-      fetchRankingStats('recent16'),
-      fetchRecentSessions(),
-      fetchMemberStandings(member.id),
-      fetchPartnerStats(member.id),
-    ]);
+  const [
+    stats,
+    winCount,
+    alltimeRows,
+    recent16Rows,
+    sessions,
+    standings,
+    partnerRows,
+    mapStats,
+  ] = await Promise.all([
+    fetchMemberHexagonStats(member.id),
+    fetchMemberWinCount(member.id),
+    fetchRankingStats('alltime'),
+    fetchRankingStats('recent16'),
+    fetchRecentSessions(),
+    fetchMemberStandings(member.id),
+    fetchPartnerStats(member.id),
+    fetchMemberMapStats(member.id),
+  ]);
 
   // 양 끝에 선 사람들만 이름이 필요하다 — 후보 전원을 조회하지 않는다.
   // 동률이면 한 칸에 여러 명이 서므로 개수는 정해져 있지 않다.
@@ -96,18 +108,25 @@ export default async function MemberDetailPage({
       <Nav />
       <LiveRefresh />
       <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
+        {/* 카드에는 색을 깔지 않는다. 안에 이미 색이 많다 — 티어 배지, 메달 칩,
+            깐부/사대 두 칸, 맵 막대, 6각형까지. 거기에 티어색 바탕까지 깔면
+            무엇이 값이고 무엇이 장식인지 구분이 안 된다.
+            티어는 테두리 하나로만 말한다. 은은한 바깥 광까지가 전부다. */}
         <div
           className="mx-auto max-w-[880px] rounded-2xl border px-6 py-10 text-center sm:px-8"
           style={{
-            background: `linear-gradient(160deg, ${ramp.from}1f, ${ramp.to}1f)`,
-            borderColor: `${ramp.from}66`,
-            boxShadow: `0 0 24px ${ramp.from}33`,
+            borderColor: `${ramp.from}59`,
+            boxShadow: `0 0 28px 0 ${ramp.from}26`,
           }}
         >
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
             {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
           </h1>
-          <p className="mt-2 text-sm text-menu">{member.tier}티어</p>
+          {/* 리더보드가 쓰는 배지 그대로다 — 같은 사람을 두 화면에서 볼 때
+              티어가 다른 물건처럼 보이면 안 된다. */}
+          <p className="mt-3">
+            <TierBadge tier={member.tier} size="md" />
+          </p>
           <WinTrophies count={winCount} />
 
           {/* 숫자를 먼저 보고 6각형으로 넘어가는 흐름 — 대시보드가 6각형 위에 온다. */}
@@ -120,7 +139,14 @@ export default async function MemberDetailPage({
             />
           </div>
 
-          {/* 전적 요약(혼자 얼마나 잘했나) 다음에 "누구와 있을 때 잘했나"가 온다. */}
+          {/* 혼자 얼마나 잘했나(전적 요약) 다음은 **어디서** 잘했나다 — 같은
+              사람의 성적을 맵으로 쪼갠 것이라 바로 이어 읽힌다. 라운드 순서대로. */}
+          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+            <MapRecords stats={mapStats} />
+          </div>
+
+          {/* 그다음이 **누구와** 잘했나다. 여기서부터는 자기 기록만으로는 안
+              나오는 이야기라, 혼자짜리 지표들을 다 보고 난 뒤에 온다. */}
           <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
             <PartnerChemistry
               best={toPartnerCards(partners.best)}

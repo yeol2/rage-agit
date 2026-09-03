@@ -253,33 +253,33 @@ console.log('\n0010 — 사람별 최근 10경기 집계 뷰');
 
 check(
   (await one(`select count(*) from information_schema.views
-    where table_name = 'member_recent_stats'`)) === 1,
-  'member_recent_stats 뷰가 있다',
+    where table_name = 'member_hexagon_stats'`)) === 1,
+  'member_hexagon_stats 뷰가 있다',
 );
 
 const statsGrants = await client.query(`
   select grantee from information_schema.table_privileges
-  where table_name = 'member_recent_stats' and privilege_type = 'SELECT'
+  where table_name = 'member_hexagon_stats' and privilege_type = 'SELECT'
     and grantee in ('anon', 'authenticated')
 `);
 const statsGrantees = statsGrants.rows.map((r) => r.grantee);
-check(statsGrantees.includes('anon'), 'anon 이 member_recent_stats 를 읽을 수 있다');
+check(statsGrantees.includes('anon'), 'anon 이 member_hexagon_stats 를 읽을 수 있다');
 check(
   statsGrantees.includes('authenticated'),
-  'authenticated 이 member_recent_stats 를 읽을 수 있다',
+  'authenticated 이 member_hexagon_stats 를 읽을 수 있다',
 );
 
 // 뷰가 최근 10경기로 제한하는지는 정의문에서 확인한다 — rn <= 10 이 없으면
 // 전체 경기가 다 들어가 평균이 조용히 틀어진다.
 check(
-  (await client.query(`select pg_get_viewdef('member_recent_stats'::regclass) as def`)).rows[0].def
+  (await client.query(`select pg_get_viewdef('member_hexagon_stats'::regclass) as def`)).rows[0].def
     .includes('<= 10'),
   '뷰가 최근 10경기로 제한한다',
 );
 
 console.log('\n0011 — 등수+킬 랭킹용 통산 집계와 배치 점수');
 
-// 0011 은 member_recent_stats 에도 avg_placement_points 를 넣었지만, 0012 가
+// 0011 은 member_hexagon_stats 에도 avg_placement_points 를 넣었지만, 0012 가
 // 그 칸을 member_recent_ranking_stats 로 옮기고 여기서는 뺐다 — 한 출처만 세는
 // 배치 점수가 남아 있으면 랭킹이 쓰는 값과 조용히 어긋난다.
 // 그래서 '빠져 있는지'는 아래 0012 절에서 확인한다.
@@ -364,15 +364,15 @@ for (const view of ['member_alltime_stats', 'member_recent_ranking_stats']) {
 // 6각형 뷰는 한 출처만 봐야 한다 — 데미지가 없는 스크린샷 경기가 최근 10경기에
 // 끼면 지표가 조용히 흐려진다.
 const recentDef = (
-  await client.query(`select pg_get_viewdef('member_recent_stats'::regclass) as def`)
+  await client.query(`select pg_get_viewdef('member_hexagon_stats'::regclass) as def`)
 ).rows[0].def;
 check(
   !recentDef.includes('scrim_screenshot_results'),
-  '6각형용 member_recent_stats 는 스크린샷 출처를 섞지 않는다',
+  '6각형용 member_hexagon_stats 는 스크린샷 출처를 섞지 않는다',
 );
 check(
   !recentDef.includes('placement_points'),
-  'member_recent_stats 에 랭킹과 어긋나는 배치 점수 칸이 남아 있지 않다',
+  'member_hexagon_stats 에 랭킹과 어긋나는 배치 점수 칸이 남아 있지 않다',
 );
 
 console.log('\n0016 — 팀 구성 테이블: 명단 업로드 롤');

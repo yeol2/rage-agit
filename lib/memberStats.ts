@@ -4,8 +4,9 @@
 import { getSupabase } from './supabaseBrowser';
 // 흩어진 정도를 재는 함수는 클랜원 대시보드와 같은 것을 쓴다.
 import { mean, stddev } from './memberDashboard';
+import { MIN_SCRIMS_FOR_RANKING, matchesFor } from './scrimCounting';
 
-export interface MemberRecentStatsRow {
+export interface MemberHexagonStatsRow {
   memberId: string;
   tier: number;
   gameCount: number;
@@ -18,9 +19,14 @@ export interface MemberRecentStatsRow {
   avgRank: number;
 }
 
-// 4경기(내전 하루치) 미만이면 6각형을 그리지 않는다.
-// 1~2경기짜리 우연을 실력처럼 보여주는 걸 막는다.
-export const MIN_GAMES_FOR_HEXAGON = 4;
+// 6각형을 그리기 위한 최소 표본 — 리더보드 자격과 같은 선이다(통산 내전 4회).
+// 리더보드에는 있는데 6각형은 없는(또는 그 반대인) 사람이 생기면, 왜 그런지
+// 설명할 말이 화면 어디에도 없다.
+//
+// 다만 리더보드의 "최근 3개월" 규칙은 따라가지 않는다. 등수를 다투는 자리에서는
+// 접은 사람을 빼야 하지만, 자기 페이지의 6각형은 접었다고 지울 기록이 아니다.
+export const MIN_SCRIMS_FOR_HEXAGON = MIN_SCRIMS_FOR_RANKING;
+export const MIN_GAMES_FOR_HEXAGON = matchesFor(MIN_SCRIMS_FOR_HEXAGON);
 
 export interface TierCohortGroup {
   id: string;
@@ -245,15 +251,15 @@ const AXIS_FORMAT: Record<HexagonAxisKey, (value: number) => string> = {
  * 떨어졌나"만큼 안팎으로 옮겨 찍는다.
  */
 export function buildHexagonAxes(
-  target: MemberRecentStatsRow,
-  clan: MemberRecentStatsRow[],
-  group: MemberRecentStatsRow[],
+  target: MemberHexagonStatsRow,
+  clan: MemberHexagonStatsRow[],
+  group: MemberHexagonStatsRow[],
 ): HexagonAxis[] {
   const ringPercent = tierRingPercent(target.tier);
 
   const build = (
     key: HexagonAxisKey,
-    pick: (row: MemberRecentStatsRow) => number | null,
+    pick: (row: MemberHexagonStatsRow) => number | null,
     higherIsBetter: boolean,
   ): HexagonAxis => {
     // null 은 어디서도 숫자로 취급하지 않는다 — 안정성은 경기가 하나뿐이면 없다.
@@ -360,7 +366,7 @@ function toStatsRow(row: {
   avg_survival: number;
   avg_assists: number;
   avg_rank: number;
-}): MemberRecentStatsRow {
+}): MemberHexagonStatsRow {
   return {
     memberId: row.member_id,
     tier: row.tier,
@@ -374,9 +380,9 @@ function toStatsRow(row: {
   };
 }
 
-export async function fetchMemberRecentStats(memberId: string): Promise<MemberRecentStatsRow | null> {
+export async function fetchMemberHexagonStats(memberId: string): Promise<MemberHexagonStatsRow | null> {
   const { data, error } = await getSupabase()
-    .from('member_recent_stats')
+    .from('member_hexagon_stats')
     .select('member_id, tier, game_count, avg_damage, avg_kills, avg_survival, avg_assists, avg_rank, rank_stddev')
     .eq('member_id', memberId)
     .maybeSingle();
@@ -386,13 +392,13 @@ export async function fetchMemberRecentStats(memberId: string): Promise<MemberRe
   return toStatsRow(data);
 }
 
-// 6각형이 볼 표본 — 집계 대상 전원이다. 눈금은 클랜 전체 기준 하나이고
+// 6각형이 볼 표본 — 집계 대상 전원이다(역대 전체). 눈금은 클랜 전체 기준 하나이고
 // (buildHexagonAxes 주석 참고), 티어 그룹은 이 목록에서 갈라 쓴다.
 // MIN_GAMES_FOR_HEXAGON 미만인 사람은 뺀다(본인이 그 미만이면 애초에 6각형을
 // 안 그리므로 이 함수까지 안 온다).
-export async function fetchHexagonCohort(): Promise<MemberRecentStatsRow[]> {
+export async function fetchHexagonCohort(): Promise<MemberHexagonStatsRow[]> {
   const { data, error } = await getSupabase()
-    .from('member_recent_stats')
+    .from('member_hexagon_stats')
     .select('member_id, tier, game_count, avg_damage, avg_kills, avg_survival, avg_assists, avg_rank, rank_stddev')
     .gte('game_count', MIN_GAMES_FOR_HEXAGON);
   if (error) throw new Error(`6각형 비교 표본을 불러오지 못했습니다: ${error.message}`);

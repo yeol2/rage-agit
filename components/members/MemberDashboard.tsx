@@ -5,14 +5,15 @@ import { ScoreRing } from '@/components/members/ScoreRing';
 import { SessionStandingChips } from '@/components/members/SessionStandingChips';
 import { centeredPercent, type DashboardWindowStats, type RecentSession } from '@/lib/memberDashboard';
 import type { TierColorRamp } from '@/lib/memberStats';
+import { SCRIM_LABEL } from '@/lib/scrimCounting';
 
 type Window = 'alltime' | 'recent16';
 
 // 리더보드 상단 토글과 같은 말·같은 순서를 쓴다 — 두 화면에서 다른 이름으로
 // 부르면 같은 값인지 알 수 없다.
 const WINDOW_OPTIONS: Array<{ id: Window; label: string }> = [
-  { id: 'alltime', label: '역대 전체' },
-  { id: 'recent16', label: '최근 16매치' },
+  { id: 'alltime', label: SCRIM_LABEL.allTime },
+  { id: 'recent16', label: SCRIM_LABEL.recentWindow },
 ];
 
 function windowButtonClass(selected: boolean): string {

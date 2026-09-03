@@ -40,6 +40,18 @@ describe('pointFor', () => {
     expect(y).toBeLessThan(cy);
   });
 
+  // Math.cos/sin 의 마지막 비트가 서버(Node)와 브라우저에서 갈리면 같은
+  // 육각형인데 points 문자열이 달라져 React 가 hydration 을 경고한다. 자릿수를
+  // 끊어서 두 곳이 반드시 같은 글자를 내게 한다.
+  it('좌표는 소수 셋째 자리까지만 쓴다 — 서버와 브라우저가 같은 글자를 내야 한다', () => {
+    for (const index of [0, 0.5, 1, 2.5, 5]) {
+      for (const [value] of [pointFor(index, 1), pointFor(index, 0.37)]) {
+        const decimals = String(value).split('.')[1] ?? '';
+        expect(decimals.length).toBeLessThanOrEqual(3);
+      }
+    }
+  });
+
   it('fraction 이 0이면 중심점이다', () => {
     const [x1, y1] = pointFor(0, 0);
     const [x2, y2] = pointFor(3, 0);

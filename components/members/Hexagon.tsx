@@ -32,13 +32,22 @@ const AVERAGE_COLOR = '#FFFFFF';
 // 실제보다 뒤로 물러나 보였고, 그러면 어느 쪽이 더 바깥인지를 굵기가 흐린다.
 const STROKE_WIDTH = 2;
 
+// 좌표를 소수 셋째 자리에서 끊는다. Math.cos/sin 의 마지막 비트가 서버(Node)와
+// 브라우저에서 다르게 나오는 경우가 있어서(...190716 대 ...19073), 그대로 쓰면
+// 서버가 그린 SVG 와 브라우저가 그린 SVG 의 points 문자열이 달라 React 가
+// hydration 불일치를 경고한다. 240 짜리 viewBox 에서 0.001 은 화면 픽셀보다
+// 훨씬 작으므로 그림은 달라지지 않는다.
+function round(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
 // index 0 이 12시 방향에서 시작해 시계방향으로 6등분한다.
 // index 는 정수가 아니어도 된다 — 축 사이(예: 0.5)를 가리키면 두 축의 중간
 // 방향이 나오고, 마우스를 받는 부채꼴을 그 방향들로 만든다.
 export function pointFor(index: number, fraction: number): [number, number] {
   const angle = (Math.PI * 2 * index) / AXIS_COUNT - Math.PI / 2;
   const r = RADIUS * fraction;
-  return [CENTER + r * Math.cos(angle), CENTER + r * Math.sin(angle)];
+  return [round(CENTER + r * Math.cos(angle)), round(CENTER + r * Math.sin(angle))];
 }
 
 export function polygonPoints(fractions: number[]): string {
