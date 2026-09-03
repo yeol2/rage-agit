@@ -83,6 +83,28 @@ describe('MapRecords', () => {
     expect(screen.getByTestId('map-row-Tiger_Main').textContent).toContain('▼1.5');
   });
 
+  // 0.0 은 "아주 작은 차이가 있다"로 읽히지만 실제로는 차이가 없다는 뜻이다.
+  // 화살표까지 달면 없는 우열을 있다고 말하게 된다.
+  it('차이가 없으면 0.0 대신 줄표를 적는다 — 화살표도 안 붙인다', () => {
+    render(
+      <MapRecords
+        stats={[
+          stat({ mapName: 'Neon_Main', label: '론도', avgRank: 8.9, overallAvgRank: 8.9, avgKills: 0.9, overallAvgKills: 0.9 }),
+        ]}
+      />,
+    );
+    const row = screen.getByTestId('map-row-Neon_Main');
+    expect(row.textContent).not.toContain('0.0');
+    expect(row.textContent).not.toMatch(/[▲▼]/);
+    expect(screen.getByLabelText('차이 없음')).toBeInTheDocument();
+  });
+
+  // 그림만으로는 오른쪽이 좋은 쪽인지 알 수 없다.
+  it('읽는 법을 한 줄로 적는다', () => {
+    render(<MapRecords stats={STATS} />);
+    expect(screen.getByText(/잘한 맵은 오른쪽/)).toBeInTheDocument();
+  });
+
   it('기록이 없으면 안내 문구를 보인다', () => {
     render(<MapRecords stats={[]} />);
     expect(screen.getByText('아직 맵별로 나눠 볼 기록이 없습니다.')).toBeInTheDocument();
