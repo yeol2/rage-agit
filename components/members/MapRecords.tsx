@@ -1,5 +1,5 @@
 import { killsDelta, rankDelta, type MapStat } from '@/lib/mapStats';
-import { siteConfig } from '@/lib/siteConfig';
+import { SCRIM_LABEL } from '@/lib/scrimCounting';
 
 // 맵별 기록 — 내전 네 라운드를 라운드 순서대로 늘어놓는다.
 //
@@ -8,9 +8,10 @@ import { siteConfig } from '@/lib/siteConfig';
 // 맵"으로 바로 읽힌다. 줄마다 "그 맵을 뺀 나머지 평균"을 기준으로 삼으면 네 줄이
 // 서로 다른 기준을 쓰면서 화면에는 같은 선 하나로 그려진다.
 //
-// 자격선은 없다. 뛴 맵은 전부 보여주고 경기 수를 같이 적는다 — 4경기짜리 평균은
-// 오차가 ±2.35등이라 그 자체로 실력을 말하지 못하지만, 그 사실은 숨기는 것보다
-// 경기 수를 옆에 적어 읽는 사람이 감안하게 하는 편이 낫다.
+// 자격선은 없다. 뛴 맵은 전부 보여주고 경기 수를 같이 적는다 — 몇 경기짜리
+// 평균이냐에 따라 같은 ▲2.0 이 뜻하는 바가 완전히 다른데(4경기면 오차가 ±2.35등,
+// 14경기면 ±1.3등), 그 사실은 숨기는 것보다 경기 수를 옆에 적어 읽는 사람이
+// 감안하게 하는 편이 낫다.
 
 const GOOD_COLOR = '#7FE0A8';
 const BAD_COLOR = '#FF8A8A';
@@ -69,7 +70,7 @@ export function MapRecords({ stats }: { stats: MapStat[] }) {
         <p className="hud text-sm font-bold text-foreground">맵별 기록</p>
         {overall && (
           <span className="text-[11px] tabular-nums text-subtext">
-            {siteConfig.memberDirectory.hexagon.mapRecordsScope} {overall.totalGames}경기 · 평균{' '}
+            {SCRIM_LABEL.allTime} {overall.totalGames}경기 · 평균{' '}
             {overall.overallAvgRank.toFixed(1)}등 · {overall.overallAvgKills.toFixed(2)}킬
           </span>
         )}

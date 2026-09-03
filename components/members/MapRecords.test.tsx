@@ -18,12 +18,14 @@ function stat(partial: Partial<MapStat> & { mapName: string; label: string }): M
   };
 }
 
-// Ez_Daks 의 실제 값이다 — 전체 16경기 평균 8.94등에 맵마다 4경기씩.
+// Ez_Daks 의 실제 값이다 — 역대 56경기 평균 9.18등에 맵마다 14경기씩.
+// 맵마다 정확히 같은 수인 것은 우연이 아니다. 내전 참가는 전부 아니면 전무라
+// 한 번 나오면 네 맵을 다 뛴다(scrimCounting 의 4경기/1내전 불변식).
 const STATS: MapStat[] = [
-  stat({ mapName: 'Neon_Main', label: '론도', games: 4, avgRank: 4.25, avgKills: 0.75, totalGames: 16, overallAvgRank: 8.94, overallAvgKills: 0.5 }),
-  stat({ mapName: 'Baltic_Main', label: '에란겔', games: 4, avgRank: 10.25, avgKills: 0.25, totalGames: 16, overallAvgRank: 8.94, overallAvgKills: 0.5 }),
-  stat({ mapName: 'Desert_Main', label: '미라마', games: 4, avgRank: 8.75, avgKills: 0.5, totalGames: 16, overallAvgRank: 8.94, overallAvgKills: 0.5 }),
-  stat({ mapName: 'Tiger_Main', label: '태이고', games: 4, avgRank: 12.5, avgKills: 0.5, totalGames: 16, overallAvgRank: 8.94, overallAvgKills: 0.5 }),
+  stat({ mapName: 'Neon_Main', label: '론도', games: 14, avgRank: 7.36, avgKills: 0.57, totalGames: 56, overallAvgRank: 9.18, overallAvgKills: 0.5 }),
+  stat({ mapName: 'Baltic_Main', label: '에란겔', games: 14, avgRank: 9.71, avgKills: 0.43, totalGames: 56, overallAvgRank: 9.18, overallAvgKills: 0.5 }),
+  stat({ mapName: 'Desert_Main', label: '미라마', games: 14, avgRank: 9.0, avgKills: 0.29, totalGames: 56, overallAvgRank: 9.18, overallAvgKills: 0.5 }),
+  stat({ mapName: 'Tiger_Main', label: '태이고', games: 14, avgRank: 10.64, avgKills: 0.71, totalGames: 56, overallAvgRank: 9.18, overallAvgKills: 0.5 }),
 ];
 
 describe('sortByScrimOrder', () => {
@@ -55,23 +57,30 @@ describe('MapRecords', () => {
     expect(labels).toEqual(['론도', '에란겔', '미라마', '태이고']);
   });
 
-  // 기준선은 네 줄이 공유하는 '내 전체 평균'이다. 8.94 − 4.25 = 4.69.
+  // 기준선은 네 줄이 공유하는 '내 전체 평균'이다. 9.18 − 7.36 = 1.82.
   it('내 전체 평균과의 차이를 적는다', () => {
     render(<MapRecords stats={STATS} />);
     const row = screen.getByTestId('map-row-Neon_Main');
-    expect(row.textContent).toContain('4.3등');
-    expect(row.textContent).toContain('▲4.7');
+    expect(row.textContent).toContain('7.4등');
+    expect(row.textContent).toContain('▲1.8');
   });
 
   it('경기 수를 같이 적는다 — 표본이 얇으면 얇다는 것이 숫자로 보여야 한다', () => {
     render(<MapRecords stats={STATS} />);
-    expect(screen.getByTestId('map-row-Tiger_Main').textContent).toContain('4경기');
-    expect(screen.getByText(/16경기 · 평균 8.9등/)).toBeInTheDocument();
+    expect(screen.getByTestId('map-row-Tiger_Main').textContent).toContain('14경기');
+    expect(screen.getByText(/56경기 · 평균 9.2등/)).toBeInTheDocument();
+  });
+
+  // 스크린샷 시대의 맵을 라운드 번호에서 되살린 뒤로(0042) 맵 기록이 전적 요약과
+  // 같은 경기를 센다. 그래서 시기를 자르는 딱지를 떼고 다른 화면과 같은 말을 쓴다.
+  it('역대 전체를 센다고 밝힌다 — 위 전적 요약과 경기 수가 같다', () => {
+    render(<MapRecords stats={STATS} />);
+    expect(screen.getByText(/^역대 전체 56경기/)).toBeInTheDocument();
   });
 
   it('평균보다 못한 맵은 반대쪽으로 적는다', () => {
     render(<MapRecords stats={STATS} />);
-    expect(screen.getByTestId('map-row-Tiger_Main').textContent).toContain('▼3.6');
+    expect(screen.getByTestId('map-row-Tiger_Main').textContent).toContain('▼1.5');
   });
 
   it('기록이 없으면 안내 문구를 보인다', () => {
