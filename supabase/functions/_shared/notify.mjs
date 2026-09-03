@@ -64,6 +64,49 @@ export function formatManualPollMessage({
   return lines.join('\n');
 }
 
+// 명단에 있는데 members 에서 못 찾은 디스코드 ID 를 한 번에 몇 명까지 적을지.
+// 디스코드 메시지는 2000자 제한이 있고, 스무 명을 넘겼다면 목록을 다 읽는 것보다
+// "뭔가 크게 어긋났다"는 사실이 먼저 전해져야 한다.
+const MAX_LISTED_MISSING = 20;
+
+/**
+ * 내전 명단 txt 업로드 결과를 알린다.
+ *
+ * **못 찾은 ID 를 이름으로 적는 것이 이 알림의 전부다.** 화면은 못 찾은 사람을
+ * 회색 줄로 보여주지만, 관리자는 업로드 직후 팀을 짜느라 그 줄을 지나치기 쉽고
+ * 나중에 누구를 등록해야 했는지 되짚기 어렵다. 그래서 ID 를 남긴다 — members 에
+ * 등록할 때 그대로 복사해 쓸 수 있어야 하므로 코드 서식으로 감싼다.
+ *
+ * 전원 확인된 경우에도 보낸다. 업로드가 됐다는 사실 자체가 알림 값이고, 조용하면
+ * 웹훅이 죽은 것인지 다 맞은 것인지 구분되지 않는다.
+ *
+ * missing 은 파일에는 있는데 members 에 없는 사람들이다. 닉네임은 업로드 파일
+ * 쪽 값이라 비어 있을 수 있지만, 못 찾은 사람에게는 그것이 유일한 단서다.
+ */
+export function formatRosterUploadMessage({ totalCount, matchedCount, missing }) {
+  const missingCount = totalCount - matchedCount;
+  const lines = [`**내전 명단 업로드 완료** — ${totalCount}명 중 ${matchedCount}명 확인`];
+
+  if (missingCount === 0) {
+    lines.push('전원 클랜원 명단에서 찾았다.');
+    return lines.join('\n');
+  }
+
+  lines.push(`**${missingCount}명은 디스코드 ID 를 못 찾았다.**`);
+  lines.push('');
+  for (const person of missing.slice(0, MAX_LISTED_MISSING)) {
+    const hint = person.discordNickname ? ` (파일 속 닉네임: ${person.discordNickname})` : '';
+    lines.push(`· \`${person.discordUsername}\`${hint}`);
+  }
+  if (missing.length > MAX_LISTED_MISSING) {
+    lines.push(`· … 외 ${missing.length - MAX_LISTED_MISSING}명`);
+  }
+  lines.push('');
+  lines.push('클랜원 명단에 discord_username 을 등록하면 다음 업로드부터 잡힌다.');
+
+  return lines.join('\n');
+}
+
 export async function sendDiscord(webhookUrl, content) {
   const res = await fetch(webhookUrl, {
     method: 'POST',

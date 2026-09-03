@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { formatManualPollMessage, sendDiscord } from './notify.mjs';
+import { formatManualPollMessage, formatRosterUploadMessage, sendDiscord } from './notify.mjs';
 
 const base = {
   scrimDate: '2026-08-23',
@@ -79,5 +79,41 @@ describe('sendDiscord', () => {
 
     await expect(sendDiscord('https://webhook.example/gone', '안녕')).rejects.toThrow('404');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('formatRosterUploadMessage', () => {
+  const person = (discordUsername, discordNickname = null) => ({ discordUsername, discordNickname });
+
+  it('전원 찾았으면 그렇다고만 적는다 — 목록이 없어야 목록이 눈에 띈다', () => {
+    const message = formatRosterUploadMessage({ totalCount: 24, matchedCount: 24, missing: [] });
+    expect(message).toContain('24명 중 24명 확인');
+    expect(message).toContain('전원 클랜원 명단에서 찾았다.');
+    expect(message).not.toContain('·');
+  });
+
+  // 이 알림의 이유다. 화면의 회색 줄은 업로드 직후 팀을 짜다 보면 지나치기 쉽다.
+  it('못 찾은 디스코드 ID 를 그대로 적는다 — 복사해서 등록할 수 있어야 한다', () => {
+    const message = formatRosterUploadMessage({
+      totalCount: 25,
+      matchedCount: 23,
+      missing: [person('hong_gd', '홍길동'), person('nobody_123')],
+    });
+    expect(message).toContain('25명 중 23명 확인');
+    expect(message).toContain('2명은 디스코드 ID 를 못 찾았다');
+    expect(message).toContain('`hong_gd`');
+    expect(message).toContain('(파일 속 닉네임: 홍길동)');
+    // 닉네임이 없으면 빈 괄호를 남기지 않는다.
+    expect(message).toContain('`nobody_123`');
+    expect(message).not.toContain('닉네임: )');
+  });
+
+  it('스무 명을 넘으면 잘라내고 몇 명 더 있는지 적는다 — 디스코드는 2000자까지다', () => {
+    const missing = Array.from({ length: 26 }, (_, i) => person(`user_${i}`));
+    const message = formatRosterUploadMessage({ totalCount: 30, matchedCount: 4, missing });
+    expect(message).toContain('`user_19`');
+    expect(message).not.toContain('`user_20`');
+    expect(message).toContain('외 6명');
+    expect(message.length).toBeLessThan(2000);
   });
 });
