@@ -1,6 +1,28 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { parseRosterFile, buildRosterEntries, type MemberForMatching } from '@/lib/scrimRoster';
+import { formatRosterUploadMessage, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
+
+// 디스코드 알림은 업로드의 곁다리다 — 웹훅이 없거나 전송이 실패해도 업로드
+// 자체는 정상으로 돌려준다(폴링 버튼과 같은 규칙). 알림 때문에 명단이 안
+// 올라간 것처럼 보이면 안 된다.
+async function notifyUploadDone(entries: { discordUsername: string; discordNickname: string | null; matched: boolean }[]) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  try {
+    await sendDiscord(
+      webhookUrl,
+      formatRosterUploadMessage({
+        totalCount: entries.length,
+        matchedCount: entries.filter((entry) => entry.matched).length,
+        missing: entries.filter((entry) => !entry.matched),
+      }),
+    );
+  } catch {
+    // 알림 실패는 조용히 넘긴다.
+  }
+}
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -65,6 +87,9 @@ export async function POST(request: Request) {
   if (entriesError) {
     return NextResponse.json({ error: '명단 저장에 실패했습니다.' }, { status: 500 });
   }
+
+  // 저장이 끝난 뒤에 부른다 — 저장이 실패한 명단을 "업로드 완료"라고 알리면 안 된다.
+  await notifyUploadDone(entries);
 
   return NextResponse.json({
     ok: true,
