@@ -10,10 +10,8 @@ function stat(partial: Partial<MapStat> & { mapName: string; label: string }): M
     memberId: 'm-1',
     games: 8,
     avgRank: 8,
-    avgKills: 1,
     totalGames: 32,
     overallAvgRank: 8.9,
-    overallAvgKills: 0.9,
     ...partial,
   };
 }
@@ -22,10 +20,10 @@ function stat(partial: Partial<MapStat> & { mapName: string; label: string }): M
 // 맵마다 정확히 같은 수인 것은 우연이 아니다. 내전 참가는 전부 아니면 전무라
 // 한 번 나오면 네 맵을 다 뛴다(scrimCounting 의 4경기/1내전 불변식).
 const STATS: MapStat[] = [
-  stat({ mapName: 'Neon_Main', label: '론도', games: 14, avgRank: 7.36, avgKills: 0.57, totalGames: 56, overallAvgRank: 9.18, overallAvgKills: 0.5 }),
-  stat({ mapName: 'Baltic_Main', label: '에란겔', games: 14, avgRank: 9.71, avgKills: 0.43, totalGames: 56, overallAvgRank: 9.18, overallAvgKills: 0.5 }),
-  stat({ mapName: 'Desert_Main', label: '미라마', games: 14, avgRank: 9.0, avgKills: 0.29, totalGames: 56, overallAvgRank: 9.18, overallAvgKills: 0.5 }),
-  stat({ mapName: 'Tiger_Main', label: '태이고', games: 14, avgRank: 10.64, avgKills: 0.71, totalGames: 56, overallAvgRank: 9.18, overallAvgKills: 0.5 }),
+  stat({ mapName: 'Neon_Main', label: '론도', games: 14, avgRank: 7.36, totalGames: 56, overallAvgRank: 9.18 }),
+  stat({ mapName: 'Baltic_Main', label: '에란겔', games: 14, avgRank: 9.71, totalGames: 56, overallAvgRank: 9.18 }),
+  stat({ mapName: 'Desert_Main', label: '미라마', games: 14, avgRank: 9.0, totalGames: 56, overallAvgRank: 9.18 }),
+  stat({ mapName: 'Tiger_Main', label: '태이고', games: 14, avgRank: 10.64, totalGames: 56, overallAvgRank: 9.18 }),
 ];
 
 describe('sortByScrimOrder', () => {
@@ -89,7 +87,7 @@ describe('MapRecords', () => {
     render(
       <MapRecords
         stats={[
-          stat({ mapName: 'Neon_Main', label: '론도', avgRank: 8.9, overallAvgRank: 8.9, avgKills: 0.9, overallAvgKills: 0.9 }),
+          stat({ mapName: 'Neon_Main', label: '론도', avgRank: 8.9, overallAvgRank: 8.9 }),
         ]}
       />,
     );

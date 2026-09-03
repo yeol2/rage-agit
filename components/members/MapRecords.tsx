@@ -1,4 +1,4 @@
-import { killsDelta, rankDelta, type MapStat } from '@/lib/mapStats';
+import { rankDelta, type MapStat } from '@/lib/mapStats';
 import { SCRIM_LABEL } from '@/lib/scrimCounting';
 
 // 맵별 기록 — 내전 네 라운드를 라운드 순서대로 늘어놓는다.
@@ -8,10 +8,11 @@ import { SCRIM_LABEL } from '@/lib/scrimCounting';
 // 맵"으로 바로 읽힌다. 줄마다 "그 맵을 뺀 나머지 평균"을 기준으로 삼으면 네 줄이
 // 서로 다른 기준을 쓰면서 화면에는 같은 선 하나로 그려진다.
 //
-// 한 줄에 숫자를 하나만 크게 둔다. 등수·등수차·킬·킬차·경기수를 같은 크기로
-// 늘어놓으면 다섯 개가 서로 경쟁해서 무엇을 보라는 화면인지 알 수 없다. 여기서
-// 답해야 할 질문은 "어느 맵이 강한가" 하나뿐이므로 편차만 크게 쓰고, 나머지는
-// 근거로 한 줄에 모아 흐리게 깐다.
+// 등수만 다룬다. 킬을 같이 놓으면 한 줄이 두 가지 답을 하게 된다 — 등수는
+// 아래로 뻗은 맵이 킬은 위로 뻗을 수 있어서(태이고가 그렇다: 10.6등에 0.71킬),
+// 그 줄이 강한 맵인지 약한 맵인지를 화면이 스스로 답하지 못한다. 이 패널의
+// 질문은 "어느 맵이 강한가" 하나뿐이므로 답도 하나여야 한다. 킬은 위 전적
+// 요약이 이미 말한다.
 //
 // 자격선은 없다. 뛴 맵은 전부 보여주고 경기 수를 같이 적는다 — 몇 경기짜리
 // 평균이냐에 따라 같은 ▲2.0 이 뜻하는 바가 완전히 다른데(4경기면 오차가 ±2.35등,
@@ -56,16 +57,15 @@ function MapRow({ stat }: { stat: MapStat }) {
   const flat = isFlat(delta);
   const better = delta > 0;
   const width = flat ? 0 : Math.min(50, (Math.abs(delta) / BAR_RANGE) * 50);
-  const kills = killsDelta(stat);
 
   return (
     <li
       className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-4 border-t border-white/[0.07] py-3.5"
       data-testid={`map-row-${stat.mapName}`}
     >
-      {/* 경기 수는 맵 이름 밑에 붙인다. 그 맵을 몇 판 뛰었나는 이 줄 전체가
-          얼마나 믿을 만한지를 말하는 값이라 이름 쪽에 속하고, 오른쪽에 같이
-          몰아두면 등수·킬과 뒤엉켜 한 줄에 숫자가 넷이 된다. */}
+      {/* 경기 수는 맵 이름 밑에 붙인다. 그 맵을 몇 판 뛰었나는 성적이 아니라
+          이 줄을 얼마나 믿을 수 있는지를 말하는 값이라, 오른쪽 성적 칸이 아니라
+          맵 이름 쪽에 속한다. */}
       <span className="leading-tight">
         <b className="block text-sm font-bold text-foreground">{stat.label}</b>
         <span className="text-[10px] tabular-nums text-subtext">{stat.games}경기</span>
@@ -88,10 +88,7 @@ function MapRow({ stat }: { stat: MapStat }) {
       <span className="min-w-[6.5rem] text-right leading-tight tabular-nums">
         <Delta value={delta} className="text-base font-bold" />
         <br />
-        <span className="text-[11px] text-subtext">
-          {stat.avgRank.toFixed(1)}등 · {stat.avgKills.toFixed(2)}킬{' '}
-          {isFlat(kills) ? '–' : `${kills > 0 ? '▲' : '▼'}${Math.abs(kills).toFixed(2)}`}
-        </span>
+        <span className="text-[11px] text-subtext">{stat.avgRank.toFixed(1)}등</span>
       </span>
     </li>
   );
@@ -107,7 +104,7 @@ export function MapRecords({ stats }: { stats: MapStat[] }) {
         {overall && (
           <span className="text-[11px] tabular-nums text-subtext">
             {SCRIM_LABEL.allTime} {overall.totalGames}경기 · 평균{' '}
-            {overall.overallAvgRank.toFixed(1)}등 · {overall.overallAvgKills.toFixed(2)}킬
+            {overall.overallAvgRank.toFixed(1)}등
           </span>
         )}
       </div>

@@ -24,21 +24,15 @@ export interface MapStat {
   label: string;
   games: number;
   avgRank: number;
-  avgKills: number;
   /** 그 사람의 **전체** 경기 수. 맵 평균이 얼마나 두꺼운 표본인지의 기준. */
   totalGames: number;
   /** 그 사람의 전체 평균등수. 네 줄이 공유하는 기준선이다. */
   overallAvgRank: number;
-  overallAvgKills: number;
 }
 
 /** 전체 평균보다 이 맵에서 몇 등 좋았나. 양수면 이 맵이 강한 쪽이다. */
 export function rankDelta(stat: MapStat): number {
   return stat.overallAvgRank - stat.avgRank;
-}
-
-export function killsDelta(stat: MapStat): number {
-  return stat.avgKills - stat.overallAvgKills;
 }
 
 export function sortByScrimOrder<T extends { mapName: string }>(rows: T[]): T[] {
@@ -58,7 +52,7 @@ export async function fetchMemberMapStats(memberId: string): Promise<MapStat[]> 
   const { data, error } = await getSupabase()
     .from('member_map_stats')
     .select(
-      'member_id, map_name, games, avg_rank, avg_kills, total_games, overall_avg_rank, overall_avg_kills',
+      'member_id, map_name, games, avg_rank, total_games, overall_avg_rank',
     )
     .eq('member_id', memberId);
   if (error) throw new Error(`맵별 기록을 불러오지 못했습니다: ${error.message}`);
@@ -70,10 +64,8 @@ export async function fetchMemberMapStats(memberId: string): Promise<MapStat[]> 
       label: mapLabel(row.map_name as string),
       games: row.games as number,
       avgRank: Number(row.avg_rank),
-      avgKills: Number(row.avg_kills),
       totalGames: row.total_games as number,
       overallAvgRank: Number(row.overall_avg_rank),
-      overallAvgKills: Number(row.overall_avg_kills),
     })),
   );
 }
