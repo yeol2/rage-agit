@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Nav } from '@/components/Nav';
+import { TierBadge } from '@/components/TierBadge';
 import { LiveRefresh } from '@/components/LiveRefresh';
 import { Footer } from '@/components/Footer';
 import { Hexagon } from '@/components/members/Hexagon';
@@ -121,7 +122,11 @@ export default async function MemberDetailPage({
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
             {stripTrailingKoreanTag(cleanDisplayName(member.discordNickname))}
           </h1>
-          <p className="mt-2 text-sm text-menu">{member.tier}티어</p>
+          {/* 리더보드가 쓰는 배지 그대로다 — 같은 사람을 두 화면에서 볼 때
+              티어가 다른 물건처럼 보이면 안 된다. */}
+          <p className="mt-3">
+            <TierBadge tier={member.tier} size="md" />
+          </p>
           <WinTrophies count={winCount} />
 
           {/* 숫자를 먼저 보고 6각형으로 넘어가는 흐름 — 대시보드가 6각형 위에 온다. */}

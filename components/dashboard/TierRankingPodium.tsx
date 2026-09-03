@@ -24,7 +24,8 @@ import {
   type RecentSession,
   type SessionStanding,
 } from '@/lib/memberDashboard';
-import { tierColorRamp, tierNameplateStyle } from '@/lib/memberStats';
+import { tierColorRamp } from '@/lib/memberStats';
+import { TierBadge } from '@/components/TierBadge';
 import { siteConfig } from '@/lib/siteConfig';
 import { ACTIVE_WITHIN_MONTHS, MIN_SCRIMS_FOR_RANKING, RECENT_WINDOW_SCRIMS, SCRIM_LABEL, matchesFor } from '@/lib/scrimCounting';
 import { useAdmin } from '@/components/admin/AdminProvider';
@@ -100,26 +101,6 @@ const HEADER_TRAILING_SPACE = String.fromCharCode(160); // U+00A0
 // 뱃지 열 트로피가 쓰는 그라디언트. 표에 수십 줄이 깔리므로 정의는 문서에
 // 하나만 두고 모든 줄이 이 id 를 가리킨다.
 const RANKING_TROPHY_GOLD = 'ranking-trophy-gold';
-
-// 티어를 맨 글자가 아니라 둥근 배지로 보여준다 — team-builder 네임플레이트와
-// 같은 배색 함수(tierNameplateStyle)를 그대로 가져다 쓴다(새 색을 만들지
-// 않는다, lib/memberStats.ts 가 티어 색의 유일한 출처).
-function TierBadge({ tier, className = '' }: { tier: number; className?: string }) {
-  const style = tierNameplateStyle(tier);
-  return (
-    <span
-      className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-bold ${className}`}
-      style={{
-        background: style.background,
-        borderColor: style.borderColor,
-        boxShadow: style.boxShadow,
-        color: style.color,
-      }}
-    >
-      {tier}티어
-    </span>
-  );
-}
 
 // 직전 등수 스냅샷 대비 상승/하락/신규를 보여준다. 종합점수 탭에서만 쓴다.
 // 상승=초록, 하락=빨강(사용자 지정). 신규(NEW)는 그 둘과 안 겹치는 네온
