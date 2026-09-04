@@ -5,7 +5,7 @@ import { getSupabaseServer } from '@/lib/supabaseServer';
 import { runPolling } from '@/supabase/functions/_shared/polling.mjs';
 import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
 import { revalidateRecordPages } from '@/lib/revalidateRecordPages';
-import { buildRoundSheet, latestScrimDate } from '@/lib/roundSheetData';
+import { buildRoundSheet } from '@/lib/roundSheetData';
 import { formatManualPollMessage, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
 import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
 
@@ -42,6 +42,36 @@ async function countRounds(supabase: SupabaseClient, scrimDate: string): Promise
   } catch {
     return 0;
   }
+}
+
+/**
+ * 이 로스터가 가리키는 내전 날짜(한국시간). 명단을 올린 저녁이 곧 그 내전이다.
+ *
+ * 폴링이 매치를 못 잡았을 때 "몇 라운드까지 왔나"를 셀 기준이다. 예전엔 그
+ * 자리에 latestScrimDate(= DB 에서 가장 최근 내전)를 썼는데, 그것이 등수 변동을
+ * 한 내전씩 밀리게 만든 원인이었다.
+ *
+ * 내전이 막 끝나고 버튼을 처음 누르면 PUBG 서버에 아직 안 올라와 있어 아무것도
+ * 못 잡는다. 그 순간 오늘 세션은 DB 에 아직 없으므로 latestScrimDate 는 **지난
+ * 내전**을 내놓고, 지난 내전은 당연히 4라운드가 다 차 있으니 roundCount >= 4 가
+ * 통과해서 스냅샷이 그 자리에서 찍혀 버렸다 — 오늘 경기가 한 판도 안 들어온
+ * 시점에. 2026-09-03 은 20:35:08 에 캡처되고 1라운드는 20:36:25 에 들어왔다.
+ *
+ * 로스터의 날짜로 세면 그 순간 오늘 라운드는 0개라 캡처가 안 된다. 4번째가
+ * 다른 경로(CLI 폴링 등)로 먼저 들어간 뒤 버튼을 누른 경우를 구제하려던 원래
+ * 의도는 그대로다 — 그때도 오늘 날짜를 세어 4가 나온다.
+ */
+async function rosterScrimDate(
+  supabase: SupabaseClient,
+  rosterId: string | null,
+): Promise<string | null> {
+  if (!rosterId) return null;
+  const { data } = await supabase
+    .from('scrim_rosters')
+    .select('fetched_at')
+    .eq('id', rosterId)
+    .maybeSingle();
+  return data?.fetched_at ? toKstDate(data.fetched_at as string) : null;
 }
 
 // 03 내전 시트의 "폴링" 버튼 — 방금 끝난 매치 하나를 잡으러 짧은 시간창으로
@@ -113,13 +143,15 @@ export async function POST(request: Request) {
     // revalidatePath 로 갱신한다. 1~3매치만 폴링된 상태로는 리더보드 화면이
     // 전혀 안 바뀌어야 등수 변동(4매치 확인 후 스냅샷)과 타이밍이 맞는다.
     // 라운드 수는 시트와 같은 기준(날짜)으로 센다. 이번에 매치를 잡았으면 그
-    // 매치의 날짜를, 못 잡았으면 가장 최근 내전 날짜를 쓴다 — 못 잡았다고 건너뛰면
+    // 매치의 날짜를, 못 잡았으면 이 로스터의 날짜를 쓴다 — 못 잡았다고 건너뛰면
     // 4번째 매치가 다른 경로(CLI 폴링 등)로 이미 들어간 뒤에 버튼을 눌렀을 때
     // 스냅샷 캡처와 리더보드 갱신을 영영 놓친다.
+    //
+    // 여기서 "가장 최근 내전"을 쓰면 안 된다. 왜 안 되는지는 rosterScrimDate 참고.
     let roundCount = 0;
     const scrimDate = result.scrims[0]?.playedAt
       ? toKstDate(result.scrims[0].playedAt)
-      : await latestScrimDate(supabase).catch(() => null);
+      : await rosterScrimDate(supabase, rosterId).catch(() => null);
     if (scrimDate) {
       roundCount = await countRounds(supabase, scrimDate);
       if (roundCount >= 4 && rosterId) {
