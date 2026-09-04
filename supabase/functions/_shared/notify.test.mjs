@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { formatManualPollMessage, formatRosterUploadMessage, sendDiscord } from './notify.mjs';
+import {
+  formatManualPollMessage,
+  formatRosterUploadMessage,
+  formatUnlinkedPlayersMessage,
+  sendDiscord,
+} from './notify.mjs';
 
 const base = {
   scrimDate: '2026-08-23',
@@ -114,6 +119,35 @@ describe('formatRosterUploadMessage', () => {
     expect(message).toContain('`user_19`');
     expect(message).not.toContain('`user_20`');
     expect(message).toContain('외 6명');
+    expect(message.length).toBeLessThan(2000);
+  });
+});
+
+describe('formatUnlinkedPlayersMessage', () => {
+  it('안 묶인 PUBG 닉네임을 그대로 적는다 — 묶을 때 복사해 쓴다', () => {
+    const message = formatUnlinkedPlayersMessage({
+      scrimDate: '2026-09-03',
+      players: ['Ez_2pan4pan-', 'Ez_Dan2'],
+    });
+    expect(message).toContain('2026-09-03 내전 — 2명이 클랜원과 안 묶였다');
+    expect(message).toContain('`Ez_2pan4pan-`');
+    expect(message).toContain('`Ez_Dan2`');
+    // 묶는 방법을 같이 적어야 알림만 보고 처리할 수 있다.
+    expect(message).toContain('link-alt-account.mjs');
+  });
+
+  it('시트에는 보이지만 개인 기록에는 안 남는다는 것을 밝힌다', () => {
+    const message = formatUnlinkedPlayersMessage({ scrimDate: '2026-09-03', players: ['Ez_x'] });
+    expect(message).toContain('팀 점수에도 들어간다');
+    expect(message).toContain('개인 기록');
+  });
+
+  it('스무 명을 넘으면 잘라낸다 — 디스코드는 2000자까지다', () => {
+    const players = Array.from({ length: 25 }, (_, i) => `Ez_p${i}`);
+    const message = formatUnlinkedPlayersMessage({ scrimDate: '2026-09-03', players });
+    expect(message).toContain('`Ez_p19`');
+    expect(message).not.toContain('`Ez_p20`');
+    expect(message).toContain('외 5명');
     expect(message.length).toBeLessThan(2000);
   });
 });

@@ -20,6 +20,15 @@ declare module '@/supabase/functions/_shared/notify.mjs' {
     missing: { discordUsername: string; discordNickname: string | null }[];
   }): string;
 
+  /**
+   * 그 내전에서 아직 클랜원과 안 묶인 참가자를 알리는 문구.
+   * players 는 PUBG 닉네임 목록이다.
+   */
+  export function formatUnlinkedPlayersMessage(args: {
+    scrimDate: string;
+    players: string[];
+  }): string;
+
   /** 디스코드 웹훅으로 메시지를 보낸다. 응답이 실패면 던진다. */
   export function sendDiscord(webhookUrl: string, content: string): Promise<void>;
 }

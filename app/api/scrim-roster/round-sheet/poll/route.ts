@@ -6,7 +6,11 @@ import { runPolling } from '@/supabase/functions/_shared/polling.mjs';
 import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
 import { revalidateRecordPages } from '@/lib/revalidateRecordPages';
 import { buildRoundSheet } from '@/lib/roundSheetData';
-import { formatManualPollMessage, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
+import {
+  formatManualPollMessage,
+  formatUnlinkedPlayersMessage,
+  sendDiscord,
+} from '@/supabase/functions/_shared/notify.mjs';
 import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
 
 // 디스코드 알림은 폴링의 곁다리다 — 웹훅이 없거나 전송이 실패해도 폴링 응답
@@ -72,6 +76,47 @@ async function rosterScrimDate(
     .eq('id', rosterId)
     .maybeSingle();
   return data?.fetched_at ? toKstDate(data.fetched_at as string) : null;
+}
+
+/**
+ * 그 내전에서 아직 클랜원과 안 묶인 참가자를 한 번만 알린다.
+ *
+ * 라운드가 다 찬 시점에만 부른다 — 라운드마다 부르면 같은 사람 이름이 네 번
+ * 오고, 1라운드에 안 묶였다가 중간에 묶어준 경우 이미 해결된 걸 또 알린다.
+ *
+ * 스냅샷 캡처와 같은 자리라 같은 조건으로 딱 한 번 돈다.
+ */
+async function notifyUnlinkedPlayers(supabase: SupabaseClient, scrimDate: string) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  try {
+    const { data: session } = await supabase
+      .from('scrim_sessions')
+      .select('id')
+      .eq('scrim_date', scrimDate)
+      .maybeSingle();
+    if (!session) return;
+
+    const { data: matchRows } = await supabase
+      .from('countable_matches')
+      .select('pubg_match_id')
+      .eq('scrim_session_id', session.id);
+    const matchIds = (matchRows ?? []).map((row) => row.pubg_match_id as string);
+    if (matchIds.length === 0) return;
+
+    const { data: rows } = await supabase
+      .from('match_participants')
+      .select('pubg_ign')
+      .in('pubg_match_id', matchIds)
+      .is('member_id', null);
+    const players = [...new Set((rows ?? []).map((row) => row.pubg_ign as string))].sort();
+    if (players.length === 0) return;
+
+    await sendDiscord(webhookUrl, formatUnlinkedPlayersMessage({ scrimDate, players }));
+  } catch {
+    // 알림 실패는 조용히 넘긴다 — 폴링 응답에는 영향을 주지 않는다.
+  }
 }
 
 // 03 내전 시트의 "폴링" 버튼 — 방금 끝난 매치 하나를 잡으러 짧은 시간창으로
@@ -155,8 +200,13 @@ export async function POST(request: Request) {
     if (scrimDate) {
       roundCount = await countRounds(supabase, scrimDate);
       if (roundCount >= 4 && rosterId) {
-        await captureRankingSnapshotForRoster(supabase, rosterId).catch(() => {});
+        const { captured } = await captureRankingSnapshotForRoster(supabase, rosterId).catch(
+          () => ({ captured: false }),
+        );
         revalidatePath('/dashboard');
+        // 스냅샷이 **실제로 찍힌** 그 한 번에만 알린다. roundCount >= 4 만 보면
+        // 버튼을 다시 누를 때마다 같은 명단이 또 온다.
+        if (captured) await notifyUnlinkedPlayers(supabase, scrimDate);
       }
     }
 

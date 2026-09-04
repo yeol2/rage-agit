@@ -5,7 +5,7 @@ import {
   squadsFromTeamIds,
   type MatchParticipantForSquads,
   type RoundParticipant,
-  type RosterMemberForScoring,
+  type PlayerForScoring,
   type RoundSheetRow,
 } from '@/lib/roundSheet';
 
@@ -90,8 +90,17 @@ export async function buildRoundSheet(
   if (matchesError) throw new Error('매치 목록을 불러오지 못했습니다.');
   if (!matchRows || matchRows.length === 0) return emptySheet();
 
+  // 사람 하나를 가리키는 열쇠. 등록된 클랜원이면 member_id 를 그대로 쓰고,
+  // 아직 안 묶인 참가자는 PUBG 계정으로 만든 키를 쓴다 — 그래야 라운드가 바뀌어도
+  // 같은 사람으로 이어지고, 나중에 계정을 묶으면 member_id 쪽으로 자연히 옮겨간다.
+  const playerKeyOf = (row: { member_id: unknown; pubg_account_id: unknown; pubg_ign: unknown }) =>
+    (row.member_id as string | null) ??
+    `pubg:${(row.pubg_account_id as string | null) ?? (row.pubg_ign as string)}`;
+
   const matchParticipants: {
+    playerKey: string;
     memberId: string | null;
+    ign: string;
     kills: number;
     teamRank: number;
     teamId: number;
@@ -104,13 +113,15 @@ export async function buildRoundSheet(
     // 순서(같은 티어끼리)는 여전히 이 배열 순서를 탄다.
     const { data: participantRows, error: participantsError } = await supabase
       .from('match_participants')
-      .select('member_id, kills, team_rank, team_id')
+      .select('member_id, pubg_ign, pubg_account_id, kills, team_rank, team_id')
       .eq('pubg_match_id', match.pubg_match_id)
       .order('id', { ascending: true });
     if (participantsError) throw new Error('매치 참가자를 불러오지 못했습니다.');
     matchParticipants.push(
       (participantRows ?? []).map((row) => ({
+        playerKey: playerKeyOf(row),
         memberId: row.member_id as string | null,
+        ign: row.pubg_ign as string,
         kills: row.kills as number,
         teamRank: row.team_rank as number,
         teamId: row.team_id as number,
@@ -123,18 +134,27 @@ export async function buildRoundSheet(
   // 어긋났다. 그래서 계획이 아니라 PUBG 가 매긴 team_id 를 팀 번호로 쓴다.
   // 계획대로 뛰었다면 결과가 같으므로 이쪽이 항상 더 정확하다.
   const squadsForMatches: MatchParticipantForSquads[][] = matchParticipants.map((participants) =>
-    participants.map((p) => ({ memberId: p.memberId, teamId: p.teamId })),
+    participants.map((p) => ({ playerKey: p.playerKey, teamId: p.teamId })),
   );
-  const { squadByMemberId, unstableMemberIds } = squadsFromTeamIds(squadsForMatches);
-  const squadNumbers = [...new Set(squadByMemberId.values())].sort((a, b) => a - b);
-  const squadMembers: RosterMemberForScoring[] = [...squadByMemberId.entries()].map(
-    ([memberId, teamNumber]) => ({ memberId, teamNumber }),
+  const { squadByPlayerKey, unstablePlayerKeys } = squadsFromTeamIds(squadsForMatches);
+  const squadNumbers = [...new Set(squadByPlayerKey.values())].sort((a, b) => a - b);
+  const squadPlayers: PlayerForScoring[] = [...squadByPlayerKey.entries()].map(
+    ([playerKey, teamNumber]) => ({ playerKey, teamNumber }),
   );
+
+  // 아직 안 묶인 참가자는 PUBG 닉네임으로 부른다 — members 에 없으니 그것이
+  // 우리가 아는 전부다. 라운드마다 같은 사람이 여러 번 나오므로 한 번만 담는다.
+  const ignByPlayerKey = new Map<string, string>();
+  for (const participants of matchParticipants) {
+    for (const p of participants) {
+      if (p.memberId === null) ignByPlayerKey.set(p.playerKey, p.ign);
+    }
+  }
 
   const { data: memberRows, error: memberFetchError } = await supabase
     .from('members')
     .select('id, discord_nickname, tier')
-    .in('id', [...squadByMemberId.keys()]);
+    .in('id', [...squadByPlayerKey.keys()].filter((key) => !key.startsWith('pubg:')));
   if (memberFetchError) throw new Error('클랜원 명단을 불러오지 못했습니다.');
   const nicknameByMemberId = new Map(
     (memberRows ?? []).map((row) => [row.id as string, row.discord_nickname as string]),
@@ -145,40 +165,48 @@ export async function buildRoundSheet(
 
   // 02 표(1~4티어 칼럼)와 같은 순서로 보이도록, 팀 안에서도 티어가 낮은
   // (숫자가 작은 = 더 잘하는) 사람이 앞에 오게 정렬한다.
-  const memberIdsBySquad = new Map<number, string[]>();
-  for (const [memberId, squadNumber] of squadByMemberId) {
-    const list = memberIdsBySquad.get(squadNumber) ?? [];
-    list.push(memberId);
-    memberIdsBySquad.set(squadNumber, list);
+  // 티어를 모르는 사람(미등록)은 맨 뒤로 보낸다 — 0 으로 두면 1티어보다 앞에 선다.
+  const UNKNOWN_TIER = Number.POSITIVE_INFINITY;
+  const playerKeysBySquad = new Map<number, string[]>();
+  for (const [playerKey, squadNumber] of squadByPlayerKey) {
+    const list = playerKeysBySquad.get(squadNumber) ?? [];
+    list.push(playerKey);
+    playerKeysBySquad.set(squadNumber, list);
   }
-  for (const [squadNumber, memberIds] of memberIdsBySquad) {
-    memberIdsBySquad.set(
+  for (const [squadNumber, keys] of playerKeysBySquad) {
+    playerKeysBySquad.set(
       squadNumber,
-      [...memberIds].sort((a, b) => (tierByMemberId.get(a) ?? 0) - (tierByMemberId.get(b) ?? 0)),
+      [...keys].sort(
+        (a, b) => (tierByMemberId.get(a) ?? UNKNOWN_TIER) - (tierByMemberId.get(b) ?? UNKNOWN_TIER),
+      ),
     );
   }
 
   const roundsResults = matchParticipants.map((participants) => {
     const roundParticipants: RoundParticipant[] = participants.map((p) => ({
-      memberId: p.memberId,
+      playerKey: p.playerKey,
       kills: p.kills,
       teamRank: p.teamRank,
     }));
-    return computeTeamRoundResults(roundParticipants, squadMembers, squadNumbers);
+    return computeTeamRoundResults(roundParticipants, squadPlayers, squadNumbers);
   });
+
+  const displayName = (key: string) =>
+    nicknameByMemberId.get(key) ?? ignByPlayerKey.get(key) ?? '(닉네임 정보 없음)';
 
   return {
     scrimDate,
     roundCount: roundsResults.length,
-    unstableTeamPlayers: unstableMemberIds.map(
-      (id) => nicknameByMemberId.get(id) ?? '(닉네임 정보 없음)',
-    ),
+    unstableTeamPlayers: unstablePlayerKeys.map(displayName),
     teams: computeRoundSheet(roundsResults, squadNumbers).map((row) => {
-      const memberIds = memberIdsBySquad.get(row.teamNumber) ?? [];
+      const playerKeys = playerKeysBySquad.get(row.teamNumber) ?? [];
       return {
         ...row,
-        memberIds,
-        players: memberIds.map((id) => nicknameByMemberId.get(id) ?? '(닉네임 정보 없음)'),
+        // memberIds 는 우승 확정이 session_standings 에 넣는 값이라 **등록된
+        // 클랜원만** 담는다. 미등록 참가자는 넣을 member_id 가 없다 — 이름은
+        // 시트에 보이지만 등수 기록에는 안 남는다.
+        memberIds: playerKeys.filter((key) => !key.startsWith('pubg:')),
+        players: playerKeys.map(displayName),
       };
     }),
   };

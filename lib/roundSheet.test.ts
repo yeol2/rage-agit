@@ -5,7 +5,7 @@ import {
   squadsFromTeamIds,
   placementPoints,
   type MatchParticipantForSquads,
-  type RosterMemberForScoring,
+  type PlayerForScoring,
   type RoundParticipant,
   type TeamRoundResult,
 } from './roundSheet';
@@ -26,17 +26,17 @@ describe('placementPoints', () => {
 });
 
 describe('computeTeamRoundResults', () => {
-  const rosterMembers: RosterMemberForScoring[] = [
-    { memberId: 'm-a', teamNumber: 1 },
-    { memberId: 'm-b', teamNumber: 1 },
-    { memberId: 'm-c', teamNumber: 2 },
+  const rosterMembers: PlayerForScoring[] = [
+    { playerKey: 'm-a', teamNumber: 1 },
+    { playerKey: 'm-b', teamNumber: 1 },
+    { playerKey: 'm-c', teamNumber: 2 },
   ];
 
   it('같은 팀원끼리 킬을 합산하고 team_rank 를 그대로 쓴다', () => {
     const participants: RoundParticipant[] = [
-      { memberId: 'm-a', kills: 3, teamRank: 5 },
-      { memberId: 'm-b', kills: 2, teamRank: 5 },
-      { memberId: 'm-c', kills: 1, teamRank: 2 },
+      { playerKey: 'm-a', kills: 3, teamRank: 5 },
+      { playerKey: 'm-b', kills: 2, teamRank: 5 },
+      { playerKey: 'm-c', kills: 1, teamRank: 2 },
     ];
     const result = computeTeamRoundResults(participants, rosterMembers, [1, 2]);
     expect(result).toEqual([
@@ -47,8 +47,8 @@ describe('computeTeamRoundResults', () => {
 
   it('team_rank 가 팀원끼리 어긋나면 방어적으로 최솟값을 쓴다', () => {
     const participants: RoundParticipant[] = [
-      { memberId: 'm-a', kills: 1, teamRank: 3 },
-      { memberId: 'm-b', kills: 1, teamRank: 5 },
+      { playerKey: 'm-a', kills: 1, teamRank: 3 },
+      { playerKey: 'm-b', kills: 1, teamRank: 5 },
     ];
     const result = computeTeamRoundResults(participants, rosterMembers, [1]);
     expect(result[0].teamRank).toBe(3);
@@ -62,8 +62,19 @@ describe('computeTeamRoundResults', () => {
     ]);
   });
 
-  it('member_id 가 null 인 참가자(미등록)는 무시한다', () => {
-    const participants: RoundParticipant[] = [{ memberId: null, kills: 10, teamRank: 1 }];
+  // 2026-09-03 내전에서 9번 팀이 부계정 한 명(8킬)을 잃고 2등을 3등으로 기록했다.
+  it('클랜원으로 등록 안 된 참가자의 킬도 팀 합계에 넣는다', () => {
+    const withGuest: PlayerForScoring[] = [...rosterMembers, { playerKey: 'pubg:acct-x', teamNumber: 1 }];
+    const participants: RoundParticipant[] = [
+      { playerKey: 'm-a', kills: 3, teamRank: 2 },
+      { playerKey: 'pubg:acct-x', kills: 8, teamRank: 2 },
+    ];
+    const result = computeTeamRoundResults(participants, withGuest, [1]);
+    expect(result[0]).toEqual({ teamNumber: 1, kills: 11, teamRank: 2 });
+  });
+
+  it('스쿼드에 없는 사람은 여전히 무시한다 — 다른 팀 소속이거나 그 판을 안 뛴 사람', () => {
+    const participants: RoundParticipant[] = [{ playerKey: '모르는사람', kills: 10, teamRank: 1 }];
     const result = computeTeamRoundResults(participants, rosterMembers, [1]);
     expect(result[0]).toEqual({ teamNumber: 1, kills: null, teamRank: null });
   });
@@ -166,67 +177,70 @@ describe('squadsFromTeamIds', () => {
   it('PUBG 가 매긴 team_id 를 그대로 팀 번호로 쓴다', () => {
     const matches: MatchParticipantForSquads[][] = [
       [
-        { memberId: 'a', teamId: 7 },
-        { memberId: 'b', teamId: 7 },
-        { memberId: 'c', teamId: 3 },
+        { playerKey: 'a', teamId: 7 },
+        { playerKey: 'b', teamId: 7 },
+        { playerKey: 'c', teamId: 3 },
       ],
     ];
-    const { squadByMemberId, unstableMemberIds } = squadsFromTeamIds(matches);
-    expect(squadByMemberId.get('a')).toBe(7);
-    expect(squadByMemberId.get('b')).toBe(7);
-    expect(squadByMemberId.get('c')).toBe(3);
-    expect(unstableMemberIds).toEqual([]);
+    const { squadByPlayerKey, unstablePlayerKeys } = squadsFromTeamIds(matches);
+    expect(squadByPlayerKey.get('a')).toBe(7);
+    expect(squadByPlayerKey.get('b')).toBe(7);
+    expect(squadByPlayerKey.get('c')).toBe(3);
+    expect(unstablePlayerKeys).toEqual([]);
   });
 
   // 예전 union-find 방식이 못 지키던 것 — 같은 경기인데 행이 도착한 순서가
   // 달라지면 팀 번호가 통째로 뒤집혔다. team_id 를 쓰면 순서를 안 탄다.
   it('행 순서가 뒤집혀도 팀 번호가 같다', () => {
     const round: MatchParticipantForSquads[] = [
-      { memberId: 'a', teamId: 1 },
-      { memberId: 'b', teamId: 1 },
-      { memberId: 'c', teamId: 16 },
-      { memberId: 'd', teamId: 16 },
+      { playerKey: 'a', teamId: 1 },
+      { playerKey: 'b', teamId: 1 },
+      { playerKey: 'c', teamId: 16 },
+      { playerKey: 'd', teamId: 16 },
     ];
     const forward = squadsFromTeamIds([round]);
     const reversed = squadsFromTeamIds([[...round].reverse()]);
-    expect([...forward.squadByMemberId].sort()).toEqual([...reversed.squadByMemberId].sort());
+    expect([...forward.squadByPlayerKey].sort()).toEqual([...reversed.squadByPlayerKey].sort());
   });
 
   it('세션 도중 team_id 가 바뀐 사람을 알려준다', () => {
     const matches: MatchParticipantForSquads[][] = [
-      [{ memberId: 'a', teamId: 5 }],
-      [{ memberId: 'a', teamId: 9 }], // 2라운드에 다른 번호
+      [{ playerKey: 'a', teamId: 5 }],
+      [{ playerKey: 'a', teamId: 9 }], // 2라운드에 다른 번호
     ];
-    const { squadByMemberId, unstableMemberIds } = squadsFromTeamIds(matches);
-    expect(squadByMemberId.get('a')).toBe(5); // 1라운드 번호를 쓴다
-    expect(unstableMemberIds).toEqual(['a']);
+    const { squadByPlayerKey, unstablePlayerKeys } = squadsFromTeamIds(matches);
+    expect(squadByPlayerKey.get('a')).toBe(5); // 1라운드 번호를 쓴다
+    expect(unstablePlayerKeys).toEqual(['a']);
   });
 
   it('선수 교체로 한 팀이 4명을 넘어도 그대로 둔다', () => {
     const matches: MatchParticipantForSquads[][] = [
       [
-        { memberId: 'a', teamId: 2 },
-        { memberId: 'b', teamId: 2 },
-        { memberId: 'c', teamId: 2 },
-        { memberId: 'd', teamId: 2 },
+        { playerKey: 'a', teamId: 2 },
+        { playerKey: 'b', teamId: 2 },
+        { playerKey: 'c', teamId: 2 },
+        { playerKey: 'd', teamId: 2 },
       ],
-      [{ memberId: 'e', teamId: 2 }], // 2라운드에 교체 투입
+      [{ playerKey: 'e', teamId: 2 }], // 2라운드에 교체 투입
     ];
-    const { squadByMemberId, unstableMemberIds } = squadsFromTeamIds(matches);
-    expect(squadByMemberId.get('e')).toBe(2);
-    expect(unstableMemberIds).toEqual([]);
+    const { squadByPlayerKey, unstablePlayerKeys } = squadsFromTeamIds(matches);
+    expect(squadByPlayerKey.get('e')).toBe(2);
+    expect(unstablePlayerKeys).toEqual([]);
   });
 
-  it('member_id 가 null 인 참가자는 무시한다', () => {
+  // 예전엔 미등록이면 건너뛰어서 그 사람이 시트에서 통째로 사라졌다 — 팀이
+  // 3명으로 보이고 킬 합계도 모자랐다.
+  it('등록 안 된 참가자도 팀에 넣는다', () => {
     const matches: MatchParticipantForSquads[][] = [
       [
-        { memberId: null, teamId: 1 },
-        { memberId: 'a', teamId: 1 },
+        { playerKey: 'pubg:acct-x', teamId: 1 },
+        { playerKey: 'a', teamId: 1 },
       ],
     ];
-    const { squadByMemberId } = squadsFromTeamIds(matches);
-    expect(squadByMemberId.size).toBe(1);
-    expect(squadByMemberId.get('a')).toBe(1);
+    const { squadByPlayerKey } = squadsFromTeamIds(matches);
+    expect(squadByPlayerKey.size).toBe(2);
+    expect(squadByPlayerKey.get('pubg:acct-x')).toBe(1);
+    expect(squadByPlayerKey.get('a')).toBe(1);
   });
 });
 

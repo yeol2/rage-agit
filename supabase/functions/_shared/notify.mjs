@@ -107,6 +107,33 @@ export function formatRosterUploadMessage({ totalCount, matchedCount, missing })
   return lines.join('\n');
 }
 
+/**
+ * 그 내전에서 아직 클랜원과 안 묶인 참가자를 알린다.
+ *
+ * 폴링은 매치 참가자를 **전원** 저장하지만, 그중 어느 PUBG 계정이 누구인지는
+ * `member_pubg_accounts` 에 등록돼 있어야만 안다. 안 묶인 사람은 시트에 PUBG
+ * 닉네임 그대로 뜨고 팀 킬 합계에는 들어가지만, **그 사람 개인 기록에는 아무것도
+ * 안 남는다** — 리더보드도 깐부도 맵 기록도 통째로 빠진다.
+ *
+ * 2026-09-03 내전이 그랬다. Ez_2pan4pan 이 부계정으로 뛰었는데 계정이 안 묶여
+ * 있어서 4경기가 통째로 사라졌고, 다음 날 시트를 눈으로 보다가 "9번 팀이 3명이네"
+ * 하고 발견했다. 그래서 그날 바로 알도록 한다.
+ *
+ * 대개는 외부인이 아니라 우리 클랜원의 부계정이다. 묶는 방법까지 같이 적어둔다.
+ */
+export function formatUnlinkedPlayersMessage({ scrimDate, players }) {
+  const lines = [`**미등록 참가자** ${scrimDate} 내전 — ${players.length}명이 클랜원과 안 묶였다.`, ''];
+  for (const ign of players.slice(0, MAX_LISTED_MISSING)) lines.push(`· \`${ign}\``);
+  if (players.length > MAX_LISTED_MISSING) {
+    lines.push(`· … 외 ${players.length - MAX_LISTED_MISSING}명`);
+  }
+  lines.push('');
+  lines.push('시트에는 이 닉네임 그대로 뜨고 팀 점수에도 들어간다.');
+  lines.push('다만 개인 기록(리더보드·깐부·맵)에는 안 남으니, 부계정이면 묶어줄 것:');
+  lines.push('`node scripts/link-alt-account.mjs <본계정> <부계정>` → `node scripts/relink-participants.mjs`');
+  return lines.join('\n');
+}
+
 export async function sendDiscord(webhookUrl, content) {
   const res = await fetch(webhookUrl, {
     method: 'POST',

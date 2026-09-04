@@ -6,13 +6,14 @@
 import { placementPoints } from '@/lib/placementPoints.mjs';
 
 export interface RoundParticipant {
-  memberId: string | null;
+  /** 사람 하나를 가리키는 열쇠. 등록된 클랜원이면 member_id, 아니면 PUBG 계정 기반 키. */
+  playerKey: string;
   kills: number;
   teamRank: number;
 }
 
-export interface RosterMemberForScoring {
-  memberId: string;
+export interface PlayerForScoring {
+  playerKey: string;
   teamNumber: number;
 }
 
@@ -25,20 +26,24 @@ export interface TeamRoundResult {
 
 export { placementPoints };
 
-// 매치(라운드) 하나의 참가자 목록에서 이 로스터의 팀별 킬합계·순위를 뽑는다.
+// 매치(라운드) 하나의 참가자 목록에서 팀별 킬합계·순위를 뽑는다.
 // 팀원끼리는 실제 게임에서 같은 team_rank 를 공유하는 게 정상이지만, 혹시
 // 어긋나면 방어적으로 최솟값(더 높은 순위)을 쓴다.
+//
+// **클랜원으로 등록 안 된 참가자도 똑같이 센다.** 예전엔 member_id 가 없으면
+// 건너뛰었는데, 그 자리가 우리 사람의 부계정인 경우가 대부분이라 팀 킬 합계가
+// 그만큼 모자랐다. 2026-09-03 내전에서 9번 팀이 8킬을 잃고 2등을 3등으로 기록한
+// 적이 있다(Ez_2pan4pan 의 부계정이 안 묶여 있었다).
 export function computeTeamRoundResults(
   participants: RoundParticipant[],
-  rosterMembers: RosterMemberForScoring[],
+  players: PlayerForScoring[],
   teamNumbers: number[],
 ): TeamRoundResult[] {
-  const teamNumberByMemberId = new Map(rosterMembers.map((m) => [m.memberId, m.teamNumber]));
+  const teamNumberByPlayerKey = new Map(players.map((p) => [p.playerKey, p.teamNumber]));
   const grouped = new Map<number, { kills: number; teamRanks: number[] }>();
 
   for (const participant of participants) {
-    if (participant.memberId === null) continue;
-    const teamNumber = teamNumberByMemberId.get(participant.memberId);
+    const teamNumber = teamNumberByPlayerKey.get(participant.playerKey);
     if (teamNumber === undefined) continue;
 
     const bucket = grouped.get(teamNumber) ?? { kills: 0, teamRanks: [] };
@@ -80,20 +85,20 @@ export interface RoundSheetRow {
 }
 
 export interface MatchParticipantForSquads {
-  memberId: string | null;
+  playerKey: string;
   teamId: number;
 }
 
 export interface SquadAssignment {
-  /** 클랜원 → 그 사람이 뛴 팀 번호(PUBG team_id). */
-  squadByMemberId: Map<string, number>;
+  /** 사람 → 그 사람이 뛴 팀 번호(PUBG team_id). 미등록 참가자도 들어간다. */
+  squadByPlayerKey: Map<string, number>;
   /**
    * 한 세션 안에서 team_id 가 라운드마다 달랐던 사람들.
    *
    * 비어 있는 게 정상이다. 값이 있으면 아래 전제가 깨졌다는 뜻이므로 화면이
    * 경고를 띄운다 — 조용히 틀린 시트를 보여주는 것보다 낫다.
    */
-  unstableMemberIds: string[];
+  unstablePlayerKeys: string[];
 }
 
 /**
@@ -115,23 +120,27 @@ export interface SquadAssignment {
  * 합계가 부풀지 않는다.
  */
 export function squadsFromTeamIds(matches: MatchParticipantForSquads[][]): SquadAssignment {
-  const squadByMemberId = new Map<string, number>();
-  const unstableMemberIds: string[] = [];
+  const squadByPlayerKey = new Map<string, number>();
+  const unstablePlayerKeys: string[] = [];
 
   // 라운드 순서대로(matches 는 played_at 오름차순) 돌면서 처음 본 번호를 쓴다.
+  //
+  // 클랜원으로 등록 안 된 참가자도 그대로 넣는다. 예전엔 건너뛰어서 그 사람이
+  // 시트에서 통째로 사라졌는데(팀이 3명으로 보이고 킬 합계도 모자랐다), 실제로
+  // 그 자리는 거의 항상 우리 사람의 부계정이었다. 누구인지 몰라도 뛴 것은
+  // 사실이므로 일단 보여주고, 나중에 계정을 묶으면 이름이 제대로 뜬다.
   for (const participants of matches) {
-    for (const { memberId, teamId } of participants) {
-      if (memberId === null) continue; // 미등록 참가자는 시트에 안 올라간다
-      const existing = squadByMemberId.get(memberId);
+    for (const { playerKey, teamId } of participants) {
+      const existing = squadByPlayerKey.get(playerKey);
       if (existing === undefined) {
-        squadByMemberId.set(memberId, teamId);
-      } else if (existing !== teamId && !unstableMemberIds.includes(memberId)) {
-        unstableMemberIds.push(memberId);
+        squadByPlayerKey.set(playerKey, teamId);
+      } else if (existing !== teamId && !unstablePlayerKeys.includes(playerKey)) {
+        unstablePlayerKeys.push(playerKey);
       }
     }
   }
 
-  return { squadByMemberId, unstableMemberIds };
+  return { squadByPlayerKey, unstablePlayerKeys };
 }
 
 // 라운드별(매치 순서대로) 팀 결과를 받아 누적 킬/배치점수/Total과 최종 순위
