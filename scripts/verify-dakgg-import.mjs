@@ -4,6 +4,7 @@
 // 적재가 에러 없이 끝났다는 것과 맞게 들어갔다는 것은 다르다.
 // 중복 가드가 한 번 새면 그날 경기가 6개가 되고, 조용히 그대로 남는다.
 
+import { departedIdentifiers } from './lib/departed.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { loadEnvLocal, requireEnv } from './lib/env.mjs';
 
@@ -110,13 +111,27 @@ for (const ign of split) console.log(`    갈라짐: ${ign}`);
 // 못 알아본 닉네임 — 개명한 클랜원이 섞여 있을 수 있다.
 const { data: unlinked } = await supabase
   .from('match_participants')
-  .select('pubg_ign')
+  .select('pubg_ign, pubg_account_id')
   .is('member_id', null);
-const igns = [...new Set((unlinked ?? []).map((r) => r.pubg_ign))];
-console.log(`\n클랜원으로 연결 안 된 닉네임 ${igns.length}개`);
+// 탈퇴자는 참가 행을 남기고 연결만 끊으므로(apply-departed-members.mjs) 늘 여기
+// 걸린다. 이미 확인된 사람을 매번 다시 보여주지 않도록 목록의 닉(부계정 포함)·계정 ID 는 뺀다.
+let departed = { igns: new Set(), accountIds: new Set() };
+try {
+  departed = departedIdentifiers();
+} catch {
+  // 목록이 없으면 전부 보여준다
+}
+const igns = [
+  ...new Set(
+    (unlinked ?? [])
+      .filter((r) => !departed.igns.has(r.pubg_ign) && !departed.accountIds.has(r.pubg_account_id))
+      .map((r) => r.pubg_ign),
+  ),
+];
+console.log(`\n클랜원으로 연결 안 된 닉네임 ${igns.length}개 (탈퇴자 목록 제외)`);
 if (igns.length > 0) console.log(`  ${igns.slice(0, 30).join(', ')}${igns.length > 30 ? ' …' : ''}`);
-console.log('  탈퇴자로 확인됐으면 data/departed-members.tsv 에 추가하고');
-console.log('  scripts/apply-departed-members.mjs 를 돌린다 — 다음부터 자동으로 지워진다.');
+console.log('  탈퇴자로 확인됐으면 data/departed-members.tsv 에 한 줄(본계정IGN/디코ID/배그계정ID/날짜/비고) 추가하고');
+console.log('  scripts/apply-departed-members.mjs --apply 를 돌린다 — 기록은 남기고 사람만 정리된다.');
 console.log('  개명한 클랜원이면 scripts/link-alt-account.mjs → scripts/relink-participants.mjs.');
 
 console.log('');
