@@ -69,6 +69,23 @@ describe('ScrimSessionRow', () => {
     expect(screen.queryByText(/1경기/)).not.toBeInTheDocument();
   });
 
+  it('줄에 펼칠 수 있다는 표시를 적어둔다', async () => {
+    // ▸ 하나만 있을 땐 눌러서 펼치는 줄인 줄 모르는 사람이 많았다.
+    render(
+      <ScrimSessionRow
+        session={session}
+        loadMatches={vi.fn().mockResolvedValue(matches)}
+        loadParticipants={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('경기 보기')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /2026-08-02 \(일\) 내전/ }));
+
+    await waitFor(() => expect(screen.getByText('접기')).toBeInTheDocument());
+    expect(screen.queryByText('경기 보기')).not.toBeInTheDocument();
+  });
+
   it('펼치면 그때 경기 목록을 가져온다', async () => {
     const loadMatches = vi.fn().mockResolvedValue(matches);
     render(
