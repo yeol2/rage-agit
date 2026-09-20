@@ -70,6 +70,27 @@ const MEDAL_TEAM_BADGE: Record<1 | 2 | 3, string> = {
   3: 'bg-[#B38A48] text-[#3F2D11]',
 };
 
+// 펼침 표시. 접힌 상태가 ˅ 고 펼치면 돌아간다 — 두 글자(▸/▾)를 갈아 끼우면
+// 바뀌는 순간만 눈에 띄는데, 돌아가면 "이게 여닫는 것"이라는 게 남는다.
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 12 12"
+      className={`h-3 w-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+    >
+      <path
+        d="M2.5 4.5 6 8l3.5-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function ScrimSessionRow({
   session,
   loadMatches = fetchSessionMatches,
@@ -109,24 +130,27 @@ export function ScrimSessionRow({
 
   return (
     <li className="py-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <button
-          type="button"
-          onClick={toggleSession}
-          aria-expanded={open}
-          className="flex items-center gap-2 text-left"
-        >
-          <span aria-hidden="true" className="text-accent">
-            {open ? '▾' : '▸'}
+      {/* 줄 전체가 버튼이다. 작은 ▸ 글자 하나만 있을 땐 눌러서 펼치는 줄인 줄
+          모르는 사람이 많았다 — 호버하면 줄이 통째로 밝아지고, 오른쪽에
+          "경기 보기 ˅" 라고 무슨 일이 일어나는지 적어둔다. */}
+      <button
+        type="button"
+        onClick={toggleSession}
+        aria-expanded={open}
+        className="-mx-3 flex w-[calc(100%+1.5rem)] items-center justify-between gap-4 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/[0.04]"
+      >
+        <span>
+          <span className="block font-bold text-foreground">{session.title}</span>
+          <span className="mt-1 block text-sm text-menu">
+            {session.participantCount}명 참여 · {session.matchCount}경기
           </span>
-          <span>
-            <span className="block font-bold text-foreground">{session.title}</span>
-            <span className="mt-1 block text-sm text-menu">
-              {session.participantCount}명 참여 · {session.matchCount}경기
-            </span>
-          </span>
-        </button>
-      </div>
+        </span>
+
+        <span className="flex shrink-0 items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1.5 text-xs font-bold text-menu">
+          {open ? '접기' : '경기 보기'}
+          <Chevron open={open} />
+        </span>
+      </button>
 
       {open && (
         <div className="mt-4 space-y-2 border-l border-white/10 pl-4">
@@ -140,10 +164,10 @@ export function ScrimSessionRow({
                 type="button"
                 onClick={() => toggleMatch(match.pubgMatchId)}
                 aria-expanded={openMatchId === match.pubgMatchId}
-                className="flex w-full items-center gap-3 py-2 text-left text-sm"
+                className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-white/[0.04]"
               >
-                <span aria-hidden="true" className="text-accent">
-                  {openMatchId === match.pubgMatchId ? '▾' : '▸'}
+                <span className="text-accent">
+                  <Chevron open={openMatchId === match.pubgMatchId} />
                 </span>
                 <span className="font-bold">{index + 1}경기</span>
                 {/* dak.gg 출처는 날짜까지만 안다. 자리표시자 시각을 보여주면
