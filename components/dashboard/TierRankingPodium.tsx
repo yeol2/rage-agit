@@ -4,6 +4,8 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
 import { WinBadge } from '@/components/WinBadge';
+import { PlaystyleBadges } from '@/components/PlaystyleBadgeChip';
+import type { PlaystyleBadgeHolder } from '@/lib/playstyleBadges';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -354,6 +356,11 @@ export interface TierRankingPodiumProps {
    */
   sessions?: RecentSession[];
   standings?: SessionStanding[];
+  /**
+   * memberId → 그 사람이 단 플레이 스타일 뱃지. 주인이 클랜 전체 비교로
+   * 정해지는 값이라 줄마다 따로 조회할 수 없어, 페이지가 한 번 받아 넘겨준다.
+   */
+  playstyleBadges?: Map<string, PlaystyleBadgeHolder[]>;
 }
 
 function formatMetricValue(
@@ -476,6 +483,7 @@ export function TierRankingPodium({
   snapshots,
   sessions = [],
   standings = [],
+  playstyleBadges,
 }: TierRankingPodiumProps) {
   const { isAdmin } = useAdmin();
   const [activeMetric, setActiveMetric] = useState<Metric>('rageScore');
@@ -854,6 +862,10 @@ export function TierRankingPodium({
                             className="text-[13px] sm:text-sm"
                             gradientId={RANKING_TROPHY_GOLD}
                           />
+                          <PlaystyleBadges
+                            holders={playstyleBadges?.get(member.memberId) ?? []}
+                            size="sm"
+                          />
                         </div>
                       </>
                     )}
@@ -1025,8 +1037,18 @@ export function TierRankingPodium({
                           <WinBadge
                             count={member.winCount}
                             className="text-[13px] sm:text-[15px]"
-                            none={<span className="text-sm text-menu">-</span>}
+                            none={
+                              // 우승도 뱃지도 없을 때만 빈 칸을 '-' 로 채운다.
+                              // 뱃지가 있는데 '-' 가 앞에 붙으면 없는 것처럼 읽힌다.
+                              (playstyleBadges?.get(member.memberId)?.length ?? 0) === 0 ? (
+                                <span className="text-sm text-menu">-</span>
+                              ) : null
+                            }
                             gradientId={RANKING_TROPHY_GOLD}
+                          />
+                          <PlaystyleBadges
+                            holders={playstyleBadges?.get(member.memberId) ?? []}
+                            size="sm"
                           />
                         </span>
                         <span className="text-right tabular-nums">

@@ -29,6 +29,12 @@ import DashboardPage from './page';
 
 afterEach(cleanup);
 
+// 뱃지 주인 고르는 규칙은 playstyleBadges.test.ts 가 덮는다. 여기서는 조회만 막는다.
+vi.mock('@/lib/playstyleBadges', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/playstyleBadges')>();
+  return { ...actual, fetchPlaystyleBadges: vi.fn().mockResolvedValue(new Map()) };
+});
+
 describe('DashboardPage', () => {
   it('네비·리더보드·푸터를 함께 그린다', async () => {
     render(await DashboardPage());

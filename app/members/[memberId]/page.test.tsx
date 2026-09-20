@@ -80,6 +80,12 @@ const stats = {
   avgRank: 5,
 };
 
+// 뱃지 주인 고르는 규칙은 playstyleBadges.test.ts 가 덮는다. 여기서는 조회만 막는다.
+vi.mock('@/lib/playstyleBadges', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/playstyleBadges')>();
+  return { ...actual, fetchPlaystyleBadges: vi.fn().mockResolvedValue(new Map()) };
+});
+
 describe('MemberDetailPage', () => {
   it('충분한 표본이 있으면 6각형을 그린다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);

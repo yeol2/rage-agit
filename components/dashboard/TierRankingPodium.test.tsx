@@ -240,4 +240,21 @@ describe('TierRankingPodium — 등수 변화', () => {
     expect(screen.queryByText('▲2')).not.toBeInTheDocument();
     expect(screen.queryByText('NEW')).not.toBeInTheDocument();
   });
+
+  it('플레이 스타일 뱃지 주인이면 뱃지 칸에 함께 보여준다', () => {
+    // 주인은 클랜 전체를 비교해야 정해지는 값이라 페이지가 받아 넘겨준다.
+    render(
+      <TierRankingPodium
+        recent16={RECENT16}
+        alltime={ALLTIME}
+        snapshots={[]}
+        playstyleBadges={
+          new Map([[ 'a', [{ kind: 'damageFarmer' as const, memberId: 'a', value: 420 }] ]])
+        }
+      />,
+    );
+
+    const slot1 = screen.getByTestId('podium-slot-1');
+    expect(within(slot1).getByText('최강 딜딸러 · 킬당 420딜')).toBeInTheDocument();
+  });
 });

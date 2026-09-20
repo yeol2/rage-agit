@@ -6,6 +6,7 @@ import { TierRankingPodium } from '@/components/dashboard/TierRankingPodium';
 import { fetchRankingStats } from '@/lib/rankingStats';
 import { fetchRankingSnapshots } from '@/lib/rankingSnapshot';
 import { fetchRecentSessions, fetchSessionStandings } from '@/lib/memberDashboard';
+import { fetchPlaystyleBadges } from '@/lib/playstyleBadges';
 import { siteConfig } from '@/lib/siteConfig';
 
 export const metadata: Metadata = {
@@ -23,11 +24,14 @@ export const metadata: Metadata = {
 export const revalidate = false;
 
 export default async function DashboardPage() {
-  const [recent16, alltime, snapshots, sessions] = await Promise.all([
+  const [recent16, alltime, snapshots, sessions, playstyleBadges] = await Promise.all([
     fetchRankingStats('recent16'),
     fetchRankingStats('alltime'),
     fetchRankingSnapshots(),
     fetchRecentSessions(),
+    // 뱃지 주인은 클랜 전체를 비교해야 정해지므로 줄마다 조회할 수 없다 —
+    // 여기서 한 번 받아 표로 넘긴다.
+    fetchPlaystyleBadges(),
   ]);
   // 드롭다운을 펼칠 때마다 조회하지 않고 한 번에 받아둔다 — 최근 10회 × 64명이라
   // 크기가 정해져 있고(약 640행), 어차피 누굴 펼칠지 미리 알 수 없다.
@@ -44,6 +48,7 @@ export default async function DashboardPage() {
         snapshots={snapshots}
         sessions={sessions}
         standings={standings}
+        playstyleBadges={playstyleBadges}
       />
       <Footer />
     </main>
