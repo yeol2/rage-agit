@@ -157,8 +157,6 @@ export const siteConfig = {
       heading: '최근 내전',
       participantSuffix: '명 참여',
       matchSuffix: '경기',
-      replayLabel: '다시보기',
-      replayPendingLabel: '다시보기 준비중',
     },
   },
 

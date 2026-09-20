@@ -126,24 +126,6 @@ export function ScrimSessionRow({
             </span>
           </span>
         </button>
-
-        {session.replayUrl ? (
-          <a
-            href={session.replayUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="shrink-0 rounded-md border border-accent/50 px-4 py-2 text-center text-sm font-bold text-accent transition-colors hover:bg-accent hover:text-background"
-          >
-            다시보기
-          </a>
-        ) : (
-          <span
-            aria-disabled="true"
-            className="shrink-0 rounded-md border border-white/10 px-4 py-2 text-center text-sm text-white/25"
-          >
-            준비중
-          </span>
-        )}
       </div>
 
       {open && (

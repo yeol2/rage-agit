@@ -35,16 +35,11 @@ describe('RecentScrimsList', () => {
     expect(screen.getByText('68명 참여 · 2경기')).toBeInTheDocument();
   });
 
-  it('다시보기 URL 이 있으면 링크를 건다', () => {
+  // 다시보기 버튼은 쓰지 않기로 해서 화면에서 뺐다(replay_url 컬럼은 남아 있다).
+  it('다시보기 URL 이 있어도 링크를 걸지 않는다', () => {
     render(<RecentScrimsList sessions={sessions} />);
-    const link = screen.getByRole('link', { name: '다시보기' });
-    expect(link).toHaveAttribute('href', 'https://youtu.be/rage-scrim');
-    expect(link).toHaveAttribute('target', '_blank');
-  });
-
-  it('다시보기가 없으면 준비중으로 보여준다', () => {
-    render(<RecentScrimsList sessions={sessions} />);
-    expect(screen.getByText('준비중')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '다시보기' })).not.toBeInTheDocument();
+    expect(screen.queryByText('준비중')).not.toBeInTheDocument();
   });
 
   it('수집된 내전이 없으면 안내를 보여준다', () => {
