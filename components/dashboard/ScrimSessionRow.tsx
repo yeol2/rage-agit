@@ -41,25 +41,29 @@ function toKstTime(iso: string): string {
 const TEAM_PLAYER_GRID =
   'grid grid-cols-[1fr_2.5rem_2.5rem_3.5rem_3.5rem_2.5rem_3.5rem_3.5rem] items-center gap-x-2';
 
-// 한 경기 안에서 1~3위 팀만 금·은·동으로 칠한다. 색은 클랜원 화면의 메달 칩
-// (SessionStandingChips)과 같은 값을 쓴다 — 같은 메달권을 두 화면에서 다른
-// 색으로 보여주지 않으려는 것이다.
+// 한 경기 안에서 1~3위 팀만 금·은·동으로 칠한다. 색 어법(옅은 그라디언트 +
+// 또렷한 테두리)은 클랜원 화면의 메달 칩(SessionStandingChips)과 같다.
+//
+// 다만 동색은 칩보다 붉게 뺐다. 칩에는 메달 그림이 함께 있어 색이 비슷해도
+// 구분되지만, 여기는 얇은 테두리와 한 줄짜리 헤더뿐이라 칩의 황갈색
+// (192,143,78)을 그대로 쓰면 금색과 구분이 안 됐다. 금색도 노랑 쪽으로
+// 더 몰아서 둘 사이를 벌린다.
 const MEDAL_TEAM_BORDER: Record<1 | 2 | 3, string> = {
-  1: 'border-[rgba(255,211,101,0.6)]',
+  1: 'border-[rgba(255,206,60,0.75)]',
   2: 'border-[rgba(215,215,218,0.55)]',
-  3: 'border-[rgba(192,143,78,0.55)]',
+  3: 'border-[rgba(198,96,48,0.75)]',
 };
 
 const MEDAL_TEAM_HEADER: Record<1 | 2 | 3, string> = {
-  1: 'bg-[linear-gradient(180deg,rgba(255,211,101,0.2),rgba(255,211,101,0.04))]',
+  1: 'bg-[linear-gradient(180deg,rgba(255,206,60,0.22),rgba(255,206,60,0.04))]',
   2: 'bg-[linear-gradient(180deg,rgba(215,215,218,0.18),rgba(215,215,218,0.04))]',
-  3: 'bg-[linear-gradient(180deg,rgba(192,143,78,0.2),rgba(192,143,78,0.05))]',
+  3: 'bg-[linear-gradient(180deg,rgba(198,96,48,0.26),rgba(198,96,48,0.05))]',
 };
 
 const MEDAL_TEAM_TEXT: Record<1 | 2 | 3, string> = {
-  1: 'text-[#FFD365]',
+  1: 'text-[#FFD34A]',
   2: 'text-[#E4E4E6]',
-  3: 'text-[#DFA45F]',
+  3: 'text-[#E8834F]',
 };
 
 export function ScrimSessionRow({

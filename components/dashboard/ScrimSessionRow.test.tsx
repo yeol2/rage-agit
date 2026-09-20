@@ -185,9 +185,9 @@ describe('ScrimSessionRow', () => {
     await userEvent.click(screen.getByRole('button', { name: /1경기/ }));
 
     await waitFor(() => expect(screen.getByTestId('match-team-10')).toBeInTheDocument());
-    expect(screen.getByTestId('match-team-10').className).toContain('rgba(255,211,101,0.6)');
+    expect(screen.getByTestId('match-team-10').className).toContain('rgba(255,206,60,0.75)');
     expect(screen.getByTestId('match-team-20').className).toContain('rgba(215,215,218,0.55)');
-    expect(screen.getByTestId('match-team-30').className).toContain('rgba(192,143,78,0.55)');
+    expect(screen.getByTestId('match-team-30').className).toContain('rgba(198,96,48,0.75)');
     expect(screen.getByTestId('match-team-40').className).toContain('border-white/10');
   });
 
