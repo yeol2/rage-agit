@@ -4,6 +4,7 @@ import { useId, type ReactNode } from 'react';
 import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
 import { BadgeTooltip } from '@/components/badges/BadgeTooltip';
 import { BADGE_COPY } from '@/components/badges/badgeCatalog';
+import { HexFrame } from '@/components/badges/HexFrame';
 
 /**
  * 내전우승 뱃지 — 트로피 하나에 횟수를 숫자로 겹쳐 얹는다.
@@ -14,16 +15,15 @@ import { BADGE_COPY } from '@/components/badges/badgeCatalog';
  * 횟수와 무관하게 고정되고, 몇 번인지도 한눈에 읽힌다 — 트로피 여덟 개를 세는
  * 것보다 숫자 '8' 이 빠르다.
  *
- * 한때 다른 뱃지처럼 육각 틀 안에 넣어봤는데, 22px 칸에서는 틀이 자리를 다 먹고
- * 트로피가 안 보였다. 틀 없이 트로피만 그리는 지금 모양이 작은 칸에서 제일 잘
- * 읽힌다.
+ * 테두리는 다른 뱃지와 같은 얇은 육각(HexFrame)이다. 뱃지 칸에 여러 개가 깔릴 때
+ * 하나만 틀이 없으면 그것만 떠 보인다.
  *
- * 크기는 바깥에서 글자 크기(className 의 text-*)로 정한다. 트로피와 숫자가 모두
- * em 단위라 하나만 바꾸면 둘이 같은 비율로 커진다.
+ * 크기는 바깥에서 글자 크기(className 의 text-*)로 정한다. 틀과 트로피, 숫자가
+ * 모두 em 단위라 하나만 바꾸면 셋이 같은 비율로 커진다.
  */
 export interface WinBadgeProps {
   count: number;
-  /** 크기를 정하는 곳. text-* 하나면 트로피와 숫자가 같이 커진다. */
+  /** 크기를 정하는 곳. text-* 하나면 틀·트로피·숫자가 같이 커진다. */
   className?: string;
   /** 우승이 0회일 때 대신 그릴 것. 표는 '-' 를 넣어 칸이 비어 보이지 않게 한다. */
   none?: ReactNode;
@@ -36,9 +36,18 @@ export interface WinBadgeProps {
 
 const DEFAULT_CHIP_COLOR = '#1B1B23';
 
-function Trophy({ gradientId, className }: { gradientId: string; className: string }) {
+// 다른 뱃지(BadgePin)의 기본값과 같은 한 변 길이 — 나란히 놓았을 때 틀 크기가
+// 어긋나지 않게 한 곳에서 맞춘다.
+const BADGE_SIZE = '2.2em';
+
+function Trophy({ gradientId }: { gradientId: string }) {
   return (
-    <svg viewBox={TROPHY_VIEWBOX} className={className} aria-hidden>
+    <svg
+      viewBox={TROPHY_VIEWBOX}
+      className="h-full w-auto"
+      data-testid="trophy-glyph"
+      aria-hidden
+    >
       <defs>
         <TrophyGoldGradient id={gradientId} />
       </defs>
@@ -65,28 +74,32 @@ export function WinBadge({
       className={`group relative inline-flex w-fit shrink-0 items-center justify-center ${className}`}
       data-testid="win-badge"
     >
-      {/* 트로피와 숫자를 한 덩어리로 묶는다 — 숫자 자리는 바깥 상자가 아니라
-          트로피 기준이어야 한다. */}
-      <span className="relative inline-flex">
-        <Trophy gradientId={goldId} className="h-[1.55em] w-auto" />
+      <HexFrame size={BADGE_SIZE}>
+        <span className="relative inline-flex h-full items-center justify-center">
+          <Trophy gradientId={goldId} />
 
-        {/* 트로피 몸통 아래쪽에 얹는다. 받침 위에서 멈춰서 받침은 그대로 보이고,
-            숫자는 트로피 안쪽에 박힌 것처럼 읽힌다. */}
-        <span
-          aria-hidden="true"
-          className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 -translate-y-[26%] rounded-full px-[0.22em] text-center text-[0.72em] font-bold leading-[1.35] tabular-nums text-[#FFD365]"
-          style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
-        >
-          {count}
+          {/* 트로피 몸통 아래쪽에 얹는다. 받침 위에서 멈춰서 받침은 그대로 보이고,
+              숫자는 트로피 안쪽에 박힌 것처럼 읽힌다. */}
+          <span
+            aria-hidden="true"
+            className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 -translate-y-[16%] rounded-full px-[0.22em] text-center text-[0.72em] font-bold leading-[1.35] tabular-nums text-[#FFD365]"
+            style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
+          >
+            {count}
+          </span>
         </span>
-      </span>
+      </HexFrame>
 
       <BadgeTooltip
         testId="badge-tooltip-scrimWin"
         name={BADGE_COPY.scrimWin.name}
         description={BADGE_COPY.scrimWin.description}
         detail={`내전 종합 1위 ${count}회`}
-        artwork={<Trophy gradientId={`${goldId}-big`} className="h-11 w-auto" />}
+        artwork={
+          <HexFrame size="3rem">
+            <Trophy gradientId={`${goldId}-big`} />
+          </HexFrame>
+        }
       />
     </span>
   );

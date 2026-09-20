@@ -139,7 +139,7 @@ describe('MemberDetailPage', () => {
 
     const badge = screen.getByTestId('win-badge');
     // 카드에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
-    expect(badge.querySelectorAll('svg')).toHaveLength(2);
+    expect(badge.querySelectorAll('[data-testid="trophy-glyph"]')).toHaveLength(2);
     expect(within(badge).getByText('3')).toBeInTheDocument();
     // 횟수는 뱃지가 말하므로 뱃지 옆 글자에는 숫자를 또 적지 않는다.
     expect(badge.parentElement!.textContent!.endsWith('내전우승')).toBe(true);
@@ -166,7 +166,7 @@ describe('MemberDetailPage', () => {
 
     const badge = screen.getByTestId('win-badge');
     // 카드에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
-    expect(badge.querySelectorAll('svg')).toHaveLength(2);
+    expect(badge.querySelectorAll('[data-testid="trophy-glyph"]')).toHaveLength(2);
     expect(within(badge).getByText('12')).toBeInTheDocument();
   });
 
