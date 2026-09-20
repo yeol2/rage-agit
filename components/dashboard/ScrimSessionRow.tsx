@@ -13,6 +13,7 @@ import {
   type ScrimSessionSummary,
 } from '@/lib/scrimData';
 import { mapLabel } from '@/lib/mapNames';
+import { medalRank } from '@/lib/memberDashboard';
 
 // 조회 함수는 기본값으로 두고 테스트에서만 바꿔 끼운다.
 //
@@ -39,6 +40,27 @@ function toKstTime(iso: string): string {
 // 않는다(4명 내내 같은 값이 반복되던 걸 없앴다).
 const TEAM_PLAYER_GRID =
   'grid grid-cols-[1fr_2.5rem_2.5rem_3.5rem_3.5rem_2.5rem_3.5rem_3.5rem] items-center gap-x-2';
+
+// 한 경기 안에서 1~3위 팀만 금·은·동으로 칠한다. 색은 클랜원 화면의 메달 칩
+// (SessionStandingChips)과 같은 값을 쓴다 — 같은 메달권을 두 화면에서 다른
+// 색으로 보여주지 않으려는 것이다.
+const MEDAL_TEAM_BORDER: Record<1 | 2 | 3, string> = {
+  1: 'border-[rgba(255,211,101,0.6)]',
+  2: 'border-[rgba(215,215,218,0.55)]',
+  3: 'border-[rgba(192,143,78,0.55)]',
+};
+
+const MEDAL_TEAM_HEADER: Record<1 | 2 | 3, string> = {
+  1: 'bg-[linear-gradient(180deg,rgba(255,211,101,0.2),rgba(255,211,101,0.04))]',
+  2: 'bg-[linear-gradient(180deg,rgba(215,215,218,0.18),rgba(215,215,218,0.04))]',
+  3: 'bg-[linear-gradient(180deg,rgba(192,143,78,0.2),rgba(192,143,78,0.05))]',
+};
+
+const MEDAL_TEAM_TEXT: Record<1 | 2 | 3, string> = {
+  1: 'text-[#FFD365]',
+  2: 'text-[#E4E4E6]',
+  3: 'text-[#DFA45F]',
+};
 
 export function ScrimSessionRow({
   session,
@@ -163,36 +185,51 @@ export function ScrimSessionRow({
                       </div>
 
                       {groupParticipantsByTeam(sortByTeamRank(participants[match.pubgMatchId])).map(
-                        (team) => (
-                          <div
-                            key={team.teamId}
-                            className="overflow-hidden rounded-lg border border-white/10"
-                          >
-                            <div className="flex items-center gap-2 bg-white/[0.04] px-3 py-1.5 text-xs">
-                              <span className="font-bold text-foreground">{team.teamRank}위</span>
-                              <span className="text-menu">팀 {team.teamId}</span>
+                        (team) => {
+                          const medal = medalRank(team.teamRank);
+
+                          return (
+                            <div
+                              key={team.teamId}
+                              data-testid={`match-team-${team.teamId}`}
+                              className={`overflow-hidden rounded-lg border ${
+                                medal ? MEDAL_TEAM_BORDER[medal] : 'border-white/10'
+                              }`}
+                            >
+                              <div
+                                className={`flex items-center gap-2 px-3 py-1.5 text-xs ${
+                                  medal ? MEDAL_TEAM_HEADER[medal] : 'bg-white/[0.04]'
+                                }`}
+                              >
+                                <span
+                                  className={`font-bold ${medal ? MEDAL_TEAM_TEXT[medal] : 'text-foreground'}`}
+                                >
+                                  {team.teamRank}위
+                                </span>
+                                <span className="text-menu">팀 {team.teamId}</span>
+                              </div>
+                              <div className="divide-y divide-white/[0.06]">
+                                {team.players.map((p) => (
+                                  <div key={p.pubgIgn} className={`${TEAM_PLAYER_GRID} px-3 py-1.5 text-sm`}>
+                                    <span>
+                                      <span className="font-bold">{p.pubgIgn}</span>
+                                      {p.discordNickname && (
+                                        <span className="ml-2 text-xs text-menu">{p.discordNickname}</span>
+                                      )}
+                                    </span>
+                                    <span>{p.kills}</span>
+                                    <span>{p.assists}</span>
+                                    <span>{Math.round(p.damageDealt)}</span>
+                                    <span>{p.dbnos}</span>
+                                    <span>{p.headshotKills}</span>
+                                    <span>{formatSurvival(p.timeSurvived)}</span>
+                                    <span>{formatDistance(p.distance)}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                            <div className="divide-y divide-white/[0.06]">
-                              {team.players.map((p) => (
-                                <div key={p.pubgIgn} className={`${TEAM_PLAYER_GRID} px-3 py-1.5 text-sm`}>
-                                  <span>
-                                    <span className="font-bold">{p.pubgIgn}</span>
-                                    {p.discordNickname && (
-                                      <span className="ml-2 text-xs text-menu">{p.discordNickname}</span>
-                                    )}
-                                  </span>
-                                  <span>{p.kills}</span>
-                                  <span>{p.assists}</span>
-                                  <span>{Math.round(p.damageDealt)}</span>
-                                  <span>{p.dbnos}</span>
-                                  <span>{p.headshotKills}</span>
-                                  <span>{formatSurvival(p.timeSurvived)}</span>
-                                  <span>{formatDistance(p.distance)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ),
+                          );
+                        },
                       )}
                     </div>
                   )}

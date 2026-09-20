@@ -162,6 +162,35 @@ describe('ScrimSessionRow', () => {
     expect(screen.queryByText('20:01')).not.toBeInTheDocument();
   });
 
+  it('1~3위 팀만 금·은·동으로 칠한다', async () => {
+    // 등수만 다른 네 팀. 4위는 색이 붙지 않는 쪽을 확인하려고 넣는다.
+    const fourTeams: ScrimParticipant[] = [1, 2, 3, 4].map((rank) => ({
+      ...participants[0],
+      pubgIgn: `Rank${rank}`,
+      discordNickname: null,
+      teamId: rank * 10,
+      teamRank: rank,
+    }));
+
+    render(
+      <ScrimSessionRow
+        session={session}
+        loadMatches={vi.fn().mockResolvedValue(matches)}
+        loadParticipants={vi.fn().mockResolvedValue(fourTeams)}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /2026-08-02 \(일\) 내전/ }));
+    await waitFor(() => expect(screen.getByText(/1경기/)).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: /1경기/ }));
+
+    await waitFor(() => expect(screen.getByTestId('match-team-10')).toBeInTheDocument());
+    expect(screen.getByTestId('match-team-10').className).toContain('rgba(255,211,101,0.6)');
+    expect(screen.getByTestId('match-team-20').className).toContain('rgba(215,215,218,0.55)');
+    expect(screen.getByTestId('match-team-30').className).toContain('rgba(192,143,78,0.55)');
+    expect(screen.getByTestId('match-team-40').className).toContain('border-white/10');
+  });
+
   it('API 에서 받은 경기는 시각을 보여준다', async () => {
     render(
       <ScrimSessionRow
