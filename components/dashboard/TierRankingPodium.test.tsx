@@ -159,9 +159,10 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const row4 = screen.getByTestId('ranking-row-4');
-    // 마우스를 올리면 뜨는 말풍선(과 스크린리더용 글)이 횟수를 말한다.
-    expect(badge(row4).textContent).toContain('내전우승 3회');
-    expect(badge(row4).querySelectorAll('svg')).toHaveLength(1);
+    // 마우스를 올리면 뜨는 설명표(와 스크린리더용 글)가 횟수를 말한다.
+    expect(badge(row4).textContent).toContain('내전 종합 1위 3회');
+    // 핀 그림 하나 + 설명표 안의 큰 그림 하나
+    expect(badge(row4).querySelectorAll('img')).toHaveLength(2);
     expect(within(badge(row4)).getByText('3')).toBeInTheDocument();
   });
 
@@ -171,9 +172,9 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const row4 = screen.getByTestId('ranking-row-4');
-    expect(badge(row4).querySelectorAll('svg')).toHaveLength(1);
+    expect(badge(row4).querySelectorAll('img')).toHaveLength(2);
     expect(within(badge(row4)).getByText('11')).toBeInTheDocument();
-    expect(badge(row4).textContent).toContain('내전우승 11회');
+    expect(badge(row4).textContent).toContain('내전 종합 1위 11회');
   });
 
   // 말풍선은 CSS 로만 열고 닫는다(group-hover) — 상태를 두지 않아 표 수십 줄에
@@ -183,11 +184,14 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const el = badge(screen.getByTestId('ranking-row-4'));
-    expect(el.className).toContain('group');
+    expect(within(el).getByTestId('badge-pin-scrimWin').className).toContain('group');
 
-    const bubble = within(el).getByTestId('win-badge-tooltip');
+    const bubble = within(el).getByTestId('badge-tooltip-scrimWin');
     expect(bubble.className).toContain('group-hover:opacity-100');
-    expect(bubble.textContent).toBe('내전우승 2회');
+    // 설명표는 이름·설명·근거 세 줄이다.
+    expect(bubble.textContent).toContain('내전 우승');
+    expect(bubble.textContent).toContain('오늘 저녁은 치킨이닭!');
+    expect(bubble.textContent).toContain('내전 종합 1위 2회');
   });
 
   it('우승이 없으면 뱃지 칸이 - 로 남는다', () => {
@@ -249,12 +253,26 @@ describe('TierRankingPodium — 등수 변화', () => {
         alltime={ALLTIME}
         snapshots={[]}
         playstyleBadges={
-          new Map([[ 'a', [{ kind: 'damageFarmer' as const, memberId: 'a', value: 420 }] ]])
+          new Map([
+            [
+              'a',
+              [
+                {
+                  kind: 'damageFarmer' as const,
+                  memberId: 'a',
+                  groupId: '0-1.5',
+                  groupLabel: '0~1.5티어',
+                  value: 420,
+                },
+              ],
+            ],
+          ])
         }
       />,
     );
 
     const slot1 = screen.getByTestId('podium-slot-1');
-    expect(within(slot1).getByText('최강 딜딸러 · 킬당 420딜')).toBeInTheDocument();
+    expect(within(slot1).getByTestId('badge-pin-damageFarmer')).toBeInTheDocument();
+    expect(within(slot1).getByText('0~1.5티어 1위 · 킬당 420딜')).toBeInTheDocument();
   });
 });

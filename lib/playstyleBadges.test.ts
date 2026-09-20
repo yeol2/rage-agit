@@ -10,6 +10,7 @@ import {
 
 function row(over: Partial<PlaystyleStatsRow> & { memberId: string }): PlaystyleStatsRow {
   return {
+    tier: 3,
     gameCount: MIN_GAMES_FOR_PLAYSTYLE_BADGE,
     totalKills: 40,
     totalDbnos: 40,
@@ -84,6 +85,25 @@ describe('pickPlaystyleBadges', () => {
       totalDamage: 36000, // 킬당 600 — dealer 와 같은 값
     });
     expect(holderOf([...rows, veteran], 'damageFarmer')).toBe('zz-veteran');
+  });
+
+  it('티어 그룹마다 따로 1등을 뽑는다', () => {
+    // 같은 값이어도 무대가 다르면 각자 자기 그룹의 1등이다.
+    const twoGroups = [
+      row({ memberId: 'low-dealer', tier: 1, totalKills: 20, totalDamage: 12000 }),
+      row({ memberId: 'low-plain', tier: 1.5 }),
+      row({ memberId: 'high-dealer', tier: 4, totalKills: 20, totalDamage: 12000 }),
+      row({ memberId: 'high-plain', tier: 4.5 }),
+    ];
+    const holders = pickPlaystyleBadges(twoGroups);
+    const dealers = holders.filter((h) => h.kind === 'damageFarmer');
+
+    expect(dealers.map((h) => [h.groupId, h.memberId])).toEqual([
+      ['0-1.5', 'low-dealer'],
+      ['4-5', 'high-dealer'],
+    ]);
+    // 어느 무대에서 1등인지도 같이 들고 다닌다 — 설명표가 그걸 적는다.
+    expect(dealers[0].groupLabel).toBe('0~1.5티어');
   });
 
   it('후보가 아무도 없으면 그 뱃지는 주인이 없다', () => {

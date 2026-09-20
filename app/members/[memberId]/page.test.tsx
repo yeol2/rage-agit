@@ -138,7 +138,8 @@ describe('MemberDetailPage', () => {
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
     const badge = screen.getByTestId('win-badge');
-    expect(badge.querySelectorAll('svg')).toHaveLength(1);
+    // 핀 그림 하나 + 설명표 안의 큰 그림 하나
+    expect(badge.querySelectorAll('img')).toHaveLength(2);
     expect(within(badge).getByText('3')).toBeInTheDocument();
     // 횟수는 뱃지가 말하므로 뱃지 옆 글자에는 숫자를 또 적지 않는다.
     expect(badge.parentElement!.textContent!.endsWith('내전우승')).toBe(true);
@@ -164,7 +165,8 @@ describe('MemberDetailPage', () => {
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
     const badge = screen.getByTestId('win-badge');
-    expect(badge.querySelectorAll('svg')).toHaveLength(1);
+    // 핀 그림 하나 + 설명표 안의 큰 그림 하나
+    expect(badge.querySelectorAll('img')).toHaveLength(2);
     expect(within(badge).getByText('12')).toBeInTheDocument();
   });
 

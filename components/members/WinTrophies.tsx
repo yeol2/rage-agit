@@ -14,9 +14,8 @@ export function WinTrophies({ count }: { count: number }) {
 
   return (
     <p className="mt-3 flex items-center justify-center gap-1.5 text-sm text-menu">
-      {/* 칸이 넉넉한 화면이라 광택을 켠다. 표처럼 수십 개가 깔리는 곳에서는
-          동시에 번쩍여서 눈에 거슬리므로 거기서는 꺼둔다. */}
-      <WinBadge count={count} className="text-[15px]" sheen chipColor="#231F2B" />
+      {/* 칸이 넉넉한 화면이라 표(22px)보다 크게 단다. */}
+      <WinBadge count={count} className="text-[24px]" chipColor="#231F2B" />
       <span>내전우승</span>
     </p>
   );
