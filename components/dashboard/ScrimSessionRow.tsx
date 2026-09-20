@@ -41,30 +41,29 @@ function toKstTime(iso: string): string {
 const TEAM_PLAYER_GRID =
   'grid grid-cols-[1fr_2.5rem_2.5rem_3.5rem_3.5rem_2.5rem_3.5rem_3.5rem] items-center gap-x-2';
 
-// 한 경기 안에서 1~3위 팀만 금·은·동으로 칠한다. 색은 리더보드 트로피 배지
-// (TierRankingPodium 의 TROPHY_COLORS)와 같은 금 #FFD365 · 은 #CDCDCD ·
-// 동 #B38A48 이다.
+// 한 경기 안에서 1~3위 팀만 금·은·동으로 칠한다. 은·동은 리더보드 트로피 배지
+// (TierRankingPodium 의 TROPHY_COLORS)와 같은 #CDCDCD · #B38A48 이고, 금만
+// 리더보드의 #FFD365 보다 노란 #FFD34A 다 — 동색과 더 멀어 보이라고 고른 값.
 //
 // 리더보드는 배지를 그 색으로 꽉 채우지만 여기는 얇은 테두리와 한 줄짜리
 // 헤더뿐이라, 같은 색도 옅게 깔면 금과 동이 같은 황갈색으로 뭉갠다. 그래서
 // 등수 글자만 색을 꽉 채워(어두운 글씨 + 메달색 배경) 리더보드 배지처럼
 // 보여주고, 테두리·헤더는 그 색의 옅은 톤으로 받친다.
 const MEDAL_TEAM_BORDER: Record<1 | 2 | 3, string> = {
-  1: 'border-[rgba(255,211,101,0.55)]',
+  1: 'border-[rgba(255,206,60,0.55)]',
   2: 'border-[rgba(205,205,205,0.5)]',
   3: 'border-[rgba(179,138,72,0.6)]',
 };
 
 const MEDAL_TEAM_HEADER: Record<1 | 2 | 3, string> = {
-  1: 'bg-[linear-gradient(180deg,rgba(255,211,101,0.16),rgba(255,211,101,0.03))]',
+  1: 'bg-[linear-gradient(180deg,rgba(255,206,60,0.16),rgba(255,206,60,0.03))]',
   2: 'bg-[linear-gradient(180deg,rgba(205,205,205,0.14),rgba(205,205,205,0.03))]',
   3: 'bg-[linear-gradient(180deg,rgba(179,138,72,0.16),rgba(179,138,72,0.03))]',
 };
 
-// 등수 글자 자리. 배경색은 리더보드 배지 색 그대로, 글자색은 그 배지의
-// 트로피 글리프 색 그대로다.
+// 등수 글자 자리. 글자색은 리더보드 배지의 트로피 글리프 색 그대로다.
 const MEDAL_TEAM_BADGE: Record<1 | 2 | 3, string> = {
-  1: 'bg-[#FFD365] text-[#5A4413]',
+  1: 'bg-[#FFD34A] text-[#5A4413]',
   2: 'bg-[#CDCDCD] text-[#44464A]',
   3: 'bg-[#B38A48] text-[#3F2D11]',
 };
