@@ -138,7 +138,7 @@ export default async function MemberDetailPage({
           {/* 내전우승(기록) 다음에 별명 뱃지가 온다 — 둘 다 이름 아래 한 덩어리로
               읽히는 자리지만, 우승은 성적이고 이쪽은 스타일이라 줄을 나눈다. */}
           <div className="mt-3 flex justify-center gap-2">
-            <PlaystyleBadges holders={playstyleBadges.get(member.id) ?? []} size="2.6rem" />
+            <PlaystyleBadges holders={playstyleBadges.get(member.id) ?? []} size="3.4rem" />
           </div>
 
           {/* 숫자를 먼저 보고 6각형으로 넘어가는 흐름 — 대시보드가 6각형 위에 온다. */}
