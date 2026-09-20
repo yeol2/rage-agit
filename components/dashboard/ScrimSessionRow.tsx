@@ -13,6 +13,7 @@ import {
   type ScrimSessionSummary,
 } from '@/lib/scrimData';
 import { mapLabel } from '@/lib/mapNames';
+import { medalRank } from '@/lib/memberDashboard';
 
 // 조회 함수는 기본값으로 두고 테스트에서만 바꿔 끼운다.
 //
@@ -39,6 +40,35 @@ function toKstTime(iso: string): string {
 // 않는다(4명 내내 같은 값이 반복되던 걸 없앴다).
 const TEAM_PLAYER_GRID =
   'grid grid-cols-[1fr_2.5rem_2.5rem_3.5rem_3.5rem_2.5rem_3.5rem_3.5rem] items-center gap-x-2';
+
+// 한 경기 안에서 1~3위 팀만 금·은·동으로 칠한다. 은·동은 리더보드 트로피 배지
+// (TierRankingPodium 의 TROPHY_COLORS)와 같은 #CDCDCD · #B38A48 이고, 금만
+// 리더보드의 #FFD365 보다 밝고 노란 #FFE04D 다 — 동색(#B38A48)이 황갈색이라
+// 금이 조금만 어두워도 둘이 같은 색으로 읽힌다. 칩·테두리·헤더 모두 같은 값을
+// 쓴다(밝기만 알파로 달리한다).
+//
+// 리더보드는 배지를 그 색으로 꽉 채우지만 여기는 얇은 테두리와 한 줄짜리
+// 헤더뿐이라, 같은 색도 옅게 깔면 금과 동이 같은 황갈색으로 뭉갠다. 그래서
+// 등수 글자만 색을 꽉 채워(어두운 글씨 + 메달색 배경) 리더보드 배지처럼
+// 보여주고, 테두리·헤더는 그 색의 옅은 톤으로 받친다.
+const MEDAL_TEAM_BORDER: Record<1 | 2 | 3, string> = {
+  1: 'border-[rgba(255,224,77,0.7)]',
+  2: 'border-[rgba(205,205,205,0.5)]',
+  3: 'border-[rgba(179,138,72,0.6)]',
+};
+
+const MEDAL_TEAM_HEADER: Record<1 | 2 | 3, string> = {
+  1: 'bg-[linear-gradient(180deg,rgba(255,224,77,0.2),rgba(255,224,77,0.04))]',
+  2: 'bg-[linear-gradient(180deg,rgba(205,205,205,0.14),rgba(205,205,205,0.03))]',
+  3: 'bg-[linear-gradient(180deg,rgba(179,138,72,0.16),rgba(179,138,72,0.03))]',
+};
+
+// 등수 글자 자리. 글자색은 리더보드 배지의 트로피 글리프 색 그대로다.
+const MEDAL_TEAM_BADGE: Record<1 | 2 | 3, string> = {
+  1: 'bg-[#FFE04D] text-[#5A4413]',
+  2: 'bg-[#CDCDCD] text-[#44464A]',
+  3: 'bg-[#B38A48] text-[#3F2D11]',
+};
 
 export function ScrimSessionRow({
   session,
@@ -163,36 +193,55 @@ export function ScrimSessionRow({
                       </div>
 
                       {groupParticipantsByTeam(sortByTeamRank(participants[match.pubgMatchId])).map(
-                        (team) => (
-                          <div
-                            key={team.teamId}
-                            className="overflow-hidden rounded-lg border border-white/10"
-                          >
-                            <div className="flex items-center gap-2 bg-white/[0.04] px-3 py-1.5 text-xs">
-                              <span className="font-bold text-foreground">{team.teamRank}위</span>
-                              <span className="text-menu">팀 {team.teamId}</span>
+                        (team) => {
+                          const medal = medalRank(team.teamRank);
+
+                          return (
+                            <div
+                              key={team.teamId}
+                              data-testid={`match-team-${team.teamId}`}
+                              className={`overflow-hidden rounded-lg border ${
+                                medal ? MEDAL_TEAM_BORDER[medal] : 'border-white/10'
+                              }`}
+                            >
+                              <div
+                                className={`flex items-center gap-2 px-3 py-1.5 text-xs ${
+                                  medal ? MEDAL_TEAM_HEADER[medal] : 'bg-white/[0.04]'
+                                }`}
+                              >
+                                <span
+                                  className={`font-bold ${
+                                    medal
+                                      ? `rounded px-1.5 py-0.5 ${MEDAL_TEAM_BADGE[medal]}`
+                                      : 'text-foreground'
+                                  }`}
+                                >
+                                  {team.teamRank}위
+                                </span>
+                                <span className="text-menu">팀 {team.teamId}</span>
+                              </div>
+                              <div className="divide-y divide-white/[0.06]">
+                                {team.players.map((p) => (
+                                  <div key={p.pubgIgn} className={`${TEAM_PLAYER_GRID} px-3 py-1.5 text-sm`}>
+                                    <span>
+                                      <span className="font-bold">{p.pubgIgn}</span>
+                                      {p.discordNickname && (
+                                        <span className="ml-2 text-xs text-menu">{p.discordNickname}</span>
+                                      )}
+                                    </span>
+                                    <span>{p.kills}</span>
+                                    <span>{p.assists}</span>
+                                    <span>{Math.round(p.damageDealt)}</span>
+                                    <span>{p.dbnos}</span>
+                                    <span>{p.headshotKills}</span>
+                                    <span>{formatSurvival(p.timeSurvived)}</span>
+                                    <span>{formatDistance(p.distance)}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                            <div className="divide-y divide-white/[0.06]">
-                              {team.players.map((p) => (
-                                <div key={p.pubgIgn} className={`${TEAM_PLAYER_GRID} px-3 py-1.5 text-sm`}>
-                                  <span>
-                                    <span className="font-bold">{p.pubgIgn}</span>
-                                    {p.discordNickname && (
-                                      <span className="ml-2 text-xs text-menu">{p.discordNickname}</span>
-                                    )}
-                                  </span>
-                                  <span>{p.kills}</span>
-                                  <span>{p.assists}</span>
-                                  <span>{Math.round(p.damageDealt)}</span>
-                                  <span>{p.dbnos}</span>
-                                  <span>{p.headshotKills}</span>
-                                  <span>{formatSurvival(p.timeSurvived)}</span>
-                                  <span>{formatDistance(p.distance)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ),
+                          );
+                        },
                       )}
                     </div>
                   )}
