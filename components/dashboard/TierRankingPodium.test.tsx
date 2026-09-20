@@ -161,8 +161,8 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     const row4 = screen.getByTestId('ranking-row-4');
     // 마우스를 올리면 뜨는 설명표(와 스크린리더용 글)가 횟수를 말한다.
     expect(badge(row4).textContent).toContain('내전 종합 1위 3회');
-    // 핀 그림 하나 + 설명표 안의 큰 그림 하나
-    expect(badge(row4).querySelectorAll('img')).toHaveLength(2);
+    // 표에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
+    expect(badge(row4).querySelectorAll('svg')).toHaveLength(2);
     expect(within(badge(row4)).getByText('3')).toBeInTheDocument();
   });
 
@@ -172,7 +172,7 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const row4 = screen.getByTestId('ranking-row-4');
-    expect(badge(row4).querySelectorAll('img')).toHaveLength(2);
+    expect(badge(row4).querySelectorAll('svg')).toHaveLength(2);
     expect(within(badge(row4)).getByText('11')).toBeInTheDocument();
     expect(badge(row4).textContent).toContain('내전 종합 1위 11회');
   });
@@ -184,7 +184,7 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const el = badge(screen.getByTestId('ranking-row-4'));
-    expect(within(el).getByTestId('badge-pin-scrimWin').className).toContain('group');
+    expect(el.className).toContain('group');
 
     const bubble = within(el).getByTestId('badge-tooltip-scrimWin');
     expect(bubble.className).toContain('group-hover:opacity-100');
