@@ -41,29 +41,32 @@ function toKstTime(iso: string): string {
 const TEAM_PLAYER_GRID =
   'grid grid-cols-[1fr_2.5rem_2.5rem_3.5rem_3.5rem_2.5rem_3.5rem_3.5rem] items-center gap-x-2';
 
-// 한 경기 안에서 1~3위 팀만 금·은·동으로 칠한다. 색 어법(옅은 그라디언트 +
-// 또렷한 테두리)은 클랜원 화면의 메달 칩(SessionStandingChips)과 같다.
+// 한 경기 안에서 1~3위 팀만 금·은·동으로 칠한다. 색은 리더보드 트로피 배지
+// (TierRankingPodium 의 TROPHY_COLORS)와 같은 금 #FFD365 · 은 #CDCDCD ·
+// 동 #B38A48 이다.
 //
-// 다만 동색은 칩보다 붉게 뺐다. 칩에는 메달 그림이 함께 있어 색이 비슷해도
-// 구분되지만, 여기는 얇은 테두리와 한 줄짜리 헤더뿐이라 칩의 황갈색
-// (192,143,78)을 그대로 쓰면 금색과 구분이 안 됐다. 금색도 노랑 쪽으로
-// 더 몰아서 둘 사이를 벌린다.
+// 리더보드는 배지를 그 색으로 꽉 채우지만 여기는 얇은 테두리와 한 줄짜리
+// 헤더뿐이라, 같은 색도 옅게 깔면 금과 동이 같은 황갈색으로 뭉갠다. 그래서
+// 등수 글자만 색을 꽉 채워(어두운 글씨 + 메달색 배경) 리더보드 배지처럼
+// 보여주고, 테두리·헤더는 그 색의 옅은 톤으로 받친다.
 const MEDAL_TEAM_BORDER: Record<1 | 2 | 3, string> = {
-  1: 'border-[rgba(255,206,60,0.75)]',
-  2: 'border-[rgba(215,215,218,0.55)]',
-  3: 'border-[rgba(198,96,48,0.75)]',
+  1: 'border-[rgba(255,211,101,0.55)]',
+  2: 'border-[rgba(205,205,205,0.5)]',
+  3: 'border-[rgba(179,138,72,0.6)]',
 };
 
 const MEDAL_TEAM_HEADER: Record<1 | 2 | 3, string> = {
-  1: 'bg-[linear-gradient(180deg,rgba(255,206,60,0.22),rgba(255,206,60,0.04))]',
-  2: 'bg-[linear-gradient(180deg,rgba(215,215,218,0.18),rgba(215,215,218,0.04))]',
-  3: 'bg-[linear-gradient(180deg,rgba(198,96,48,0.26),rgba(198,96,48,0.05))]',
+  1: 'bg-[linear-gradient(180deg,rgba(255,211,101,0.16),rgba(255,211,101,0.03))]',
+  2: 'bg-[linear-gradient(180deg,rgba(205,205,205,0.14),rgba(205,205,205,0.03))]',
+  3: 'bg-[linear-gradient(180deg,rgba(179,138,72,0.16),rgba(179,138,72,0.03))]',
 };
 
-const MEDAL_TEAM_TEXT: Record<1 | 2 | 3, string> = {
-  1: 'text-[#FFD34A]',
-  2: 'text-[#E4E4E6]',
-  3: 'text-[#E8834F]',
+// 등수 글자 자리. 배경색은 리더보드 배지 색 그대로, 글자색은 그 배지의
+// 트로피 글리프 색 그대로다.
+const MEDAL_TEAM_BADGE: Record<1 | 2 | 3, string> = {
+  1: 'bg-[#FFD365] text-[#5A4413]',
+  2: 'bg-[#CDCDCD] text-[#44464A]',
+  3: 'bg-[#B38A48] text-[#3F2D11]',
 };
 
 export function ScrimSessionRow({
@@ -206,7 +209,11 @@ export function ScrimSessionRow({
                                 }`}
                               >
                                 <span
-                                  className={`font-bold ${medal ? MEDAL_TEAM_TEXT[medal] : 'text-foreground'}`}
+                                  className={`font-bold ${
+                                    medal
+                                      ? `rounded px-1.5 py-0.5 ${MEDAL_TEAM_BADGE[medal]}`
+                                      : 'text-foreground'
+                                  }`}
                                 >
                                   {team.teamRank}위
                                 </span>
