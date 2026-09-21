@@ -16,6 +16,16 @@ const DEFAULT_STROKE = 'rgba(255,211,101,0.45)';
 
 export const HEX_INNER_RATIO = '72%';
 
+/**
+ * 모든 뱃지가 쓰는 한 변 길이. **rem 으로 고정**한다 — em 으로 두면 뱃지가
+ * 놓인 자리의 글자 크기를 따라가서, 같은 줄의 트로피(14px 기준 30.8px)와
+ * 스타일 뱃지(16px 기준 35.2px)가 서로 다른 크기로 그려졌다.
+ */
+export const BADGE_SIZE = '2.1rem';
+
+/** 클랜원 상세처럼 칸이 넉넉한 곳. */
+export const BADGE_SIZE_LARGE = '3.4rem';
+
 export function HexFrame({
   size,
   stroke = DEFAULT_STROKE,

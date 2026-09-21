@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { BadgeMedal, PlaystyleBadgeKind } from '@/lib/playstyleBadges';
 import { BADGE_COPY, badgeImage } from './badgeCatalog';
 import { BadgeTooltip } from './BadgeTooltip';
-import { HexFrame } from './HexFrame';
+import { BADGE_SIZE, HexFrame } from './HexFrame';
 
 /**
  * 그림 한 장짜리 뱃지 — 얇은 육각 테두리 안에 그림, 올리면 설명표.
@@ -13,7 +13,7 @@ import { HexFrame } from './HexFrame';
 export interface BadgePinProps {
   badge: PlaystyleBadgeKind;
   medal: BadgeMedal;
-  /** 뱃지 한 변(=육각형 높이). 글자 크기에 맞추려면 '2.2em' 같은 값도 된다. */
+  /** 뱃지 한 변(=육각형 높이). 기본값은 모든 뱃지가 공유하는 크기다. */
   size?: string;
   /** 설명표 맨 아래 줄 — 이 뱃지를 왜 받았는지. */
   detail?: ReactNode;
@@ -48,7 +48,7 @@ function Artwork({
   );
 }
 
-export function BadgePin({ badge, medal, size = '2.2em', detail }: BadgePinProps) {
+export function BadgePin({ badge, medal, size = BADGE_SIZE, detail }: BadgePinProps) {
   const copy = BADGE_COPY[badge];
 
   return (

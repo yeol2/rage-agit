@@ -4,7 +4,7 @@ import { useId, type ReactNode } from 'react';
 import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
 import { BadgeTooltip } from '@/components/badges/BadgeTooltip';
 import { BADGE_COPY } from '@/components/badges/badgeCatalog';
-import { HexFrame } from '@/components/badges/HexFrame';
+import { BADGE_SIZE, HexFrame } from '@/components/badges/HexFrame';
 
 /**
  * 내전우승 뱃지 — 트로피 하나에 횟수를 숫자로 겹쳐 얹는다.
@@ -32,13 +32,11 @@ export interface WinBadgeProps {
    * 보인다. 기본값은 카드·표 줄에 공통으로 쓰는 그래파이트다.
    */
   chipColor?: string;
+  /** 뱃지 한 변. 다른 뱃지와 같은 값을 써야 한 줄에서 크기가 안 어긋난다. */
+  size?: string;
 }
 
 const DEFAULT_CHIP_COLOR = '#1B1B23';
-
-// 다른 뱃지(BadgePin)의 기본값과 같은 한 변 길이 — 나란히 놓았을 때 틀 크기가
-// 어긋나지 않게 한 곳에서 맞춘다.
-const BADGE_SIZE = '2.2em';
 
 function Trophy({ gradientId }: { gradientId: string }) {
   return (
@@ -63,6 +61,7 @@ export function WinBadge({
   className = '',
   none = null,
   chipColor = DEFAULT_CHIP_COLOR,
+  size = BADGE_SIZE,
 }: WinBadgeProps) {
   // 같은 문서에 이 뱃지가 수십 개 깔리므로 그라디언트 id 가 겹치면 안 된다.
   const goldId = `win-gold-${useId().replace(/:/g, '')}`;
@@ -74,7 +73,7 @@ export function WinBadge({
       className={`group relative inline-flex w-fit shrink-0 items-center justify-center ${className}`}
       data-testid="win-badge"
     >
-      <HexFrame size={BADGE_SIZE}>
+      <HexFrame size={size}>
         <span className="relative inline-flex h-full items-center justify-center">
           <Trophy gradientId={goldId} />
 

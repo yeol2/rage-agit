@@ -855,7 +855,6 @@ export function TierRankingPodium({
                           />
                           <PlaystyleBadges
                             holders={playstyleBadges?.get(member.memberId) ?? []}
-                            size="2.2em"
                           />
                         </div>
                       </>
@@ -1042,7 +1041,6 @@ export function TierRankingPodium({
                           />
                           <PlaystyleBadges
                             holders={playstyleBadges?.get(member.memberId) ?? []}
-                            size="2.2em"
                           />
                         </span>
                         <span className="text-right tabular-nums">

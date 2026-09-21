@@ -1,4 +1,5 @@
 import { WinBadge } from '@/components/WinBadge';
+import { BADGE_SIZE_LARGE } from '@/components/badges/HexFrame';
 
 // 클랜원 상세 화면 이름 아래의 내전우승 뱃지.
 //
@@ -15,7 +16,7 @@ export function WinTrophies({ count }: { count: number }) {
   return (
     <p className="mt-3 flex items-center justify-center gap-1.5 text-sm text-menu">
       {/* 칸이 넉넉한 화면이라 표(22px)보다 크게 단다. */}
-      <WinBadge count={count} className="text-[24px]" chipColor="#231F2B" />
+      <WinBadge count={count} size={BADGE_SIZE_LARGE} className="text-[24px]" chipColor="#231F2B" />
       <span>내전우승</span>
     </p>
   );

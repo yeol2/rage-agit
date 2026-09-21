@@ -1,5 +1,6 @@
 import type { BadgeMedal, PlaystyleBadgeHolder } from '@/lib/playstyleBadges';
 import { BadgePin } from './BadgePin';
+import { BADGE_SIZE } from './HexFrame';
 
 /**
  * 한 사람이 단 플레이 스타일 뱃지들.
@@ -22,7 +23,7 @@ export function playstyleBadgeDetail(holder: PlaystyleBadgeHolder): string {
 
 export function PlaystyleBadges({
   holders,
-  size = '2.2em',
+  size = BADGE_SIZE,
 }: {
   holders: PlaystyleBadgeHolder[];
   size?: string;
