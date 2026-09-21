@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MIN_DBNOS_FOR_PLAYSTYLE_BADGE,
   MIN_GAMES_FOR_PLAYSTYLE_BADGE,
-  MIN_KILLS_FOR_PLAYSTYLE_BADGE,
   badgesByMember,
-  baselineOf,
+  damagePerKillOf,
   pickPlaystyleBadges,
   type PlaystyleStatsRow,
 } from './playstyleBadges';
@@ -14,14 +12,13 @@ function row(over: Partial<PlaystyleStatsRow> & { memberId: string }): Playstyle
     tier: 3,
     gameCount: MIN_GAMES_FOR_PLAYSTYLE_BADGE,
     totalKills: 40,
-    totalDbnos: 40,
     totalDamage: 8000, // 킬당 200
     ...over,
   };
 }
 
-// 기준선을 200딜/킬, 1.00킬/기절로 만드는 평범한 사람들. 여기에 극단적인
-// 사람을 한둘 섞어서 누가 뽑히는지 본다.
+// 기준선을 킬당 200딜로 만드는 평범한 사람들. 여기에 극단적인 사람을 섞어서
+// 누가 뽑히는지 본다.
 const crowd = Array.from({ length: 8 }, (_, i) => row({ memberId: `plain-${i}` }));
 
 const kindsOf = (rows: PlaystyleStatsRow[], kind: string) =>
@@ -29,11 +26,9 @@ const kindsOf = (rows: PlaystyleStatsRow[], kind: string) =>
     .filter((h) => h.kind === kind)
     .map((h) => `${h.medal}:${h.memberId}`);
 
-describe('baselineOf', () => {
+describe('damagePerKillOf', () => {
   it('합계 대 합계로 기준선을 만든다', () => {
-    const base = baselineOf(crowd);
-    expect(base.damagePerKill).toBeCloseTo(200, 5);
-    expect(base.killsPerDbno).toBeCloseTo(1, 5);
+    expect(damagePerKillOf(crowd)).toBeCloseTo(200, 5);
   });
 });
 
@@ -59,26 +54,11 @@ describe('pickPlaystyleBadges', () => {
     expect(kindsOf(rows, 'killFarmer')).toEqual(['1:sniper', '2:mid', '3:slight']);
   });
 
-  it('실속 없는 사람은 기절 대비 킬이 모자란 순으로 금·은·동', () => {
-    const rows = [
-      ...crowd,
-      row({ memberId: 'worst', totalDbnos: 80 }), // 40킬인데 80번 눕힘
-      row({ memberId: 'bad', totalDbnos: 70 }),
-      row({ memberId: 'meh', totalDbnos: 60 }),
-    ];
-    expect(kindsOf(rows, 'hollow')).toEqual(['1:worst', '2:bad', '3:meh']);
-  });
-
-  it('딜은 적은데 킬이 더 적은 사람은 딜딸러가 아니다', () => {
-    // 비율(킬당 딜량)로 뽑던 시절의 1위가 이런 사람이었다 — 딜 하위권인데
-    // 킬이 더 없어서 비율만 컸다. 경기당 절대량으로 재면 올라오지 못한다.
-    const rows = [
-      ...crowd,
-      row({ memberId: 'quiet', totalKills: 20, totalDamage: 5000 }), // 킬당 250
-      row({ memberId: 'loud', totalDamage: 12000 }), // 킬당 300, 딜도 많다
-    ];
-    expect(kindsOf(rows, 'damageFarmer')[0]).toBe('1:loud');
-    expect(kindsOf(rows, 'damageFarmer')).not.toContain('1:quiet');
+  it('딜도 킬도 많은 사람이라도 기준에 맞으면 받는다', () => {
+    // "킬에 비해 딜을 많이 쳤다"가 정의의 전부다. 잘하는 사람을 막으려고
+    // 반대쪽 조건(킬이 중앙값 이하 같은)을 걸지 않는다.
+    const rows = [...crowd, row({ memberId: 'ace', totalKills: 80, totalDamage: 20000 })];
+    expect(kindsOf(rows, 'damageFarmer')[0]).toBe('1:ace');
   });
 
   it('딜딸러와 킬딸러는 한 값의 양 끝이라 한 사람이 둘 다 달 수 없다', () => {
@@ -89,69 +69,44 @@ describe('pickPlaystyleBadges', () => {
     expect(kinds).not.toContain('killFarmer');
   });
 
-  it('표본이 모자라면 아무리 극단적이어도 후보가 아니다', () => {
+  it('티어 그룹마다 따로 뽑고, 기준선도 그룹 안에서 다시 잡는다', () => {
+    // 두 그룹이 서로 다른 "보통"을 갖는다 — 0~1.5 는 킬당 400딜이 보통이라
+    // 킬당 300딜인 사람은 딜이 오히려 모자라지만, 3~3.5 에서는 딜딸러다.
+    const rich = Array.from({ length: 4 }, (_, i) =>
+      row({ memberId: `rich-${i}`, tier: 1, totalDamage: 16000 }),
+    );
+    const rows = [
+      ...crowd, // 3티어, 킬당 200
+      ...rich, // 1티어, 킬당 400
+      row({ memberId: 'mid-rich', tier: 1, totalDamage: 12000 }), // 킬당 300
+      row({ memberId: 'mid-poor', tier: 3, totalDamage: 12000 }), // 킬당 300
+    ];
+    const holders = pickPlaystyleBadges(rows).filter((h) => h.kind === 'damageFarmer');
+    expect(holders.find((h) => h.memberId === 'mid-poor')?.groupLabel).toBe('3~3.5티어');
+    expect(holders.map((h) => h.memberId)).not.toContain('mid-rich');
+  });
+
+  it('경기 수가 모자라면 아무리 극단적이어도 후보가 아니다', () => {
     const rookie = row({
       memberId: 'rookie',
       gameCount: MIN_GAMES_FOR_PLAYSTYLE_BADGE - 1,
       totalDamage: 99999,
     });
-    const fewKills = row({
-      memberId: 'few-kills',
-      totalKills: MIN_KILLS_FOR_PLAYSTYLE_BADGE - 1,
-      totalDamage: 99999,
-    });
-    const fewKnocks = row({
-      memberId: 'few-knocks',
-      totalDbnos: MIN_DBNOS_FOR_PLAYSTYLE_BADGE - 1,
-      totalKills: 1,
-    });
-    const rows = [...crowd, rookie, fewKills, fewKnocks];
-    const everyone = pickPlaystyleBadges(rows).map((h) => h.memberId);
-    expect(everyone).not.toContain('rookie');
-    expect(everyone).not.toContain('few-kills');
-    expect(everyone).not.toContain('few-knocks');
+    expect(pickPlaystyleBadges([...crowd, rookie]).map((h) => h.memberId)).not.toContain('rookie');
   });
 
-  it('딜도 킬도 최상위인 에이스는 킬딸러가 아니다', () => {
-    // 가드가 없던 판에서는 클랜 킬 1위·딜 2위인 사람이 킬딸러 금메달이었다.
-    // 딜이 중앙값 이하여야 한다는 조건이 그걸 막는다.
-    const rows = [
-      ...crowd,
-      row({ memberId: 'ace', totalKills: 90, totalDamage: 16000 }), // 딜도 킬도 최상위
-      row({ memberId: 'cheap', totalKills: 50, totalDamage: 6000 }), // 적은 딜로 킬
-    ];
-    const winners = kindsOf(rows, 'killFarmer');
-    expect(winners[0]).toBe('1:cheap');
-    expect(winners.join(' ')).not.toContain('ace');
-  });
-
-  it('눕히기를 별로 안 하는 사람은 실속 뱃지 후보가 아니다', () => {
-    const rows = [
-      ...crowd,
-      row({ memberId: 'quiet', totalKills: 20, totalDbnos: 25 }), // 기절 자체가 적다
-      row({ memberId: 'busy', totalKills: 40, totalDbnos: 70 }), // 많이 눕히고 못 끝냄
-    ];
-    expect(kindsOf(rows, 'hollow')[0]).toBe('1:busy');
+  it('통산 킬이 적어도 후보에서 빼지 않는다', () => {
+    // 킬 하한을 뒀다가 뺐다 — "킬에 비해 딜을 많이 쳤다"에 킬이 몇 개 이상이어야
+    // 한다는 조건은 없다. 킬이 거의 없으면 초과딜이 사실상 총딜이 된다.
+    const rows = [...crowd, row({ memberId: 'no-kills', totalKills: 2, totalDamage: 6000 })];
+    expect(kindsOf(rows, 'damageFarmer')[0]).toBe('1:no-kills');
   });
 
   it('기준선을 안 벗어난 사람에게는 메달을 안 준다', () => {
-    // 후보가 적은 그룹에서 이게 없으면 "기대보다 오히려 적게 한" 사람이
-    // 동메달을 받는다(실측: 0~1.5티어 킬딸러 동메달 −0.05킬).
-    const rows = [
-      ...crowd,
-      row({ memberId: 'over', totalDamage: 12000 }), // 기대보다 더 넣음
-    ];
-    const winners = kindsOf(rows, 'damageFarmer');
-    expect(winners).toEqual(['1:over']);
-  });
-
-  it('기준선을 벗어난 사람이 셋보다 적으면 있는 만큼만 준다', () => {
-    const rows = [
-      ...crowd,
-      row({ memberId: 'over-1', totalDamage: 12000 }),
-      row({ memberId: 'over-2', totalDamage: 10000 }),
-    ];
-    expect(kindsOf(rows, 'damageFarmer')).toEqual(['1:over-1', '2:over-2']);
+    // 후보가 적은 그룹에서 이게 없으면 "기대보다 오히려 모자란" 사람이 동메달을
+    // 받는다(실측: 0~1.5티어 킬딸러 동메달 −0.05킬).
+    const rows = [...crowd, row({ memberId: 'over', totalDamage: 12000 })];
+    expect(kindsOf(rows, 'damageFarmer')).toEqual(['1:over']);
   });
 
   it('후보가 아무도 없으면 아무 뱃지도 안 준다', () => {
@@ -161,8 +116,13 @@ describe('pickPlaystyleBadges', () => {
   it('값이 같으면 표본이 많은 쪽이 위다', () => {
     const rows = [
       ...crowd,
-      row({ memberId: 'veteran', gameCount: MIN_GAMES_FOR_PLAYSTYLE_BADGE * 3, totalKills: 120, totalDbnos: 120, totalDamage: 36000 }),
-      row({ memberId: 'rookie-ish', totalKills: 40, totalDbnos: 40, totalDamage: 12000 }),
+      row({
+        memberId: 'veteran',
+        gameCount: MIN_GAMES_FOR_PLAYSTYLE_BADGE * 3,
+        totalKills: 120,
+        totalDamage: 36000,
+      }),
+      row({ memberId: 'rookie-ish', totalKills: 40, totalDamage: 12000 }),
     ];
     // 둘 다 기대보다 경기당 같은 만큼(+250딜) 더 넣었다.
     expect(kindsOf(rows, 'damageFarmer')[0]).toBe('1:veteran');

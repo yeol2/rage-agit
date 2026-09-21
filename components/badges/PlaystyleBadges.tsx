@@ -23,9 +23,7 @@ export function playstyleBadgeDetail(holder: PlaystyleBadgeHolder): string {
   const evidence =
     holder.kind === 'damageFarmer'
       ? `기대보다 경기당 +${Math.round(holder.value)}딜`
-      : holder.kind === 'killFarmer'
-        ? `기대보다 경기당 +${holder.value.toFixed(2)}킬`
-        : `경기당 ${holder.value.toFixed(2)}킬 놓침`;
+      : `기대보다 경기당 +${holder.value.toFixed(2)}킬`;
   return `${holder.groupLabel} ${MEDAL_LABEL[holder.medal]} · ${evidence}`;
 }
 

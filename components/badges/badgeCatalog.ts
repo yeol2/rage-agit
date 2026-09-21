@@ -32,15 +32,10 @@ export const BADGE_COPY: Record<BadgeKey, BadgeCopy> = {
     name: '최강 킬딸러',
     description: '눕히는 건 팀원, 마무리는 내 몫이닭',
   },
-  hollow: {
-    name: '실속 없는 사람',
-    description: '밑 빠진 독에 기절 붓기',
-  },
 };
 
 /** 그림이 PNG 인 뱃지들(플레이 스타일 3종). */
 export const BADGE_IMAGE: Record<PlaystyleBadgeKind, string> = {
   damageFarmer: '/badges/damage-farmer.png',
   killFarmer: '/badges/kill-farmer.png',
-  hollow: '/badges/hollow.png',
 };
