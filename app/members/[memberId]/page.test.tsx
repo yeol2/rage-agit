@@ -141,11 +141,11 @@ describe('MemberDetailPage', () => {
     // 카드에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
     expect(badge.querySelectorAll('[data-testid="trophy-glyph"]')).toHaveLength(2);
     expect(within(badge).getByText('3')).toBeInTheDocument();
-    // 횟수는 뱃지가 말하므로 뱃지 옆 글자에는 숫자를 또 적지 않는다.
-    expect(badge.parentElement!.textContent!.endsWith('내전우승')).toBe(true);
+    // 뱃지 옆에 '내전우승' 같은 글자는 안 붙인다 — 올리면 설명표가 다 말한다.
+    expect(screen.queryByText('내전우승')).not.toBeInTheDocument();
   });
 
-  it('우승이 없으면 트로피 줄을 아예 안 그린다', async () => {
+  it('우승이 없으면 트로피를 아예 안 그린다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
@@ -153,7 +153,7 @@ describe('MemberDetailPage', () => {
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
-    expect(screen.queryByText(/내전우승/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('win-badge')).not.toBeInTheDocument();
   });
 
   it('우승이 아무리 많아도 트로피는 하나다', async () => {

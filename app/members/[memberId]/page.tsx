@@ -7,7 +7,7 @@ import { Hexagon } from '@/components/members/Hexagon';
 import { MemberDashboard } from '@/components/members/MemberDashboard';
 import { MapRecords } from '@/components/members/MapRecords';
 import { PartnerChemistry } from '@/components/members/PartnerChemistry';
-import { WinTrophies } from '@/components/members/WinTrophies';
+import { WinBadge } from '@/components/WinBadge';
 import { PlaystyleBadges } from '@/components/badges/PlaystyleBadges';
 import { BADGE_SIZE_LARGE } from '@/components/badges/HexFrame';
 import {
@@ -134,11 +134,10 @@ export default async function MemberDetailPage({
           <p className="mt-3">
             <TierBadge tier={member.tier} size="md" />
           </p>
-          <WinTrophies count={winCount} />
-
-          {/* 내전우승(기록) 다음에 별명 뱃지가 온다 — 둘 다 이름 아래 한 덩어리로
-              읽히는 자리지만, 우승은 성적이고 이쪽은 스타일이라 줄을 나눈다. */}
-          <div className="mt-3 flex justify-center gap-2">
+          {/* 뱃지는 티어 아래 한 줄에 가로로 늘어놓는다. 옆에 '내전우승' 같은
+              글자는 안 붙인다 — 뱃지에 마우스를 올리면 이름과 뜻이 다 나온다. */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <WinBadge count={winCount} size={BADGE_SIZE_LARGE} chipColor="#231F2B" className="text-[24px]" />
             <PlaystyleBadges holders={playstyleBadges.get(member.id) ?? []} size={BADGE_SIZE_LARGE} />
           </div>
 
