@@ -28,13 +28,13 @@ export const BADGE_COPY: Record<BadgeKey, BadgeCopy> = {
   },
   damageFarmer: {
     name: '딜딸의 신',
-    quip: '딜은 내가 다 넣었는데 킬은 남이 가져갔닭',
+    quip: '나 탄좀 줄래? 구상이랑 드링크도 주면 좋고',
     description:
       '같은 티어 그룹에서, 자기 킬 수로 기대되는 딜보다 경기당 가장 많이 더 넣은 세 명에게 줍니다.',
   },
   killFarmer: {
     name: '킬딸의 신',
-    quip: '눕히는 건 팀원, 마무리는 내 몫이닭',
+    quip: '어~ 눕히느라 고생했고 확킬은 내가 먹을게',
     description:
       '같은 티어 그룹에서, 자기 딜량으로 기대되는 킬보다 경기당 가장 많이 더 챙긴 세 명에게 줍니다.',
   },
