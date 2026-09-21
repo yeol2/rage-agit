@@ -13,11 +13,13 @@ export interface BadgePinProps {
   size?: string;
   /** 설명표 맨 아래 줄 — 이 뱃지를 왜 받았는지. */
   detail?: ReactNode;
+  /** 테두리 색 — 금·은·동을 여기서 말한다. */
+  stroke?: string;
 }
 
-function Artwork({ badge, size }: { badge: PlaystyleBadgeKind; size: string }) {
+function Artwork({ badge, size, stroke }: { badge: PlaystyleBadgeKind; size: string; stroke?: string }) {
   return (
-    <HexFrame size={size}>
+    <HexFrame size={size} stroke={stroke}>
       {/* eslint-disable-next-line @next/next/no-img-element -- 목록 안 작은 아이콘이라 next/image 의 최적화가 이득이 없다 */}
       <img
         src={BADGE_IMAGE[badge]}
@@ -30,7 +32,7 @@ function Artwork({ badge, size }: { badge: PlaystyleBadgeKind; size: string }) {
   );
 }
 
-export function BadgePin({ badge, size = '2.2em', detail }: BadgePinProps) {
+export function BadgePin({ badge, size = '2.2em', detail, stroke }: BadgePinProps) {
   const copy = BADGE_COPY[badge];
 
   return (
@@ -38,14 +40,14 @@ export function BadgePin({ badge, size = '2.2em', detail }: BadgePinProps) {
       className="group relative inline-flex w-fit shrink-0 items-center justify-center"
       data-testid={`badge-pin-${badge}`}
     >
-      <Artwork badge={badge} size={size} />
+      <Artwork badge={badge} size={size} stroke={stroke} />
 
       <BadgeTooltip
         testId={`badge-tooltip-${badge}`}
         name={copy.name}
         description={copy.description}
         detail={detail}
-        artwork={<Artwork badge={badge} size="3rem" />}
+        artwork={<Artwork badge={badge} size="3rem" stroke={stroke} />}
       />
     </span>
   );

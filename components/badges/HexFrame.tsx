@@ -12,9 +12,20 @@ import type { ReactNode } from 'react';
  */
 const HEX_POINTS = '50,1.5 93.5,26.2 93.5,73.8 50,98.5 6.5,73.8 6.5,26.2';
 
+const DEFAULT_STROKE = 'rgba(255,211,101,0.45)';
+
 export const HEX_INNER_RATIO = '72%';
 
-export function HexFrame({ size, children }: { size: string; children: ReactNode }) {
+export function HexFrame({
+  size,
+  stroke = DEFAULT_STROKE,
+  children,
+}: {
+  size: string;
+  /** 테두리 색. 금·은·동 뱃지는 메달 색을 넣는다. */
+  stroke?: string;
+  children: ReactNode;
+}) {
   return (
     <span
       className="relative inline-flex shrink-0 items-center justify-center"
@@ -24,7 +35,7 @@ export function HexFrame({ size, children }: { size: string; children: ReactNode
         <polygon
           points={HEX_POINTS}
           fill="none"
-          stroke="rgba(255,211,101,0.45)"
+          stroke={stroke}
           strokeWidth="1"
           vectorEffect="non-scaling-stroke"
           strokeLinejoin="round"
