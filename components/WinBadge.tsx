@@ -73,21 +73,22 @@ export function WinBadge({
       className={`group relative inline-flex w-fit shrink-0 items-center justify-center ${className}`}
       data-testid="win-badge"
     >
-      <HexFrame size={size}>
-        <span className="relative inline-flex h-full items-center justify-center">
+      {/* 횟수는 육각형 **맨 아래 꼭짓점**에 걸쳐 놓는다. 예전엔 트로피 몸통
+          위에 얹었는데, 틀이 생기고 나서는 그림 한가운데를 가려서 트로피가
+          무엇인지 잘 안 보였다. */}
+      <span className="relative inline-flex">
+        <HexFrame size={size}>
           <Trophy gradientId={goldId} />
+        </HexFrame>
 
-          {/* 트로피 몸통 아래쪽에 얹는다. 받침 위에서 멈춰서 받침은 그대로 보이고,
-              숫자는 트로피 안쪽에 박힌 것처럼 읽힌다. */}
-          <span
-            aria-hidden="true"
-            className="absolute bottom-0 left-1/2 min-w-[1.15em] -translate-x-1/2 -translate-y-[16%] rounded-full px-[0.22em] text-center text-[0.72em] font-bold leading-[1.35] tabular-nums text-[#FFD365]"
-            style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
-          >
-            {count}
-          </span>
+        <span
+          aria-hidden="true"
+          className="absolute bottom-0 left-1/2 min-w-[1.3em] -translate-x-1/2 translate-y-[38%] rounded-full px-[0.3em] text-center text-[0.68em] font-bold leading-[1.45] tabular-nums text-[#FFD365]"
+          style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
+        >
+          {count}
         </span>
-      </HexFrame>
+      </span>
 
       <BadgeTooltip
         testId="badge-tooltip-scrimWin"
