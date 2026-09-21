@@ -1,15 +1,13 @@
-import type { PlaystyleBadgeKind } from '@/lib/playstyleBadges';
+import type { BadgeMedal, PlaystyleBadgeKind } from '@/lib/playstyleBadges';
 
 /**
- * 뱃지 도감 — 이름·설명을 한 곳에 모은다.
+ * 뱃지 도감 — 이름·설명·그림을 한 곳에 모은다.
  *
  * 뱃지는 두 화면(리더보드·클랜원 상세)에 붙고 설명표도 같이 뜬다. 문구가
  * 화면마다 흩어지면 하나를 고칠 때 다른 하나가 남는다.
  *
- * 그림은 뱃지마다 종류가 다르다 — 플레이 스타일 뱃지는 핀 사진(PNG, public/badges),
- * 내전우승은 트로피 글리프(SVG, components/TrophyGlyph.tsx)다. 그래서 그림은
- * 여기 모으지 않고 각자 자기 컴포넌트가 그린다. 틀(육각형 같은 것)은 씌우지
- * 않는다 — 22px 칸에서는 틀이 자리를 다 먹어 정작 그림이 안 보인다.
+ * 내전우승 트로피만 그림이 SVG 라 여기 없다(components/TrophyGlyph.tsx) —
+ * 횟수 숫자를 얹어야 해서 처음부터 벡터로 그렸다.
  */
 export type BadgeKey = 'scrimWin' | PlaystyleBadgeKind;
 
@@ -34,8 +32,14 @@ export const BADGE_COPY: Record<BadgeKey, BadgeCopy> = {
   },
 };
 
-/** 그림이 PNG 인 뱃지들(플레이 스타일 3종). */
-export const BADGE_IMAGE: Record<PlaystyleBadgeKind, string> = {
-  damageFarmer: '/badges/damage-farmer.png',
-  killFarmer: '/badges/kill-farmer.png',
-};
+/**
+ * 그림은 메달마다 한 벌씩이다 — 테두리만 금은동이면 작은 크기(표에서 30px)에서
+ * 그 선이 거의 안 보여 셋이 같은 뱃지로 읽힌다. 에나멜 색까지 바꾸면 멀리서도
+ * 갈린다.
+ */
+const MEDAL_FILE: Record<BadgeMedal, string> = { 1: 'gold', 2: 'silver', 3: 'bronze' };
+
+export function badgeImage(kind: PlaystyleBadgeKind, medal: BadgeMedal): string {
+  const file = kind === 'damageFarmer' ? 'damage-farmer' : 'kill-farmer';
+  return `/badges/${file}-${MEDAL_FILE[medal]}.png`;
+}
