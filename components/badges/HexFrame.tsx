@@ -12,7 +12,8 @@ import type { ReactNode } from 'react';
  */
 const HEX_POINTS = '50,1.5 93.5,26.2 93.5,73.8 50,98.5 6.5,73.8 6.5,26.2';
 
-const DEFAULT_STROKE = 'rgba(255,211,101,0.45)';
+// 내전우승 트로피가 쓰는 기본 선 — 금메달 뱃지와 같은 밝은 금색이다.
+const DEFAULT_STROKE = '#FFE49A';
 
 export const HEX_INNER_RATIO = '72%';
 

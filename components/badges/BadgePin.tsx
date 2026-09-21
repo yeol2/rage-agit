@@ -19,10 +19,15 @@ export interface BadgePinProps {
   detail?: ReactNode;
 }
 
+/**
+ * 테두리 — 그림과 같은 메달색이되 한 톤 밝게, 불투명하게 쓴다. 얇은 선이라
+ * 그림과 같은 밝기로 두면 배경에 묻혀서 금은동이 안 읽힌다.
+ * (시상대 트로피 배지색 #FFD365 / #CDCDCD / #B38A48 을 밝기만 올린 값)
+ */
 const MEDAL_STROKE: Record<BadgeMedal, string> = {
-  1: 'rgba(255,211,101,0.8)',
-  2: 'rgba(205,205,205,0.75)',
-  3: 'rgba(179,138,72,0.85)',
+  1: '#FFE49A',
+  2: '#E8E8E8',
+  3: '#D8A85F',
 };
 
 function Artwork({
