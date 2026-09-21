@@ -264,6 +264,8 @@ describe('TierRankingPodium — 등수 변화', () => {
                   groupId: '0-1.5',
                   groupLabel: '0~1.5티어',
                   value: 57,
+                  damagePerKill: 243,
+                  groupDamagePerKill: 186,
                 },
               ],
             ],
@@ -274,6 +276,9 @@ describe('TierRankingPodium — 등수 변화', () => {
 
     const slot1 = screen.getByTestId('podium-slot-1');
     expect(within(slot1).getByTestId('badge-pin-damageFarmer')).toBeInTheDocument();
-    expect(within(slot1).getByText('0~1.5티어 금메달 · 기대보다 경기당 +57딜')).toBeInTheDocument();
+    expect(within(slot1).getByText('0~1.5티어 금메달')).toBeInTheDocument();
+    expect(
+      within(slot1).getByText('킬당 데미지 243 (그룹 평균 186) · 기대보다 경기당 +57딜'),
+    ).toBeInTheDocument();
   });
 });

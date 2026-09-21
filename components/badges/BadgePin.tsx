@@ -15,8 +15,10 @@ export interface BadgePinProps {
   medal: BadgeMedal;
   /** 뱃지 한 변(=육각형 높이). 기본값은 모든 뱃지가 공유하는 크기다. */
   size?: string;
-  /** 설명표 맨 아래 줄 — 이 뱃지를 왜 받았는지. */
-  detail?: ReactNode;
+  /** 설명표의 메달 줄 — "3~3.5티어 금메달". */
+  medalLine?: ReactNode;
+  /** 설명표 맨 아랫줄의 뚜렷한 수치. */
+  statLine?: ReactNode;
 }
 
 /**
@@ -53,7 +55,7 @@ function Artwork({
   );
 }
 
-export function BadgePin({ badge, medal, size = BADGE_SIZE, detail }: BadgePinProps) {
+export function BadgePin({ badge, medal, size = BADGE_SIZE, medalLine, statLine }: BadgePinProps) {
   const copy = BADGE_COPY[badge];
 
   return (
@@ -66,9 +68,11 @@ export function BadgePin({ badge, medal, size = BADGE_SIZE, detail }: BadgePinPr
       <BadgeTooltip
         testId={`badge-tooltip-${badge}`}
         name={copy.name}
+        quip={copy.quip}
         description={copy.description}
-        detail={detail}
-        artwork={<Artwork badge={badge} medal={medal} size="3rem" />}
+        medalLine={medalLine}
+        statLine={statLine}
+        artwork={<Artwork badge={badge} medal={medal} size="4.5rem" />}
       />
     </span>
   );

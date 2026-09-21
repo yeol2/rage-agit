@@ -74,6 +74,10 @@ export interface PlaystyleBadgeHolder {
   groupLabel: string;
   /** 기준선에서 벗어난 정도(경기당). 딜딸러는 딜, 킬딸러는 킬 단위다. */
   value: number;
+  /** 본인 킬당 딜량 — 설명표가 보여주는 "뚜렷한 수치"다. */
+  damagePerKill: number;
+  /** 그 구간의 기준선(킬 하나 = 딜 얼마). 본인 값과 나란히 보여준다. */
+  groupDamagePerKill: number;
 }
 
 /** 한 구간의 합계로 만든 기준선 — 킬 하나에 딜 얼마. */
@@ -146,6 +150,8 @@ export function pickPlaystyleBadges(rows: PlaystyleStatsRow[]): PlaystyleBadgeHo
             groupId: group.id,
             groupLabel: group.label,
             value,
+            damagePerKill: row.totalKills > 0 ? row.totalDamage / row.totalKills : 0,
+            groupDamagePerKill: damagePerKill,
           });
         });
     }

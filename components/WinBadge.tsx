@@ -92,10 +92,11 @@ export function WinBadge({
       <BadgeTooltip
         testId="badge-tooltip-scrimWin"
         name={BADGE_COPY.scrimWin.name}
+        quip={BADGE_COPY.scrimWin.quip}
         description={BADGE_COPY.scrimWin.description}
-        detail={`내전 종합 1위 ${count}회`}
+        statLine={`내전 종합 1위 ${count}회`}
         artwork={
-          <HexFrame size="3rem">
+          <HexFrame size="4.5rem">
             <Trophy gradientId={`${goldId}-big`} />
           </HexFrame>
         }
