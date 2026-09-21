@@ -7,6 +7,10 @@ import type { ReactNode } from 'react';
  * (표에서 34px)에서는 그림만으로 무슨 뱃지인지 알 수 없어서, 여기서는 그림을
  * 크게 다시 보여주고 이름과 뜻을 같이 적는다.
  *
+ * 층수(z-70)는 메뉴바(z-60)보다 위다 — 클랜원 화면의 뱃지는 화면 위쪽에 있어서
+ * 설명표가 메뉴바·관리자 안내줄 뒤로 들어가 가려졌다. 설명표는 잠깐 떴다 사라지는
+ * 것이라 무엇 위에 얹혀도 길을 막지 않는다.
+ *
  * 여는 것은 CSS 뿐이다(group-hover). 상태를 두면 표 수십 줄에 리렌더가 번진다.
  * 위로 펴는 이유는 리더보드 물음표 말풍선과 같다 — 아래로 펴면 바로 다음 줄을
  * 가린다.
@@ -49,7 +53,7 @@ export function BadgeTooltip({
       <span
         role="tooltip"
         data-testid={testId}
-        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 flex w-max max-w-[17rem] -translate-x-1/2 flex-col items-center rounded-xl border border-white/10 px-4 py-3 text-center opacity-0 shadow-xl transition-opacity group-hover:opacity-100"
+        className="pointer-events-none absolute bottom-full left-1/2 z-[70] mb-2 flex w-max max-w-[17rem] -translate-x-1/2 flex-col items-center rounded-xl border border-white/10 px-4 py-3 text-center opacity-0 shadow-xl transition-opacity group-hover:opacity-100"
         style={{ background: TOOLTIP_BG }}
       >
         <b className="text-sm font-bold leading-tight text-foreground">[{name}]</b>
