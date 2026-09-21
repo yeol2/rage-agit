@@ -4,13 +4,14 @@ import {
   MIN_GAMES_FOR_PLAYSTYLE_BADGE,
   MIN_KILLS_FOR_PLAYSTYLE_BADGE,
   badgesByMember,
-  clanBaseline,
+  baselineOf,
   pickPlaystyleBadges,
   type PlaystyleStatsRow,
 } from './playstyleBadges';
 
 function row(over: Partial<PlaystyleStatsRow> & { memberId: string }): PlaystyleStatsRow {
   return {
+    tier: 3,
     gameCount: MIN_GAMES_FOR_PLAYSTYLE_BADGE,
     totalKills: 40,
     totalDbnos: 40,
@@ -28,9 +29,9 @@ const kindsOf = (rows: PlaystyleStatsRow[], kind: string) =>
     .filter((h) => h.kind === kind)
     .map((h) => `${h.medal}:${h.memberId}`);
 
-describe('clanBaseline', () => {
+describe('baselineOf', () => {
   it('합계 대 합계로 기준선을 만든다', () => {
-    const base = clanBaseline(crowd);
+    const base = baselineOf(crowd);
     expect(base.damagePerKill).toBeCloseTo(200, 5);
     expect(base.killsPerDbno).toBeCloseTo(1, 5);
   });
@@ -133,9 +134,24 @@ describe('pickPlaystyleBadges', () => {
     expect(kindsOf(rows, 'hollow')[0]).toBe('1:busy');
   });
 
-  it('후보가 셋보다 적으면 있는 만큼만 준다', () => {
-    const two = [row({ memberId: 'a' }), row({ memberId: 'b', totalDamage: 9000 })];
-    expect(kindsOf(two, 'damageFarmer')).toHaveLength(2);
+  it('기준선을 안 벗어난 사람에게는 메달을 안 준다', () => {
+    // 후보가 적은 그룹에서 이게 없으면 "기대보다 오히려 적게 한" 사람이
+    // 동메달을 받는다(실측: 0~1.5티어 킬딸러 동메달 −0.05킬).
+    const rows = [
+      ...crowd,
+      row({ memberId: 'over', totalDamage: 12000 }), // 기대보다 더 넣음
+    ];
+    const winners = kindsOf(rows, 'damageFarmer');
+    expect(winners).toEqual(['1:over']);
+  });
+
+  it('기준선을 벗어난 사람이 셋보다 적으면 있는 만큼만 준다', () => {
+    const rows = [
+      ...crowd,
+      row({ memberId: 'over-1', totalDamage: 12000 }),
+      row({ memberId: 'over-2', totalDamage: 10000 }),
+    ];
+    expect(kindsOf(rows, 'damageFarmer')).toEqual(['1:over-1', '2:over-2']);
   });
 
   it('후보가 아무도 없으면 아무 뱃지도 안 준다', () => {

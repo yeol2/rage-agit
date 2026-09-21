@@ -26,7 +26,7 @@ export function playstyleBadgeDetail(holder: PlaystyleBadgeHolder): string {
       : holder.kind === 'killFarmer'
         ? `기대보다 경기당 +${holder.value.toFixed(2)}킬`
         : `경기당 ${holder.value.toFixed(2)}킬 놓침`;
-  return `${MEDAL_LABEL[holder.medal]} · ${evidence}`;
+  return `${holder.groupLabel} ${MEDAL_LABEL[holder.medal]} · ${evidence}`;
 }
 
 export function PlaystyleBadges({
