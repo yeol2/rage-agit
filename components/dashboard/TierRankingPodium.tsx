@@ -1006,7 +1006,11 @@ export function TierRankingPodium({
                             setExpandedMemberId(expanded ? null : member.memberId);
                           }
                         }}
-                        className={`${rankingGrid} cursor-pointer rounded-xl px-4 py-2.5 outline-none ring-white/20 focus-visible:ring-2 ${
+                        /* 줄 높이는 44px 로 못 박는다 — 뱃지를 키웠다고 표가
+                           길어지면 한 화면에 보이는 사람 수가 줄어든다. 위아래
+                           여백(py)을 줄여 뱃지가 커진 만큼을 내주고, 뱃지가 없는
+                           줄도 같은 높이를 유지하도록 min-h 로 바닥을 깐다. */
+                        className={`${rankingGrid} min-h-[44px] cursor-pointer rounded-xl px-4 py-1 outline-none ring-white/20 focus-visible:ring-2 ${
                           expanded ? 'rounded-b-none' : ''
                         }`}
                         style={{ background: RANKING_ROW_BG }}
