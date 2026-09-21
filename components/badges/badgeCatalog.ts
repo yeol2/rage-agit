@@ -24,19 +24,17 @@ export const BADGE_COPY: Record<BadgeKey, BadgeCopy> = {
   scrimWin: {
     name: '내전 우승',
     quip: '오늘 저녁은 치킨이닭!',
-    description: '내전에서 종합 1위를 한 횟수입니다.',
+    description: '내전 종합 1위',
   },
   damageFarmer: {
     name: '딜딸의 신',
     quip: '나 탄좀 줄래? 구상이랑 드링크도 주면 좋고',
-    description:
-      '같은 티어 그룹에서, 자기 킬 수로 기대되는 딜보다 경기당 가장 많이 더 넣은 세 명에게 줍니다.',
+    description: '같은 티어에서 킬 대비 딜이 가장 많은 사람',
   },
   killFarmer: {
     name: '킬딸의 신',
     quip: '어~ 눕히느라 고생했고 확킬은 내가 먹을게',
-    description:
-      '같은 티어 그룹에서, 자기 딜량으로 기대되는 킬보다 경기당 가장 많이 더 챙긴 세 명에게 줍니다.',
+    description: '같은 티어에서 딜 대비 킬이 가장 많은 사람',
   },
 };
 

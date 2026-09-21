@@ -96,7 +96,7 @@ export function WinBadge({
         description={BADGE_COPY.scrimWin.description}
         statLine={`내전 종합 1위 ${count}회`}
         artwork={
-          <HexFrame size="4.5rem">
+          <HexFrame size="6rem">
             <Trophy gradientId={`${goldId}-big`} />
           </HexFrame>
         }

@@ -11,6 +11,9 @@ import type { ReactNode } from 'react';
  * 위로 펴는 이유는 리더보드 물음표 말풍선과 같다 — 아래로 펴면 바로 다음 줄을
  * 가린다.
  *
+ * 스크린리더용 글을 따로 두지 않는다. 이 카드는 opacity 로만 감춰서 읽는 장치가
+ * 그대로 읽어가는데, 같은 말을 sr-only 로 한 벌 더 두면 두 번 읽힌다.
+ *
  * 그림은 뱃지마다 다른 종류다: 플레이 스타일 뱃지는 핀 사진(PNG), 내전우승은
  * 트로피 글리프(SVG). 그래서 src 가 아니라 **그려둔 것을 그대로 받는다**.
  */
@@ -61,10 +64,6 @@ export function BadgeTooltip({
         {statLine && (
           <span className="mt-1 text-[11px] leading-tight text-menu">{statLine}</span>
         )}
-      </span>
-
-      <span className="sr-only">
-        {name} — {quip} {description} {medalLine} {statLine}
       </span>
     </>
   );

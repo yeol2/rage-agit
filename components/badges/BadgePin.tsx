@@ -72,7 +72,7 @@ export function BadgePin({ badge, medal, size = BADGE_SIZE, medalLine, statLine 
         description={copy.description}
         medalLine={medalLine}
         statLine={statLine}
-        artwork={<Artwork badge={badge} medal={medal} size="4.5rem" />}
+        artwork={<Artwork badge={badge} medal={medal} size="6rem" />}
       />
     </span>
   );

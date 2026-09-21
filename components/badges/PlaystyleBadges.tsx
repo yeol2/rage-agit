@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { BadgeMedal, PlaystyleBadgeHolder } from '@/lib/playstyleBadges';
 import { BadgePin } from './BadgePin';
 import { BADGE_SIZE } from './HexFrame';
@@ -18,20 +19,28 @@ export function playstyleMedalLine(holder: PlaystyleBadgeHolder): string {
 }
 
 /**
- * 뚜렷한 수치 한 줄.
+ * 뚜렷한 수치 한 줄 — "킬 하나 따는 데 딜을 얼마나 쓰는가"를 티어 평균과 나란히
+ * 놓는다.
  *
- * 킬당 데미지를 그룹 기준선과 나란히 보여준다 — 뱃지를 준 계산 자체(경기당
- * 초과분)는 한눈에 안 들어오지만, "킬 하나에 몇 딜 쓰는 사람인가"는 자기
- * 전적으로 바로 검산된다. 뒤에 실제 계산값을 덧붙인다.
+ * 뱃지를 준 계산 자체는 경기당 초과분인데, 그 숫자는 한 번 더 설명해야 뜻이
+ * 통한다. 킬당 딜량은 자기 전적으로 바로 검산되고, 평균보다 많이 쓰면 딜딸,
+ * 적게 쓰면 킬딸이라는 것도 그 줄에서 바로 읽힌다.
  */
-export function playstyleStatLine(holder: PlaystyleBadgeHolder): string {
+export function playstyleStatLine(holder: PlaystyleBadgeHolder): ReactNode {
   const mine = Math.round(holder.damagePerKill);
   const base = Math.round(holder.groupDamagePerKill);
-  const extra =
-    holder.kind === 'damageFarmer'
-      ? `경기당 +${Math.round(holder.value)}딜`
-      : `경기당 +${holder.value.toFixed(2)}킬`;
-  return `킬당 데미지 ${mine} (그룹 평균 ${base}) · 기대보다 ${extra}`;
+  const gap = Math.abs(mine - base);
+  const direction = holder.kind === 'damageFarmer' ? '더 씁니다' : '적게 씁니다';
+
+  return (
+    <>
+      {/* 숫자를 먼저 한 줄로 보여주고, 그게 무슨 뜻인지는 아랫줄에서 푼다. */}
+      <span className="block font-bold text-foreground">1킬 당 {mine}딜</span>
+      <span className="block">
+        티어 평균(1킬당 {base}딜)보다 {gap}딜 {direction}
+      </span>
+    </>
+  );
 }
 
 export function PlaystyleBadges({
