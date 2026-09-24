@@ -1,13 +1,10 @@
-'use client';
-
-import { useId, type ReactNode } from 'react';
-import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
+import type { ReactNode } from 'react';
 import { BadgeTooltip } from '@/components/badges/BadgeTooltip';
 import { BADGE_COPY } from '@/components/badges/badgeCatalog';
 import { BADGE_SIZE, HexFrame } from '@/components/badges/HexFrame';
 
 /**
- * 내전우승 뱃지 — 트로피 하나에 횟수를 숫자로 겹쳐 얹는다.
+ * 내전우승 뱃지 — 트로피 하나에 횟수를 숫자로 붙인다.
  *
  * 예전에는 횟수만큼 트로피를 늘어놓았다. 우승이 쌓일수록 가로로 길어져서 4위
  * 이하 표에서는 뱃지 칸을 넘겼고(모바일 48px 칸은 4개부터 잘린다), 그걸 막으려고
@@ -15,21 +12,18 @@ import { BADGE_SIZE, HexFrame } from '@/components/badges/HexFrame';
  * 횟수와 무관하게 고정되고, 몇 번인지도 한눈에 읽힌다 — 트로피 여덟 개를 세는
  * 것보다 숫자 '8' 이 빠르다.
  *
- * 테두리는 다른 뱃지와 같은 얇은 육각(HexFrame)이다. 뱃지 칸에 여러 개가 깔릴 때
- * 하나만 틀이 없으면 그것만 떠 보인다.
- *
- * 크기는 바깥에서 글자 크기(className 의 text-*)로 정한다. 틀과 트로피, 숫자가
- * 모두 em 단위라 하나만 바꾸면 셋이 같은 비율로 커진다.
+ * 그림은 다른 뱃지와 같은 방식이다 — 배경을 지운 PNG 를 같은 육각 틀에 넣는다.
+ * 트로피만 SVG 글리프로 그리던 때는 같은 줄에서 재질이 혼자 달라 보였다.
  */
 export interface WinBadgeProps {
   count: number;
-  /** 크기를 정하는 곳. text-* 하나면 틀·트로피·숫자가 같이 커진다. */
+  /** 숫자 크기를 정하는 곳. 뱃지 자체 크기는 size 가 정한다. */
   className?: string;
   /** 우승이 0회일 때 대신 그릴 것. 표는 '-' 를 넣어 칸이 비어 보이지 않게 한다. */
   none?: ReactNode;
   /**
-   * 숫자 뒤 알약 색. 뒤에 깔린 배경과 같아야 트로피가 알약 뒤로 지나가는 것처럼
-   * 보인다. 기본값은 카드·표 줄에 공통으로 쓰는 그래파이트다.
+   * 숫자 뒤 알약 색. 뒤에 깔린 배경과 같아야 알약이 줄 위에 얹힌 것처럼 보인다.
+   * 기본값은 카드·표 줄에 공통으로 쓰는 그래파이트다.
    */
   chipColor?: string;
   /** 뱃지 한 변. 다른 뱃지와 같은 값을 써야 한 줄에서 크기가 안 어긋난다. */
@@ -38,21 +32,17 @@ export interface WinBadgeProps {
 
 const DEFAULT_CHIP_COLOR = '#1B1B23';
 
-function Trophy({ gradientId }: { gradientId: string }) {
+function Trophy() {
   return (
-    <svg
-      viewBox={TROPHY_VIEWBOX}
-      className="h-full w-auto"
-      data-testid="trophy-glyph"
-      aria-hidden
-    >
-      <defs>
-        <TrophyGoldGradient id={gradientId} />
-      </defs>
-      <g fill={`url(#${gradientId})`}>
-        <TrophyPaths />
-      </g>
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element -- 목록 안 작은 아이콘이라 next/image 의 최적화가 이득이 없다
+    <img
+      src="/badges/scrim-win.png"
+      alt=""
+      aria-hidden="true"
+      data-testid="trophy-art"
+      className="h-full w-full"
+      style={{ objectFit: 'contain' }}
+    />
   );
 }
 
@@ -63,9 +53,6 @@ export function WinBadge({
   chipColor = DEFAULT_CHIP_COLOR,
   size = BADGE_SIZE,
 }: WinBadgeProps) {
-  // 같은 문서에 이 뱃지가 수십 개 깔리므로 그라디언트 id 가 겹치면 안 된다.
-  const goldId = `win-gold-${useId().replace(/:/g, '')}`;
-
   if (count <= 0) return <>{none}</>;
 
   return (
@@ -73,12 +60,11 @@ export function WinBadge({
       className={`group relative inline-flex w-fit shrink-0 items-center justify-center ${className}`}
       data-testid="win-badge"
     >
-      {/* 횟수는 육각형 **맨 아래 꼭짓점**에 걸쳐 놓는다. 예전엔 트로피 몸통
-          위에 얹었는데, 틀이 생기고 나서는 그림 한가운데를 가려서 트로피가
-          무엇인지 잘 안 보였다. */}
+      {/* 횟수는 육각형 **맨 아래 꼭짓점**에 걸쳐 놓는다. 트로피 몸통 위에 얹으면
+          그림 한가운데를 가려서 무엇인지 잘 안 보인다. */}
       <span className="relative inline-flex">
         <HexFrame size={size}>
-          <Trophy gradientId={goldId} />
+          <Trophy />
         </HexFrame>
 
         <span
@@ -98,7 +84,7 @@ export function WinBadge({
         statLine={`내전 종합 1위 ${count}회`}
         artwork={
           <HexFrame size="6rem">
-            <Trophy gradientId={`${goldId}-big`} />
+            <Trophy />
           </HexFrame>
         }
       />

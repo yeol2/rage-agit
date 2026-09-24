@@ -139,7 +139,7 @@ describe('MemberDetailPage', () => {
 
     const badge = screen.getByTestId('win-badge');
     // 카드에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
-    expect(badge.querySelectorAll('[data-testid="trophy-glyph"]')).toHaveLength(2);
+    expect(badge.querySelectorAll('[data-testid="trophy-art"]')).toHaveLength(2);
     expect(within(badge).getByText('3')).toBeInTheDocument();
     // 뱃지 옆에 '내전우승' 같은 글자는 안 붙인다 — 올리면 설명표가 다 말한다.
     expect(screen.queryByText('내전우승')).not.toBeInTheDocument();
@@ -166,7 +166,7 @@ describe('MemberDetailPage', () => {
 
     const badge = screen.getByTestId('win-badge');
     // 카드에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
-    expect(badge.querySelectorAll('[data-testid="trophy-glyph"]')).toHaveLength(2);
+    expect(badge.querySelectorAll('[data-testid="trophy-art"]')).toHaveLength(2);
     expect(within(badge).getByText('12')).toBeInTheDocument();
   });
 
