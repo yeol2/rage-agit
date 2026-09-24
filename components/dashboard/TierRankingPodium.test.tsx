@@ -159,9 +159,10 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const row4 = screen.getByTestId('ranking-row-4');
-    // 마우스를 올리면 뜨는 말풍선(과 스크린리더용 글)이 횟수를 말한다.
-    expect(badge(row4).textContent).toContain('내전우승 3회');
-    expect(badge(row4).querySelectorAll('svg')).toHaveLength(1);
+    // 마우스를 올리면 뜨는 설명표(와 스크린리더용 글)가 횟수를 말한다.
+    expect(badge(row4).textContent).toContain('내전 종합 1위 3회');
+    // 줄에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
+    expect(badge(row4).querySelectorAll('[data-testid="trophy-art"]')).toHaveLength(2);
     expect(within(badge(row4)).getByText('3')).toBeInTheDocument();
   });
 
@@ -171,9 +172,9 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     render(<TierRankingPodium recent16={withWins} alltime={ALLTIME} snapshots={[]} />);
 
     const row4 = screen.getByTestId('ranking-row-4');
-    expect(badge(row4).querySelectorAll('svg')).toHaveLength(1);
+    expect(badge(row4).querySelectorAll('[data-testid="trophy-art"]')).toHaveLength(2);
     expect(within(badge(row4)).getByText('11')).toBeInTheDocument();
-    expect(badge(row4).textContent).toContain('내전우승 11회');
+    expect(badge(row4).textContent).toContain('내전 종합 1위 11회');
   });
 
   // 말풍선은 CSS 로만 열고 닫는다(group-hover) — 상태를 두지 않아 표 수십 줄에
@@ -185,9 +186,12 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     const el = badge(screen.getByTestId('ranking-row-4'));
     expect(el.className).toContain('group');
 
-    const bubble = within(el).getByTestId('win-badge-tooltip');
+    const bubble = within(el).getByTestId('badge-tooltip-scrimWin');
     expect(bubble.className).toContain('group-hover:opacity-100');
-    expect(bubble.textContent).toBe('내전우승 2회');
+    // 설명표는 이름·설명·근거 세 줄이다.
+    expect(bubble.textContent).toContain('내전 우승');
+    expect(bubble.textContent).toContain('오늘 저녁은 치킨이닭!');
+    expect(bubble.textContent).toContain('내전 종합 1위 2회');
   });
 
   it('우승이 없으면 뱃지 칸이 - 로 남는다', () => {
@@ -239,5 +243,44 @@ describe('TierRankingPodium — 등수 변화', () => {
     fireEvent.click(screen.getByRole('button', { name: '평균킬' }));
     expect(screen.queryByText('▲2')).not.toBeInTheDocument();
     expect(screen.queryByText('NEW')).not.toBeInTheDocument();
+  });
+
+  it('플레이 스타일 뱃지 주인이면 뱃지 칸에 함께 보여준다', () => {
+    // 주인은 클랜 전체를 비교해야 정해지는 값이라 페이지가 받아 넘겨준다.
+    render(
+      <TierRankingPodium
+        recent16={RECENT16}
+        alltime={ALLTIME}
+        snapshots={[]}
+        playstyleBadges={
+          new Map([
+            [
+              'a',
+              [
+                {
+                  kind: 'damageFarmer' as const,
+                  memberId: 'a',
+                  medal: 1 as const,
+                  groupId: '0-1.5',
+                  groupLabel: '0~1.5티어',
+                  value: 57,
+                  damagePerKill: 243,
+                  groupDamagePerKill: 186,
+                },
+              ],
+            ],
+          ])
+        }
+      />,
+    );
+
+    const slot1 = screen.getByTestId('podium-slot-1');
+    expect(within(slot1).getByTestId('badge-pin-damageFarmer')).toBeInTheDocument();
+    expect(within(slot1).getByText('0~1.5티어 금메달')).toBeInTheDocument();
+    // 수치는 두 줄이다 — 숫자 한 줄, 그게 무슨 뜻인지 한 줄.
+    expect(within(slot1).getByText('1킬 당 243딜')).toBeInTheDocument();
+    expect(
+      within(slot1).getByText(/티어 평균\(1킬당 186딜\)보다 57딜 더 씁니다/),
+    ).toBeInTheDocument();
   });
 });

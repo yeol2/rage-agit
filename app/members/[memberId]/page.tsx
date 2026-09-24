@@ -7,7 +7,9 @@ import { Hexagon } from '@/components/members/Hexagon';
 import { MemberDashboard } from '@/components/members/MemberDashboard';
 import { MapRecords } from '@/components/members/MapRecords';
 import { PartnerChemistry } from '@/components/members/PartnerChemistry';
-import { WinTrophies } from '@/components/members/WinTrophies';
+import { WinBadge } from '@/components/WinBadge';
+import { PlaystyleBadges } from '@/components/badges/PlaystyleBadges';
+import { BADGE_SIZE_LARGE } from '@/components/badges/HexFrame';
 import {
   buildWindowStats,
   fetchMemberStandings,
@@ -34,6 +36,7 @@ import {
   type PartnerStat,
 } from '@/lib/partnerStats';
 import { fetchMemberMapStats } from '@/lib/mapStats';
+import { fetchPlaystyleBadges } from '@/lib/playstyleBadges';
 import { siteConfig } from '@/lib/siteConfig';
 
 // 다른 기록 화면들과 같은 기준이다(/members, /matches). 폴링·우승 확정이
@@ -58,6 +61,7 @@ export default async function MemberDetailPage({
     standings,
     partnerRows,
     mapStats,
+    playstyleBadges,
   ] = await Promise.all([
     fetchMemberHexagonStats(member.id),
     fetchMemberWinCount(member.id),
@@ -67,6 +71,9 @@ export default async function MemberDetailPage({
     fetchMemberStandings(member.id),
     fetchPartnerStats(member.id),
     fetchMemberMapStats(member.id),
+    // 뱃지 주인은 클랜 전체를 놓고 봐야 정해진다("최강"은 한 명뿐이다).
+    // 그래서 이 사람 것만 받아올 수가 없고, 전원 집계를 받아 여기서 꺼내 쓴다.
+    fetchPlaystyleBadges(),
   ]);
 
   // 양 끝에 선 사람들만 이름이 필요하다 — 후보 전원을 조회하지 않는다.
@@ -127,7 +134,12 @@ export default async function MemberDetailPage({
           <p className="mt-3">
             <TierBadge tier={member.tier} size="md" />
           </p>
-          <WinTrophies count={winCount} />
+          {/* 뱃지는 티어 아래 한 줄에 가로로 늘어놓는다. 옆에 '내전우승' 같은
+              글자는 안 붙인다 — 뱃지에 마우스를 올리면 이름과 뜻이 다 나온다. */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <WinBadge count={winCount} size={BADGE_SIZE_LARGE} chipColor="#231F2B" className="text-[24px]" />
+            <PlaystyleBadges holders={playstyleBadges.get(member.id) ?? []} size={BADGE_SIZE_LARGE} />
+          </div>
 
           {/* 숫자를 먼저 보고 6각형으로 넘어가는 흐름 — 대시보드가 6각형 위에 온다. */}
           <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">

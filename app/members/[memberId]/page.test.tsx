@@ -80,6 +80,12 @@ const stats = {
   avgRank: 5,
 };
 
+// 뱃지 주인 고르는 규칙은 playstyleBadges.test.ts 가 덮는다. 여기서는 조회만 막는다.
+vi.mock('@/lib/playstyleBadges', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/playstyleBadges')>();
+  return { ...actual, fetchPlaystyleBadges: vi.fn().mockResolvedValue(new Map()) };
+});
+
 describe('MemberDetailPage', () => {
   it('충분한 표본이 있으면 6각형을 그린다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
@@ -132,13 +138,14 @@ describe('MemberDetailPage', () => {
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
     const badge = screen.getByTestId('win-badge');
-    expect(badge.querySelectorAll('svg')).toHaveLength(1);
+    // 카드에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
+    expect(badge.querySelectorAll('[data-testid="trophy-art"]')).toHaveLength(2);
     expect(within(badge).getByText('3')).toBeInTheDocument();
-    // 횟수는 뱃지가 말하므로 뱃지 옆 글자에는 숫자를 또 적지 않는다.
-    expect(badge.parentElement!.textContent!.endsWith('내전우승')).toBe(true);
+    // 뱃지 옆에 '내전우승' 같은 글자는 안 붙인다 — 올리면 설명표가 다 말한다.
+    expect(screen.queryByText('내전우승')).not.toBeInTheDocument();
   });
 
-  it('우승이 없으면 트로피 줄을 아예 안 그린다', async () => {
+  it('우승이 없으면 트로피를 아예 안 그린다', async () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
@@ -146,7 +153,7 @@ describe('MemberDetailPage', () => {
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
-    expect(screen.queryByText(/내전우승/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('win-badge')).not.toBeInTheDocument();
   });
 
   it('우승이 아무리 많아도 트로피는 하나다', async () => {
@@ -158,7 +165,8 @@ describe('MemberDetailPage', () => {
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
     const badge = screen.getByTestId('win-badge');
-    expect(badge.querySelectorAll('svg')).toHaveLength(1);
+    // 카드에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
+    expect(badge.querySelectorAll('[data-testid="trophy-art"]')).toHaveLength(2);
     expect(within(badge).getByText('12')).toBeInTheDocument();
   });
 

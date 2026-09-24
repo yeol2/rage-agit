@@ -2,8 +2,10 @@
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { TROPHY_VIEWBOX, TrophyGoldGradient, TrophyPaths } from '@/components/TrophyGlyph';
+import { TROPHY_VIEWBOX, TrophyPaths } from '@/components/TrophyGlyph';
 import { WinBadge } from '@/components/WinBadge';
+import { PlaystyleBadges } from '@/components/badges/PlaystyleBadges';
+import type { PlaystyleBadgeHolder } from '@/lib/playstyleBadges';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -354,6 +356,11 @@ export interface TierRankingPodiumProps {
    */
   sessions?: RecentSession[];
   standings?: SessionStanding[];
+  /**
+   * memberId → 그 사람이 단 플레이 스타일 뱃지. 주인이 클랜 전체 비교로
+   * 정해지는 값이라 줄마다 따로 조회할 수 없어, 페이지가 한 번 받아 넘겨준다.
+   */
+  playstyleBadges?: Map<string, PlaystyleBadgeHolder[]>;
 }
 
 function formatMetricValue(
@@ -476,6 +483,7 @@ export function TierRankingPodium({
   snapshots,
   sessions = [],
   standings = [],
+  playstyleBadges,
 }: TierRankingPodiumProps) {
   const { isAdmin } = useAdmin();
   const [activeMetric, setActiveMetric] = useState<Metric>('rageScore');
@@ -588,14 +596,6 @@ export function TierRankingPodium({
 
   return (
     <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
-      {/* 뱃지 열 트로피가 쓰는 그라디언트. 줄마다 정의하면 같은 id 가 수십 번
-          겹치므로 문서에 하나만 두고 모든 줄이 이걸 가리킨다. */}
-      <svg width="0" height="0" aria-hidden className="absolute">
-        <defs>
-          <TrophyGoldGradient id={RANKING_TROPHY_GOLD} />
-        </defs>
-      </svg>
-
       {/* 제목이 위, 집계 창 토글(역대 전체/최근 12매치)이 그 아래 — 사용자가 지정한 순서. */}
       <div className="flex flex-col items-center text-center">
         <p className="hud text-[11px] text-accent sm:text-xs">
@@ -852,7 +852,9 @@ export function TierRankingPodium({
                           <WinBadge
                             count={member.winCount}
                             className="text-[13px] sm:text-sm"
-                            gradientId={RANKING_TROPHY_GOLD}
+                          />
+                          <PlaystyleBadges
+                            holders={playstyleBadges?.get(member.memberId) ?? []}
                           />
                         </div>
                       </>
@@ -1003,7 +1005,11 @@ export function TierRankingPodium({
                             setExpandedMemberId(expanded ? null : member.memberId);
                           }
                         }}
-                        className={`${rankingGrid} cursor-pointer rounded-xl px-4 py-2.5 outline-none ring-white/20 focus-visible:ring-2 ${
+                        /* 줄 높이는 44px 로 못 박는다 — 뱃지를 키웠다고 표가
+                           길어지면 한 화면에 보이는 사람 수가 줄어든다. 위아래
+                           여백(py)을 줄여 뱃지가 커진 만큼을 내주고, 뱃지가 없는
+                           줄도 같은 높이를 유지하도록 min-h 로 바닥을 깐다. */
+                        className={`${rankingGrid} min-h-[44px] cursor-pointer rounded-xl px-4 py-1 outline-none ring-white/20 focus-visible:ring-2 ${
                           expanded ? 'rounded-b-none' : ''
                         }`}
                         style={{ background: RANKING_ROW_BG }}
@@ -1025,8 +1031,16 @@ export function TierRankingPodium({
                           <WinBadge
                             count={member.winCount}
                             className="text-[13px] sm:text-[15px]"
-                            none={<span className="text-sm text-menu">-</span>}
-                            gradientId={RANKING_TROPHY_GOLD}
+                            none={
+                              // 우승도 뱃지도 없을 때만 빈 칸을 '-' 로 채운다.
+                              // 뱃지가 있는데 '-' 가 앞에 붙으면 없는 것처럼 읽힌다.
+                              (playstyleBadges?.get(member.memberId)?.length ?? 0) === 0 ? (
+                                <span className="text-sm text-menu">-</span>
+                              ) : null
+                            }
+                          />
+                          <PlaystyleBadges
+                            holders={playstyleBadges?.get(member.memberId) ?? []}
                           />
                         </span>
                         <span className="text-right tabular-nums">
