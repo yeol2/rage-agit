@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   formatManualPollMessage,
   formatRosterUploadMessage,
+  formatTeamSheetMessages,
   formatUnlinkedPlayersMessage,
   sendDiscord,
 } from './notify.mjs';
@@ -149,5 +150,29 @@ describe('formatUnlinkedPlayersMessage', () => {
     expect(message).not.toContain('`Ez_p20`');
     expect(message).toContain('외 5명');
     expect(message.length).toBeLessThan(2000);
+  });
+});
+
+describe('formatTeamSheetMessages', () => {
+  it('표 메시지에는 한 줄에 한 팀, 탭으로 나눈 이름 말고 아무것도 없다', () => {
+    // 우클릭 → 텍스트 복사는 메시지 원문을 통째로 가져간다 — 안내 문구나
+    // 코드블록 기호가 섞이면 시트에 쓰레기 줄이 생긴다.
+    const [, table] = formatTeamSheetMessages({
+      teams: [
+        ['A', 'B', 'C', 'D'],
+        ['E', 'F', 'G', 'H'],
+      ],
+    });
+    expect(table).toBe('A\tB\tC\tD\nE\tF\tG\tH');
+  });
+
+  it('안내 메시지에 팀 수를 적는다', () => {
+    const [header] = formatTeamSheetMessages({ teams: [['A', 'B', 'C', 'D']] });
+    expect(header).toContain('1팀');
+  });
+
+  it('빈 자리는 ? 로 채운다 — 디스코드가 메시지 앞뒤 탭을 잘라 줄이 밀리지 않게', () => {
+    const [, table] = formatTeamSheetMessages({ teams: [['', 'B', 'C', '']] });
+    expect(table).toBe('?\tB\tC\t?');
   });
 });

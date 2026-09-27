@@ -134,6 +134,33 @@ export function formatUnlinkedPlayersMessage({ scrimDate, players }) {
   return lines.join('\n');
 }
 
+/**
+ * "팀 구성" 버튼 결과를 엑셀 내전 시트에 붙여넣을 수 있게 보낸다.
+ *
+ * 시트는 A열에 (#01)~(#16) 팀 번호가 이미 적혀 있고 B~E열이 팀원1~4 칸이다.
+ * 그래서 팀 번호 없이 **한 줄에 한 팀, 칸 사이는 탭**으로만 적는다.
+ *
+ * **메시지를 두 개로 나눠 보낸다(안내 → 표).** 디스코드에서 표를 옮기는 가장
+ * 쉬운 방법이 메시지 우클릭 → "텍스트 복사"인데, 이건 메시지 원문을 통째로
+ * 복사한다. 안내 문구나 코드블록 ``` 가 같은 메시지에 있으면 그것까지 딸려와서
+ * 시트에 쓰레기 줄이 생긴다 — 그래서 표 메시지에는 표 말고 아무것도 넣지 않는다.
+ * 코드블록 없이 보내면 화면에서는 이름 속 `_` 가 기울임으로 보일 수 있지만,
+ * "텍스트 복사"는 원문을 가져가므로 붙여넣은 값은 정확하다.
+ *
+ * 디스코드는 메시지 맨 앞·맨 뒤의 공백(탭 포함)을 잘라낸다(실제로 확인함).
+ * 1번 팀 1티어가 비어 있으면 그 줄 전체가 한 칸씩 당겨지므로, 빈 자리는
+ * 빈 문자열 대신 `?` 로 채운다.
+ *
+ * teams[i] 는 i+1번 팀의 1~4티어 순 이름이다. [안내, 표] 순으로 돌려준다.
+ */
+export function formatTeamSheetMessages({ teams }) {
+  const rows = teams.map((members) => members.map((name) => name || '?').join('\t'));
+  return [
+    `**팀 구성 완료** — ${teams.length}팀 · 아래 메시지 우클릭 → 텍스트 복사 → 시트 팀원1 칸에서 Ctrl+Shift+V`,
+    rows.join('\n'),
+  ];
+}
+
 export async function sendDiscord(webhookUrl, content) {
   const res = await fetch(webhookUrl, {
     method: 'POST',
