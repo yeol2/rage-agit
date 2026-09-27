@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { assignTeamNumbers, type TeamAssignmentInput } from '@/lib/scrimRoster';
+import { cleanDisplayName, stripTrailingKoreanTag } from '@/lib/memberStats';
+import { formatTeamSheetMessages, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
 
 const TIER_SLOTS = [1, 2, 3, 4] as const;
 
@@ -9,6 +11,41 @@ const TIER_SLOTS = [1, 2, 3, 4] as const;
 // 활성화/비활성화하지만, 그 사이 명단이 바뀌었을 수 있어 서버에서 다시 검증한다.
 function targetPerTierFor(totalCount: number): number {
   return totalCount > 0 ? Math.round(totalCount / 4) : 16;
+}
+
+// 엑셀 시트에는 클랜 접두사 없이 적으므로 "Ez_XXXX" 에서 "XXXX" 만 남긴다
+// (03 시트의 RoundSheet cleanName() 과 같은 규칙).
+function sheetName(discordNickname: string | null): string {
+  if (!discordNickname) return '';
+  return stripTrailingKoreanTag(cleanDisplayName(discordNickname)).replace(/^ez_/i, '');
+}
+
+// 팀 × 티어 격자를 만들어 디스코드로 보낸다 —
+// 관리자가 그대로 복사해 엑셀 내전 시트에 붙여넣는다. 알림은 곁다리라 웹훅이
+// 없거나 실패해도 팀 구성 자체는 성공으로 돌려준다(업로드·폴링과 같은 규칙).
+async function notifyTeamSheet(
+  rows: { discord_nickname: string | null; tier_slot: number | null; team_number: number | null }[],
+  teamCount: number,
+) {
+  // 팀 구성 표는 운영진이 같이 보는 채널로 따로 보낸다. 다른 알림(업로드·폴링)이
+  // 가는 DISCORD_WEBHOOK_URL 은 운영자 개인 채널이라, 전용 주소가 없을 때만 그리로 보낸다.
+  const webhookUrl = process.env.DISCORD_TEAM_SHEET_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  const teams = Array.from({ length: teamCount }, () => ['', '', '', '']);
+  for (const row of rows) {
+    if (row.team_number === null || row.tier_slot === null) continue;
+    teams[row.team_number - 1][row.tier_slot - 1] = sheetName(row.discord_nickname);
+  }
+
+  try {
+    // 순서가 중요하다(안내가 위, 표가 아래) — 동시에 보내지 않고 차례로 보낸다.
+    for (const content of formatTeamSheetMessages({ teams })) {
+      await sendDiscord(webhookUrl, content);
+    }
+  } catch {
+    // 알림 실패는 조용히 넘긴다.
+  }
 }
 
 // "팀 구성" 버튼을 누르면 호출된다 — 02 티어 테이블에 보이는 순서 그대로 팀
@@ -76,6 +113,8 @@ export async function POST(request: Request) {
   if (refetchError || !updatedRows) {
     return NextResponse.json({ error: '갱신된 명단을 불러오지 못했습니다.' }, { status: 500 });
   }
+
+  await notifyTeamSheet(updatedRows, targetPerTier);
 
   return NextResponse.json({
     entries: updatedRows.map((row) => ({
