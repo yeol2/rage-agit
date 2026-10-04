@@ -29,7 +29,7 @@ export const BADGE_COPY: Record<BadgeKey, BadgeCopy> = {
   },
   crabKing: {
     name: '꽃게들의 왕',
-    quip: '집게발 하나로 저티어를 평정했다',
+    quip: '내가 "킹" 크랩이다',
     description: '저티어 내전 종합 1위',
   },
   damageFarmer: {
