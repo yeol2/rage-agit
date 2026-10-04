@@ -8,6 +8,8 @@ export interface ScrimSessionSummary {
   replayUrl: string | null;
   matchCount: number;
   participantCount: number;
+  // 우승 확정 때 저티어 내전으로 확정됐는지(0045/0046). 확정 전에는 false.
+  lowTier: boolean;
 }
 
 export interface ScrimMatch {
@@ -46,6 +48,19 @@ export async function fetchScrimSessions(limit = 10, since?: string): Promise<Sc
   const { data, error } = await query;
   if (error) throw new Error(`내전 목록을 불러오지 못했습니다: ${error.message}`);
 
+  // 저티어 여부는 확정된 종합등수 쪽에만 있다 — 같은 날짜·회차로 맞춰 붙인다.
+  const dates = (data ?? []).map((row) => row.scrim_date as string);
+  const lowTierKeys = new Set<string>();
+  if (dates.length > 0) {
+    const { data: flags, error: flagError } = await getSupabase()
+      .from('session_standing_dates')
+      .select('scrim_date, session_number')
+      .eq('low_tier', true)
+      .in('scrim_date', dates);
+    if (flagError) throw new Error(`저티어 내전 여부를 불러오지 못했습니다: ${flagError.message}`);
+    for (const f of flags ?? []) lowTierKeys.add(`${f.scrim_date}#${f.session_number}`);
+  }
+
   return (data ?? []).map((row) => ({
     id: row.id,
     scrimDate: row.scrim_date,
@@ -54,6 +69,7 @@ export async function fetchScrimSessions(limit = 10, since?: string): Promise<Sc
     replayUrl: row.replay_url,
     matchCount: row.match_count,
     participantCount: row.participant_count,
+    lowTier: lowTierKeys.has(`${row.scrim_date}#${row.session_number ?? 1}`),
   }));
 }
 

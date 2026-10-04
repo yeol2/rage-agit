@@ -12,6 +12,7 @@ import {
   type ScrimParticipant,
   type ScrimSessionSummary,
 } from '@/lib/scrimData';
+import { LowTierTag } from '@/components/LowTierTag';
 import { mapLabel } from '@/lib/mapNames';
 import { medalRank } from '@/lib/memberDashboard';
 
@@ -140,7 +141,10 @@ export function ScrimSessionRow({
         className="-mx-3 flex w-[calc(100%+1.5rem)] items-center justify-between gap-4 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/[0.04]"
       >
         <span>
-          <span className="block font-bold text-foreground">{session.title}</span>
+          <span className="flex items-center gap-2 font-bold text-foreground">
+            {session.title}
+            {session.lowTier && <LowTierTag />}
+          </span>
           <span className="mt-1 block text-sm text-menu">
             {session.participantCount}명 참여 · {session.matchCount}경기
           </span>

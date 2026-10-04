@@ -14,6 +14,7 @@ const sessions: ScrimSessionSummary[] = [
     replayUrl: 'https://youtu.be/rage-scrim',
     matchCount: 4,
     participantCount: 64,
+    lowTier: false,
   },
   {
     id: 's2',
@@ -23,6 +24,7 @@ const sessions: ScrimSessionSummary[] = [
     replayUrl: null,
     matchCount: 2,
     participantCount: 68,
+    lowTier: false,
   },
 ];
 
