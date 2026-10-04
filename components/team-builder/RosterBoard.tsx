@@ -701,7 +701,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
           {/* 저티어 내전 토글 — 켜면 이 내전의 우승팀이 "꽃게들의 왕" 트로피를
               받는다. 명단을 새로 올리면 다시 꺼진 상태로 시작한다. */}
           <label className="mr-3 inline-flex cursor-pointer select-none items-center gap-2.5">
-            <span className="text-sm text-white">저티어 내전</span>
+            <span className={`text-sm transition-colors ${lowTier ? 'text-white' : 'text-menu'}`}>저티어 내전</span>
             <button
               type="button"
               role="switch"
