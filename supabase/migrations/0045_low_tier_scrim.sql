@@ -1,7 +1,7 @@
 -- 저티어 내전을 일반 내전과 구분한다. 차이는 우승 트로피 하나뿐이다 —
 -- 일반 내전 우승은 기존 내전우승 트로피, 저티어 내전 우승은 "꽃게들의 왕".
 --
--- 저티어 여부는 내전마다 관리자가 01 티어 테이블의 토글로 정한다. 명단을 새로
+-- 저티어 여부는 관리자가 03 내전 시트의 토글로 정한다(우승 확정 순간의 값). 명단을 새로
 -- 올리면 scrim_rosters 행이 새로 생기므로 기본값(false)으로 자연히 돌아간다.
 alter table scrim_rosters add column if not exists low_tier boolean not null default false;
 

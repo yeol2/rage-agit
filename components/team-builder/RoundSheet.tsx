@@ -119,6 +119,7 @@ async function interruptibleSleep(ms: number, cancelRef: { current: boolean }) {
 
 export function RoundSheet({
   rosterId,
+  initialLowTier = false,
 }: {
   /**
    * 폴링 씨앗을 고르고 등수 스냅샷을 한 번만 찍기 위해 서버가 쓰는 값 —
@@ -126,8 +127,13 @@ export function RoundSheet({
    * 올렸거나 "초기화"로 지운 뒤에는 없을 수 있고, 그때는 폴링 버튼만 잠긴다.
    */
   rosterId?: string;
+  /** 명단에 저장돼 있던 저티어 내전 토글 값. 새로고침해도 이어지게 한다. */
+  initialLowTier?: boolean;
 }) {
   const [data, setData] = useState<RoundSheetResponse | null>(null);
+  // 저티어 내전 토글 — "우승 확정"을 누르는 순간 이 값으로 트로피가 갈린다
+  // (켜짐: 꽃게들의 왕, 꺼짐: 내전우승). 기본은 꺼짐.
+  const [lowTier, setLowTier] = useState(initialLowTier);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
   const [pollAttempt, setPollAttempt] = useState(0);
@@ -214,7 +220,29 @@ export function RoundSheet({
     cancelRef.current = true;
   }
 
+  // 낙관적으로 먼저 바꾼다. 명단이 있으면 거기 저장해 새로고침해도 유지되게
+  // 하고, 저장이 실패하면 되돌린다. 명단이 없으면 화면에서만 들고 있는다 —
+  // 어느 쪽이든 확정 때는 지금 화면의 값을 그대로 보낸다.
+  async function handleToggleLowTier() {
+    const next = !lowTier;
+    setLowTier(next);
+    if (!rosterId) return;
+    try {
+      const response = await fetch('/api/scrim-roster/low-tier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rosterId, lowTier: next }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? '저티어 내전 설정을 저장하지 못했습니다.');
+    } catch (err) {
+      setLowTier(!next);
+      setPollMessage(err instanceof Error ? err.message : '저티어 내전 설정을 저장하지 못했습니다.');
+    }
+  }
+
   // 우승팀은 서버가 시트를 다시 만들어 정한다 — 여기서는 방아쇠만 당긴다.
+  // 어떤 트로피를 줄지는 누르는 순간의 토글 값으로 정한다.
   async function handleConfirmWin() {
     setConfirming(true);
     setPollMessage(null);
@@ -222,7 +250,7 @@ export function RoundSheet({
       const response = await fetch('/api/scrim-roster/round-sheet/confirm-win', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scrimDate: data?.scrimDate }),
+        body: JSON.stringify({ scrimDate: data?.scrimDate, lowTier }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? '우승 확정에 실패했습니다.');
@@ -409,6 +437,28 @@ export function RoundSheet({
               중단
             </button>
           )}
+          {/* 저티어 내전 토글 — 켠 채로 "우승 확정"을 누르면 우승팀이 내전우승
+              트로피 대신 "꽃게들의 왕"을 받는다. */}
+          <label className="mr-2 inline-flex cursor-pointer select-none items-center gap-2.5">
+            <span className={`text-sm transition-colors ${lowTier ? 'text-white' : 'text-menu'}`}>저티어 내전</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={lowTier}
+              aria-label="저티어 내전"
+              onClick={() => void handleToggleLowTier()}
+              className={`relative inline-flex h-4 w-9 shrink-0 items-center rounded-full transition-colors ${
+                lowTier ? 'bg-accent/45' : 'bg-white/20'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`absolute h-5 w-5 rounded-full border-[3px] transition-all ${
+                  lowTier ? 'left-[calc(100%-1.25rem)] border-accent bg-accent' : 'left-0 border-[#6B6B70] bg-white'
+                }`}
+              />
+            </button>
+          </label>
           {/* 4경기가 다 기록돼야 내전우승이 정해진다 — 그 전에는 눌러도
               서버가 막지만, 버튼부터 잠가 헛클릭을 줄인다. */}
           <button

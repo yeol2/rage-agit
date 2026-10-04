@@ -165,3 +165,65 @@ describe('RoundSheet — 우승 확정', () => {
     expect(await screen.findByText('아직 내전 세션이 없습니다.')).toBeInTheDocument();
   });
 });
+
+describe('RoundSheet — 저티어 내전 토글', () => {
+  function stubConfirm() {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('confirm-win')) {
+        const { lowTier } = JSON.parse(String(init?.body));
+        return {
+          ok: true,
+          json: async () => ({
+            lowTier,
+            totalScore: 20,
+            players: ['Ez_Alpha', 'Ez_Bravo', 'Ez_Charlie', 'Ez_Delta'],
+            savedTeams: 16,
+            savedMembers: 63,
+          }),
+        };
+      }
+      if (url.includes('low-tier')) return { ok: true, json: async () => ({ ok: true }) };
+      return { ok: true, json: async () => mockSheetResponse(4) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  const confirmBody = (fetchMock: ReturnType<typeof stubConfirm>) =>
+    JSON.parse(String(fetchMock.mock.calls.find(([url]) => url.includes('confirm-win'))![1]!.body));
+
+  it('기본은 꺼져 있고, 그대로 확정하면 일반 내전우승으로 확정한다', async () => {
+    const fetchMock = stubConfirm();
+    render(<RoundSheet rosterId="roster-1" />);
+
+    const toggle = await screen.findByRole('switch', { name: '저티어 내전' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+    await userEvent.click(screen.getByRole('button', { name: '우승 확정' }));
+
+    expect(confirmBody(fetchMock).lowTier).toBe(false);
+    expect(await screen.findByText(/^내전우승 확정/)).toBeInTheDocument();
+  });
+
+  it('켜고 확정하면 꽃게들의 왕으로 확정하고, 토글 값은 명단에 저장한다', async () => {
+    const fetchMock = stubConfirm();
+    render(<RoundSheet rosterId="roster-1" />);
+
+    await userEvent.click(await screen.findByRole('switch', { name: '저티어 내전' }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scrim-roster/low-tier',
+      expect.objectContaining({ body: JSON.stringify({ rosterId: 'roster-1', lowTier: true }) }),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '우승 확정' }));
+
+    expect(confirmBody(fetchMock).lowTier).toBe(true);
+    expect(await screen.findByText(/^꽃게들의 왕 확정/)).toBeInTheDocument();
+  });
+
+  it('명단에 저장된 값으로 시작한다', async () => {
+    stubConfirm();
+    render(<RoundSheet rosterId="roster-1" initialLowTier />);
+    expect(await screen.findByRole('switch', { name: '저티어 내전' })).toHaveAttribute('aria-checked', 'true');
+  });
+});
