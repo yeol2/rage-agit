@@ -218,19 +218,27 @@ export function groupEntriesByTier(sortedEntries: RosterEntry[]): TierGroup[] {
 
 export interface TeamAssignmentInput {
   id: string;
+  memberId?: string | null;
   tier: number | null;
   tierSlot: 1 | 2 | 3 | 4 | null;
 }
 
-// "팀 구성" 버튼을 누르면 01의 각 티어 칸에 보이는 순서(실제 티어 오름차순) 그대로
-// 1번팀부터 차례로 매긴다. 네 칸 모두 인원수가 같다는 전제(호출하는 쪽에서 검증)
-// 하에 각 팀은 티어별로 정확히 한 명씩 받는다.
-export function assignTeamNumbers(entries: TeamAssignmentInput[]): Map<string, number> {
+// "팀 구성" 버튼을 누르면 01의 각 티어 칸에 보이는 순서(실제 티어 오름차순, 같은
+// 티어 안에서는 점수 내림차순 — sortEntriesByTier 와 같은 규칙) 그대로 1번팀부터
+// 차례로 매긴다. 네 칸 모두 인원수가 같다는 전제(호출하는 쪽에서 검증) 하에 각 팀은
+// 티어별로 정확히 한 명씩 받는다. 입력은 화면과 같은 기준(id)으로 정렬돼 있어야
+// 점수까지 같을 때의 순서도 화면과 맞는다.
+export function assignTeamNumbers(
+  entries: TeamAssignmentInput[],
+  scoreByMemberId: Record<string, number> = {},
+): Map<string, number> {
+  const scoreOf = (entry: TeamAssignmentInput) =>
+    entry.memberId && entry.memberId in scoreByMemberId ? scoreByMemberId[entry.memberId] : -Infinity;
   const teamNumberById = new Map<string, number>();
   for (const slot of [1, 2, 3, 4] as const) {
     const slotEntries = entries
       .filter((entry) => entry.tierSlot === slot)
-      .sort((a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity));
+      .sort((a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity) || scoreOf(b) - scoreOf(a));
     slotEntries.forEach((entry, index) => teamNumberById.set(entry.id, index + 1));
   }
   return teamNumberById;

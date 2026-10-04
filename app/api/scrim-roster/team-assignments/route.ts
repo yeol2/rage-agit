@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { assignTeamNumbers, type TeamAssignmentInput } from '@/lib/scrimRoster';
+import { fetchRageScoreMap } from '@/lib/rageScoreMap';
 import { cleanDisplayName, stripTrailingKoreanTag } from '@/lib/memberStats';
 import { formatTeamSheetMessages, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
 
@@ -62,14 +63,17 @@ export async function POST(request: Request) {
 
   const { data: rows, error: fetchError } = await supabase
     .from('scrim_roster_entries')
-    .select('id, tier, tier_slot')
-    .eq('roster_id', rosterId);
+    .select('id, member_id, tier, tier_slot')
+    .eq('roster_id', rosterId)
+    // 화면(fetchLatestRoster)과 같은 기준 — 티어·점수까지 같을 때의 순서를 맞춘다.
+    .order('id', { ascending: true });
   if (fetchError) {
     return NextResponse.json({ error: '명단을 불러오지 못했습니다.' }, { status: 500 });
   }
 
   const entries: TeamAssignmentInput[] = (rows ?? []).map((row) => ({
     id: row.id as string,
+    memberId: row.member_id as string | null,
     tier: row.tier as number | null,
     tierSlot: row.tier_slot as 1 | 2 | 3 | 4 | null,
   }));
@@ -85,7 +89,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const teamNumberById = assignTeamNumbers(entries);
+  // 같은 티어 안에서는 점수 높은 사람이 앞 번호 팀으로 간다(01 화면 순서와 같다).
+  // 점수를 못 불러와도 팀 구성은 막지 않는다 — 그때는 티어 순서만으로 매긴다.
+  const scores = await fetchRageScoreMap('recent16').catch(() => ({}));
+  const teamNumberById = assignTeamNumbers(entries, scores);
 
   // 팀 번호를 다시 매길 때마다 고정은 항상 해제된 상태로 되돌린다 — 이전에
   // 눌렀던 "팀 구성"에서 고정해둔 자리가 새 배치에도 그대로 남아있으면 안 된다.

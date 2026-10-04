@@ -268,6 +268,18 @@ describe('assignTeamNumbers', () => {
     expect(result.get('d')).toBe(1);
   });
 
+  it('같은 티어 안에서는 점수가 높은 사람이 앞 번호 팀으로 간다(01 화면 순서와 같다)', () => {
+    const entries = [
+      entry({ id: 'low', memberId: 'm-low', tier: 1, tierSlot: 1 }),
+      entry({ id: 'high', memberId: 'm-high', tier: 1, tierSlot: 1 }),
+      entry({ id: 'top', memberId: 'm-top', tier: 0, tierSlot: 1 }),
+    ];
+    const result = assignTeamNumbers(entries, { 'm-low': 30, 'm-high': 80, 'm-top': 5 });
+    expect(result.get('top')).toBe(1); // 티어가 먼저
+    expect(result.get('high')).toBe(2);
+    expect(result.get('low')).toBe(3);
+  });
+
   it('tierSlot이 null인 항목은 결과에 안 들어간다', () => {
     const entries = [entry({ id: 'a', tier: null, tierSlot: null })];
     expect(assignTeamNumbers(entries).has('a')).toBe(false);
