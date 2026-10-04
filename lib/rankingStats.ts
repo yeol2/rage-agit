@@ -28,6 +28,8 @@ export interface RankingStatsRow {
   lastPlayedAt: string;
   // 내전우승 횟수. 랭킹 계산에는 안 쓰고 뱃지 열에만 보인다.
   winCount: number;
+  // 저티어 내전 우승(꽃게들의 왕) 횟수. winCount 와 따로 센다(0045).
+  crabKingCount: number;
 }
 
 export interface RankingStatsRowWithScore extends RankingStatsRow {
@@ -149,7 +151,7 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
       .from('member_alltime_stats')
       .select('member_id, tier, game_count, avg_kills, avg_placement_points, avg_rank, last_played_at'),
     fetchAllMembers(),
-    getSupabase().from('member_win_counts').select('member_id, win_count'),
+    getSupabase().from('member_win_counts').select('member_id, win_count, crab_king_count'),
   ]);
   if (alltimeResult.error) {
     throw new Error(`통산 전적을 불러오지 못했습니다: ${alltimeResult.error.message}`);
@@ -161,6 +163,9 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
   // 우승이 한 번도 없으면 뷰에 행 자체가 없다 — 없는 사람은 0 이다.
   const winCountByMember = new Map(
     (winsResult.data ?? []).map((r) => [r.member_id as string, r.win_count as number]),
+  );
+  const crabKingCountByMember = new Map(
+    (winsResult.data ?? []).map((r) => [r.member_id as string, (r.crab_king_count as number) ?? 0]),
   );
 
   let windowData: RankingViewRow[] = alltimeData;
@@ -195,5 +200,6 @@ export async function fetchRankingStats(window: RankingWindow): Promise<RankingS
       avgRank: Number(row.avg_rank),
       lastPlayedAt: lastPlayedByMember.get(row.member_id) ?? new Date(0).toISOString(),
       winCount: winCountByMember.get(row.member_id) ?? 0,
+      crabKingCount: crabKingCountByMember.get(row.member_id) ?? 0,
     }));
 }

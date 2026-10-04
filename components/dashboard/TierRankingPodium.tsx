@@ -853,6 +853,11 @@ export function TierRankingPodium({
                             count={member.winCount}
                             className="text-[13px] sm:text-sm"
                           />
+                          <WinBadge
+                            kind="crabKing"
+                            count={member.crabKingCount}
+                            className="text-[13px] sm:text-sm"
+                          />
                           <PlaystyleBadges
                             holders={playstyleBadges?.get(member.memberId) ?? []}
                           />
@@ -1034,10 +1039,16 @@ export function TierRankingPodium({
                             none={
                               // 우승도 뱃지도 없을 때만 빈 칸을 '-' 로 채운다.
                               // 뱃지가 있는데 '-' 가 앞에 붙으면 없는 것처럼 읽힌다.
+                              member.crabKingCount === 0 &&
                               (playstyleBadges?.get(member.memberId)?.length ?? 0) === 0 ? (
                                 <span className="text-sm text-menu">-</span>
                               ) : null
                             }
+                          />
+                          <WinBadge
+                            kind="crabKing"
+                            count={member.crabKingCount}
+                            className="text-[13px] sm:text-[15px]"
                           />
                           <PlaystyleBadges
                             holders={playstyleBadges?.get(member.memberId) ?? []}

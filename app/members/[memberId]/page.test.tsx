@@ -7,7 +7,7 @@ vi.mock('@/lib/memberStats', async (importOriginal) => {
     ...actual,
     fetchMember: vi.fn(),
     fetchMemberHexagonStats: vi.fn(),
-    fetchMemberWinCount: vi.fn(),
+    fetchMemberWinCounts: vi.fn(),
     fetchHexagonCohort: vi.fn(),
   };
 });
@@ -55,14 +55,14 @@ import MemberDetailPage from './page';
 import {
   fetchMember,
   fetchMemberHexagonStats,
-  fetchMemberWinCount,
+  fetchMemberWinCounts,
   fetchHexagonCohort,
 } from '@/lib/memberStats';
 
 beforeEach(() => {
   // 우승 횟수는 대부분의 테스트가 신경 쓰지 않는다 — 안 세운 테스트가 실제
   // 조회로 새어 나가지 않게 기본값을 둔다.
-  vi.mocked(fetchMemberWinCount).mockResolvedValue(0);
+  vi.mocked(fetchMemberWinCounts).mockResolvedValue({ winCount: 0, crabKingCount: 0 });
 });
 
 afterEach(cleanup);
@@ -133,7 +133,7 @@ describe('MemberDetailPage', () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
-    vi.mocked(fetchMemberWinCount).mockResolvedValue(3);
+    vi.mocked(fetchMemberWinCounts).mockResolvedValue({ winCount: 3, crabKingCount: 0 });
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
@@ -149,7 +149,7 @@ describe('MemberDetailPage', () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
-    vi.mocked(fetchMemberWinCount).mockResolvedValue(0);
+    vi.mocked(fetchMemberWinCounts).mockResolvedValue({ winCount: 0, crabKingCount: 0 });
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 
@@ -160,7 +160,7 @@ describe('MemberDetailPage', () => {
     vi.mocked(fetchMember).mockResolvedValue(member);
     vi.mocked(fetchMemberHexagonStats).mockResolvedValue(stats);
     vi.mocked(fetchHexagonCohort).mockResolvedValue([stats]);
-    vi.mocked(fetchMemberWinCount).mockResolvedValue(12);
+    vi.mocked(fetchMemberWinCounts).mockResolvedValue({ winCount: 12, crabKingCount: 0 });
 
     render(await MemberDetailPage({ params: { memberId: 'm-1' } }));
 

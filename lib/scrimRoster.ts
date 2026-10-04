@@ -161,6 +161,8 @@ export interface RosterEntry {
 export interface Roster {
   id: string;
   fetchedAt: string;
+  // 저티어 내전이면 우승팀이 내전우승 트로피 대신 "꽃게들의 왕"을 받는다(0045).
+  lowTier: boolean;
   entries: RosterEntry[];
 }
 
@@ -323,7 +325,7 @@ export function computeReroll(
 export async function fetchLatestRoster(): Promise<Roster | null> {
   const { data: rosterRow, error: rosterError } = await getFreshSupabase()
     .from('scrim_rosters')
-    .select('id, fetched_at')
+    .select('id, fetched_at, low_tier')
     .order('fetched_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -350,6 +352,7 @@ export async function fetchLatestRoster(): Promise<Roster | null> {
   return {
     id: rosterRow.id,
     fetchedAt: rosterRow.fetched_at,
+    lowTier: rosterRow.low_tier ?? false,
     entries: (entriesData ?? []).map((row) => ({
       id: row.id,
       discordNickname: row.discord_nickname,

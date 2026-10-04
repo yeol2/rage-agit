@@ -345,15 +345,18 @@ export async function fetchMember(memberId: string): Promise<MemberSummary | nul
   return { id: data.id, discordNickname: data.discord_nickname, tier: data.tier, vipRank: data.vip_rank };
 }
 
-// 내전우승 횟수. 우승 기록이 한 번도 없으면 뷰에 행 자체가 없으므로 0 이다.
-export async function fetchMemberWinCount(memberId: string): Promise<number> {
+// 내전우승 횟수와 저티어 내전 우승(꽃게들의 왕) 횟수. 우승 기록이 한 번도
+// 없으면 뷰에 행 자체가 없으므로 둘 다 0 이다.
+export async function fetchMemberWinCounts(
+  memberId: string,
+): Promise<{ winCount: number; crabKingCount: number }> {
   const { data, error } = await getSupabase()
     .from('member_win_counts')
-    .select('win_count')
+    .select('win_count, crab_king_count')
     .eq('member_id', memberId)
     .maybeSingle();
   if (error) throw new Error(`우승 횟수를 불러오지 못했습니다: ${error.message}`);
-  return data?.win_count ?? 0;
+  return { winCount: data?.win_count ?? 0, crabKingCount: data?.crab_king_count ?? 0 };
 }
 
 function toStatsRow(row: {

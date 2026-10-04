@@ -22,7 +22,7 @@ import {
   cleanDisplayName,
   fetchMember,
   fetchMemberHexagonStats,
-  fetchMemberWinCount,
+  fetchMemberWinCounts,
   fetchHexagonCohort,
   stripTrailingKoreanTag,
   tierColorRamp,
@@ -54,7 +54,7 @@ export default async function MemberDetailPage({
 
   const [
     stats,
-    winCount,
+    { winCount, crabKingCount },
     alltimeRows,
     recent16Rows,
     sessions,
@@ -64,7 +64,7 @@ export default async function MemberDetailPage({
     playstyleBadges,
   ] = await Promise.all([
     fetchMemberHexagonStats(member.id),
-    fetchMemberWinCount(member.id),
+    fetchMemberWinCounts(member.id),
     fetchRankingStats('alltime'),
     fetchRankingStats('recent16'),
     fetchRecentSessions(),
@@ -138,6 +138,13 @@ export default async function MemberDetailPage({
               글자는 안 붙인다 — 뱃지에 마우스를 올리면 이름과 뜻이 다 나온다. */}
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
             <WinBadge count={winCount} size={BADGE_SIZE_LARGE} chipColor="#231F2B" className="text-[24px]" />
+            <WinBadge
+              kind="crabKing"
+              count={crabKingCount}
+              size={BADGE_SIZE_LARGE}
+              chipColor="#231F2B"
+              className="text-[24px]"
+            />
             <PlaystyleBadges holders={playstyleBadges.get(member.id) ?? []} size={BADGE_SIZE_LARGE} />
           </div>
 

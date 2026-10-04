@@ -18,6 +18,7 @@ function row(overrides: Partial<RankingStatsRow>): RankingStatsRow {
     avgRank: 5,
     lastPlayedAt: new Date().toISOString(),
     winCount: 0,
+    crabKingCount: 0,
     ...overrides,
   };
 }
@@ -199,6 +200,24 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     const row4 = screen.getByTestId('ranking-row-4');
     expect(within(row4).getByText('-')).toBeInTheDocument();
     expect(within(row4).queryByTitle(/내전우승/)).not.toBeInTheDocument();
+  });
+
+  it('저티어 내전 우승은 꽃게들의 왕 트로피로 따로 센다', () => {
+    const withCrab = RECENT16.map((r) => ({ ...r, winCount: 1, crabKingCount: 2 }));
+    render(<TierRankingPodium recent16={withCrab} alltime={ALLTIME} snapshots={[]} />);
+
+    const row4 = screen.getByTestId('ranking-row-4');
+    const crab = within(row4).getByTestId('crab-king-badge');
+    expect(crab.querySelectorAll('[data-testid="crab-king-art"]')).toHaveLength(2);
+    expect(within(crab).getByTestId('badge-tooltip-crabKing').textContent).toContain('저티어 내전 종합 1위 2회');
+    // 일반 우승 트로피는 일반 내전 횟수만 그대로 보여준다.
+    expect(badge(row4).textContent).toContain('내전 종합 1위 1회');
+  });
+
+  it('꽃게들의 왕만 있어도 뱃지 칸에 - 가 붙지 않는다', () => {
+    const crabOnly = RECENT16.map((r) => ({ ...r, crabKingCount: 1 }));
+    render(<TierRankingPodium recent16={crabOnly} alltime={ALLTIME} snapshots={[]} />);
+    expect(within(screen.getByTestId('ranking-row-4')).queryByText('-')).not.toBeInTheDocument();
   });
 });
 

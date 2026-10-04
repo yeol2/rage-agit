@@ -241,6 +241,9 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
   // "초기화" 버튼 — 실수로 누르면 이번 내전 전체 계획(01/02/03)이 날아가므로
   // 바로 실행하지 않고, 경고 문구가 딸린 확인 버튼을 한 번 더 눌러야 진행된다.
+  // 저티어 내전 토글 — 우승팀이 받는 트로피만 달라진다(꽃게들의 왕). 기본은 꺼짐.
+  const [lowTier, setLowTier] = useState(roster?.lowTier ?? false);
+  const [lowTierError, setLowTierError] = useState<string | null>(null);
   const [resetConfirming, setResetConfirming] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -262,7 +265,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
     };
   }, [isAdmin]);
 
-  // 명단이 없어도 01 시트는 보여준다 — 시트는 실제 매치만 보므로 로스터와
+  // 명단이 없어도 03 시트는 보여준다 — 시트는 실제 매치만 보므로 로스터와
   // 무관하다. "초기화"로 명단을 지우고 다음 내전을 준비하는 동안에도 지난
   // 내전 결과를 계속 볼 수 있어야 한다.
   if (!roster) {
@@ -272,24 +275,24 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
           <span className="mr-3" style={{ color: '#322F36' }}>
             01
           </span>{' '}
-          내전 시트
-        </h2>
-        <div className="mt-10">
-          <RoundSheet />
-        </div>
-
-        <div aria-hidden="true" className="mt-16 border-t border-white/10" />
-
-        <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
-          <span className="mr-3" style={{ color: '#322F36' }}>
-            02
-          </span>{' '}
           티어 테이블
         </h2>
         <div className="mt-10">
           <RosterUploadForm />
         </div>
         <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>
+
+        <div aria-hidden="true" className="mt-16 border-t border-white/10" />
+
+        <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
+          <span className="mr-3" style={{ color: '#322F36' }}>
+            03
+          </span>{' '}
+          내전 시트
+        </h2>
+        <div className="mt-10">
+          <RoundSheet />
+        </div>
       </div>
     );
   }
@@ -514,6 +517,26 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
   // "VIP 정렬" 버튼 — 서버가 참가 중인 VIP를 등수 순으로 스왑해 저장하고, 갱신된
   // 전체 명단을 돌려준다.
+  // 낙관적으로 먼저 바꾸고, 저장이 실패하면 되돌린다.
+  async function handleToggleLowTier() {
+    const next = !lowTier;
+    setLowTier(next);
+    setLowTierError(null);
+
+    try {
+      const response = await fetch('/api/scrim-roster/low-tier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rosterId, lowTier: next }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? '저티어 내전 설정을 저장하지 못했습니다.');
+    } catch (err) {
+      setLowTier(!next);
+      setLowTierError(err instanceof Error ? err.message : '저티어 내전 설정을 저장하지 못했습니다.');
+    }
+  }
+
   async function handleVipSort() {
     setVipSorting(true);
     setVipSortError(null);
@@ -660,25 +683,10 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
   return (
     <div>
-      {/* 01 내전 시트 — 실제 매치가 폴링되면 team_number(02/03) 진행 여부와
-          무관하게 PUBG API의 실제 팀(team_id) 기준으로 채워진다. 그래서 앞
-          단계를 마쳐야 열리는 버튼이 필요 없다 — 로스터만 있으면 항상 보인다. */}
+      {/* 01 티어 테이블 */}
       <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
         <span className="mr-3" style={{ color: '#322F36' }}>
           01
-        </span>{' '}
-        내전 시트
-      </h2>
-      <div className="mt-10">
-        <RoundSheet rosterId={rosterId} />
-      </div>
-
-      <div aria-hidden="true" className="mt-16 border-t border-white/10" />
-
-      {/* 02 티어 테이블 */}
-      <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
-        <span className="mr-3" style={{ color: '#322F36' }}>
-          02
         </span>{' '}
         티어 테이블
       </h2>
@@ -689,7 +697,29 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         <p className="hud text-xs text-menu">
           마지막 갱신: {new Date(roster.fetchedAt).toLocaleString('ko-KR')}
         </p>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {/* 저티어 내전 토글 — 켜면 이 내전의 우승팀이 "꽃게들의 왕" 트로피를
+              받는다. 명단을 새로 올리면 다시 꺼진 상태로 시작한다. */}
+          <label className="mr-3 inline-flex cursor-pointer select-none items-center gap-2.5">
+            <span className={`text-sm transition-colors ${lowTier ? 'text-white' : 'text-menu'}`}>저티어 내전</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={lowTier}
+              aria-label="저티어 내전"
+              onClick={() => void handleToggleLowTier()}
+              className={`relative inline-flex h-4 w-9 shrink-0 items-center rounded-full transition-colors ${
+                lowTier ? 'bg-accent/45' : 'bg-white/20'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`absolute h-5 w-5 rounded-full border-[3px] transition-all ${
+                  lowTier ? 'left-[calc(100%-1.25rem)] border-accent bg-accent' : 'left-0 border-[#6B6B70] bg-white'
+                }`}
+              />
+            </button>
+          </label>
           <button
             type="button"
             onClick={() => void handleUndo()}
@@ -725,6 +755,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         </div>
       </div>
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+      {lowTierError && <p className="mt-2 text-sm text-red-400">{lowTierError}</p>}
 
       {showAddForm && (
         <form onSubmit={handleAddManualEntry} className="mt-3 flex flex-wrap items-center gap-2">
@@ -882,11 +913,11 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       </div>
 
       <div className="mt-16 border-t border-white/10 pt-10">
-        {/* 03 팀 구성 테이블 — 팀 구성 버튼을 누르기 전에도 항상 보인다. 아직
+        {/* 02 팀 구성 테이블 — 팀 구성 버튼을 누르기 전에도 항상 보인다. 아직
             팀 번호가 없으면 자리마다 점선 빈 칸으로 표시된다(Nameplate 분기). */}
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
           <span className="mr-3" style={{ color: '#322F36' }}>
-            03
+            02
           </span>{' '}
           팀 구성 테이블
         </h2>
@@ -1054,6 +1085,21 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
             </div>
           </div>
         </div>
+
+      <div aria-hidden="true" className="mt-16 border-t border-white/10" />
+
+      {/* 03 내전 시트 — 실제 매치가 폴링되면 team_number(01/02) 진행 여부와
+          무관하게 PUBG API의 실제 팀(team_id) 기준으로 채워진다. 그래서 앞
+          단계를 마쳐야 열리는 버튼이 필요 없다 — 로스터만 있으면 항상 보인다. */}
+      <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
+        <span className="mr-3" style={{ color: '#322F36' }}>
+          03
+        </span>{' '}
+        내전 시트
+      </h2>
+      <div className="mt-10">
+        <RoundSheet rosterId={rosterId} />
+      </div>
 
       <div aria-hidden="true" className="mt-16 border-t border-white/10" />
 
