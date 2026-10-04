@@ -56,19 +56,9 @@ export async function POST(request: Request) {
   }
 
   // 저티어 내전이면 우승팀이 내전우승 트로피 대신 "꽃게들의 왕"을 받는다(0045).
-  // 지금 열려 있는 명단(가장 최근 것)의 토글 값을 그대로 쓴다 — 확정은 그날
-  // 명단을 초기화하기 전에 누르므로 그 명단이 곧 이 내전이다. 명단이 이미
-  // 지워졌으면 일반 내전으로 본다.
-  const { data: rosterRow, error: rosterError } = await supabase
-    .from('scrim_rosters')
-    .select('low_tier')
-    .order('fetched_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (rosterError) {
-    return NextResponse.json({ error: '저티어 내전 여부를 확인하지 못했습니다.' }, { status: 500 });
-  }
-  const lowTier = rosterRow?.low_tier ?? false;
+  // 03 시트의 토글이 "우승 확정"을 누르는 순간 켜져 있었는지를 그대로 쓴다.
+  // 값이 안 오면 일반 내전으로 본다.
+  const lowTier = body.lowTier === true;
 
   // 등수는 팀 단위지만 표는 사람 단위다 — 팀원 4명이 같은 standing 을 나눠 갖는다.
   // 매칭된 클랜원이 하나도 없는 팀(탈퇴자·게스트만 있던 팀)은 남길 행이 없어
