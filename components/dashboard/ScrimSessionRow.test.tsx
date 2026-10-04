@@ -14,6 +14,7 @@ const session: ScrimSessionSummary = {
   replayUrl: null,
   matchCount: 4,
   participantCount: 64,
+  lowTier: false,
 };
 
 const matches: ScrimMatch[] = [
@@ -67,6 +68,14 @@ describe('ScrimSessionRow', () => {
     render(<ScrimSessionRow session={session} loadMatches={vi.fn()} loadParticipants={vi.fn()} />);
     expect(screen.getByText('2026-08-02 (일) 내전')).toBeInTheDocument();
     expect(screen.queryByText(/1경기/)).not.toBeInTheDocument();
+    expect(screen.queryByText('저티어 내전')).not.toBeInTheDocument();
+  });
+
+  it('저티어 내전이면 제목 옆에 저티어 내전이라고 적는다', () => {
+    render(
+      <ScrimSessionRow session={{ ...session, lowTier: true }} loadMatches={vi.fn()} loadParticipants={vi.fn()} />,
+    );
+    expect(screen.getByText('저티어 내전')).toBeInTheDocument();
   });
 
   it('줄에 펼칠 수 있다는 표시를 적어둔다', async () => {

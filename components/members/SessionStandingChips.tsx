@@ -1,3 +1,4 @@
+import { LowTierTag } from '@/components/LowTierTag';
 import { medalRank, type RecentSession } from '@/lib/memberDashboard';
 
 // 칸 하나는 언제나 [뱃지 / 등수 / 날짜] 세 줄이고 **세 줄의 높이가 고정**이다.
@@ -95,6 +96,9 @@ export function SessionStandingChips({
             <div className="mt-[7px] h-3.5 text-[11px] font-semibold leading-[14px] tracking-tight text-menu tabular-nums">
               {session.label}
             </div>
+
+            {/* 저티어 내전 회차만 날짜 아래에 한 줄 더 붙인다. */}
+            {session.lowTier && <LowTierTag className="mt-1.5" />}
 
             <span className="sr-only">
               {session.label} {standing === undefined ? '불참' : `종합 ${standing}위`}

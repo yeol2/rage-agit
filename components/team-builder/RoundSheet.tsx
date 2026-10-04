@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { LowTierTag } from '@/components/LowTierTag';
 import { cleanDisplayName, stripTrailingKoreanTag } from '@/lib/memberStats';
 import { useScrimLive } from '@/lib/useScrimLive';
 
@@ -424,8 +425,9 @@ export function RoundSheet({
       <div className="mt-4 flex items-center justify-between" style={{ width: TABLE_WIDTH, maxWidth: '100%' }}>
         {/* 준비 중에는 지난 내전이 보이므로 어느 날짜인지 반드시 같이 띄운다 —
             없으면 오늘 것으로 오해한다. */}
-        <h3 className="hud text-xs text-menu">
+        <h3 className="hud flex items-center gap-2 text-xs text-menu">
           {data.scrimDate ? `${data.scrimDate} · ` : ''}경기 {data.roundCount}개 기록됨
+          {lowTier && <LowTierTag />}
         </h3>
         <div className="flex items-center gap-2">
           {polling && (

@@ -19,6 +19,7 @@ export const RECENT_SESSION_COUNT = 10;
 export interface RecentSession {
   scrimDate: string; // 'YYYY-MM-DD'
   label: string; // '08-23(일)'
+  lowTier: boolean; // 저티어 내전으로 확정된 회차
 }
 
 export interface SessionStanding {
@@ -150,7 +151,7 @@ export function buildWindowStats(
 export async function fetchRecentSessions(limit = RECENT_SESSION_COUNT): Promise<RecentSession[]> {
   const { data, error } = await getSupabase()
     .from('session_standing_dates')
-    .select('scrim_date, standing_count')
+    .select('scrim_date, standing_count, low_tier')
     .gt('standing_count', 1)
     .order('scrim_date', { ascending: false })
     .limit(limit);
@@ -158,7 +159,11 @@ export async function fetchRecentSessions(limit = RECENT_SESSION_COUNT): Promise
 
   // 화면은 오래된 것 → 최근 순으로 왼쪽부터 놓는다(추세가 왼쪽에서 오른쪽으로 읽히게).
   return (data ?? [])
-    .map((row) => ({ scrimDate: row.scrim_date as string, label: formatChipDate(row.scrim_date as string) }))
+    .map((row) => ({
+      scrimDate: row.scrim_date as string,
+      label: formatChipDate(row.scrim_date as string),
+      lowTier: row.low_tier === true,
+    }))
     .reverse();
 }
 

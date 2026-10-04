@@ -672,6 +672,14 @@ check(
   'member_win_counts 가 꽃게들의 왕 횟수를 따로 센다',
 );
 
+console.log('\n0046 — 내전 단위 저티어 표시');
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'session_standing_dates' and column_name = 'low_tier'`)) === 1,
+  'session_standing_dates 가 내전마다 저티어 여부를 내보낸다',
+);
+
 await client.end();
 
 console.log('');
