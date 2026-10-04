@@ -644,6 +644,34 @@ check(
   'member_win_counts 가 session_standings 를 본다',
 );
 
+console.log('\n0045 — 저티어 내전과 꽃게들의 왕 트로피');
+
+for (const table of ['scrim_rosters', 'session_standings']) {
+  check(
+    (await one(`select count(*) from information_schema.columns
+      where table_name = '${table}' and column_name = 'low_tier'`)) === 1,
+    `${table}.low_tier 컬럼이 있다`,
+  );
+}
+
+const lowTierGrants = await client.query(`
+  select grantee from information_schema.column_privileges
+  where table_name = 'scrim_rosters' and column_name = 'low_tier'
+    and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated')
+`);
+for (const role of ['anon', 'authenticated']) {
+  check(
+    lowTierGrants.rows.some((r) => r.grantee === role),
+    `${role} 은 scrim_rosters.low_tier 를 읽을 수 있다`,
+  );
+}
+
+check(
+  (await one(`select count(*) from information_schema.columns
+    where table_name = 'member_win_counts' and column_name = 'crab_king_count'`)) === 1,
+  'member_win_counts 가 꽃게들의 왕 횟수를 따로 센다',
+);
+
 await client.end();
 
 console.log('');

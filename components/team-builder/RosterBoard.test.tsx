@@ -26,7 +26,7 @@ function makeEntry(overrides: Partial<RosterEntry>): RosterEntry {
 }
 
 function makeRoster(entries: RosterEntry[]): Roster {
-  return { id: 'roster-1', fetchedAt: new Date().toISOString(), entries };
+  return { id: 'roster-1', fetchedAt: new Date().toISOString(), lowTier: false, entries };
 }
 
 const ROUND_SHEET_GET_URL = '/api/scrim-roster/round-sheet';
@@ -49,6 +49,35 @@ function stubFetch(handler: (url: string, init?: RequestInit) => unknown) {
 function teamTable() {
   return screen.getByRole('table', { name: '팀 구성 표' });
 }
+
+describe('RosterBoard - 저티어 내전 토글', () => {
+  it('기본은 꺼져 있고, 누르면 켜진 값을 저장한다', async () => {
+    const fetchMock = stubFetch(() => ({ ok: true, json: async () => ({ ok: true }) }));
+    render(<RosterBoard roster={makeRoster([makeEntry({ id: 'a' })])} />);
+
+    const toggle = screen.getByRole('switch', { name: '저티어 내전' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+    await userEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scrim-roster/low-tier',
+      expect.objectContaining({ body: JSON.stringify({ rosterId: 'roster-1', lowTier: true }) }),
+    );
+  });
+
+  it('저장에 실패하면 원래대로 꺼진다', async () => {
+    stubFetch(() => ({ ok: false, json: async () => ({ error: '실패' }) }));
+    render(<RosterBoard roster={makeRoster([makeEntry({ id: 'a' })])} />);
+
+    const toggle = screen.getByRole('switch', { name: '저티어 내전' });
+    await userEvent.click(toggle);
+
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
+    expect(screen.getByText('실패')).toBeInTheDocument();
+  });
+});
 
 describe('RosterBoard - 팀 구성', () => {
   it('1~4티어가 다 안 찼으면 팀 구성 버튼이 비활성화된다', () => {

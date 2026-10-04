@@ -7,10 +7,11 @@ import type { BadgeMedal, PlaystyleBadgeKind } from '@/lib/playstyleBadges';
  * 화면마다 흩어지면 하나를 고칠 때 다른 하나가 남는다. **문구를 고치려면
  * 이 파일만 고치면 된다.**
  *
- * 내전우승 트로피만 그림이 SVG 라 여기 없다(components/TrophyGlyph.tsx) —
- * 횟수 숫자를 얹어야 해서 처음부터 벡터로 그렸다.
+ * 우승 트로피 두 개(내전우승·꽃게들의 왕)는 횟수 숫자를 얹어야 해서 그림을
+ * components/WinBadge.tsx 가 따로 들고 있다.
  */
-export type BadgeKey = 'scrimWin' | PlaystyleBadgeKind;
+export type TrophyKind = 'scrimWin' | 'crabKing';
+export type BadgeKey = TrophyKind | PlaystyleBadgeKind;
 
 export interface BadgeCopy {
   name: string;
@@ -25,6 +26,11 @@ export const BADGE_COPY: Record<BadgeKey, BadgeCopy> = {
     name: '내전 우승',
     quip: '오늘 저녁은 치킨이닭!',
     description: '내전 종합 1위',
+  },
+  crabKing: {
+    name: '꽃게들의 왕',
+    quip: '집게발 하나로 저티어를 평정했다',
+    description: '저티어 내전 종합 1위',
   },
   damageFarmer: {
     name: '딜딸의 신',

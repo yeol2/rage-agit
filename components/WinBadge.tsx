@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BadgeTooltip } from '@/components/badges/BadgeTooltip';
-import { BADGE_COPY } from '@/components/badges/badgeCatalog';
+import { BADGE_COPY, type TrophyKind } from '@/components/badges/badgeCatalog';
 import { BADGE_SIZE, HexFrame } from '@/components/badges/HexFrame';
 
 /**
@@ -14,9 +14,13 @@ import { BADGE_SIZE, HexFrame } from '@/components/badges/HexFrame';
  *
  * 그림은 다른 뱃지와 같은 방식이다 — 배경을 지운 PNG 를 같은 육각 틀에 넣는다.
  * 트로피만 SVG 글리프로 그리던 때는 같은 줄에서 재질이 혼자 달라 보였다.
+ *
+ * 저티어 내전 우승(꽃게들의 왕)도 같은 모양이다 — 그림과 문구만 다르다(kind).
  */
 export interface WinBadgeProps {
   count: number;
+  /** 어떤 우승 트로피인가. 기본은 일반 내전우승. */
+  kind?: TrophyKind;
   /** 숫자 크기를 정하는 곳. 뱃지 자체 크기는 size 가 정한다. */
   className?: string;
   /** 우승이 0회일 때 대신 그릴 것. 표는 '-' 를 넣어 칸이 비어 보이지 않게 한다. */
@@ -32,14 +36,24 @@ export interface WinBadgeProps {
 
 const DEFAULT_CHIP_COLOR = '#1B1B23';
 
-function Trophy() {
+const TROPHY_IMAGE: Record<TrophyKind, string> = {
+  scrimWin: '/badges/scrim-win.png',
+  crabKing: '/badges/crab-king.png',
+};
+
+const STAT_LABEL: Record<TrophyKind, string> = {
+  scrimWin: '내전 종합 1위',
+  crabKing: '저티어 내전 종합 1위',
+};
+
+function Trophy({ kind }: { kind: TrophyKind }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- 목록 안 작은 아이콘이라 next/image 의 최적화가 이득이 없다
     <img
-      src="/badges/scrim-win.png"
+      src={TROPHY_IMAGE[kind]}
       alt=""
       aria-hidden="true"
-      data-testid="trophy-art"
+      data-testid={kind === 'scrimWin' ? 'trophy-art' : 'crab-king-art'}
       className="h-full w-full"
       style={{ objectFit: 'contain' }}
     />
@@ -48,6 +62,7 @@ function Trophy() {
 
 export function WinBadge({
   count,
+  kind = 'scrimWin',
   className = '',
   none = null,
   chipColor = DEFAULT_CHIP_COLOR,
@@ -58,13 +73,13 @@ export function WinBadge({
   return (
     <span
       className={`group relative inline-flex w-fit shrink-0 items-center justify-center ${className}`}
-      data-testid="win-badge"
+      data-testid={kind === 'scrimWin' ? 'win-badge' : 'crab-king-badge'}
     >
       {/* 횟수는 육각형 **맨 아래 꼭짓점**에 걸쳐 놓는다. 트로피 몸통 위에 얹으면
           그림 한가운데를 가려서 무엇인지 잘 안 보인다. */}
       <span className="relative inline-flex">
         <HexFrame size={size}>
-          <Trophy />
+          <Trophy kind={kind} />
         </HexFrame>
 
         <span
@@ -77,14 +92,14 @@ export function WinBadge({
       </span>
 
       <BadgeTooltip
-        testId="badge-tooltip-scrimWin"
-        name={BADGE_COPY.scrimWin.name}
-        quip={BADGE_COPY.scrimWin.quip}
-        description={BADGE_COPY.scrimWin.description}
-        statLine={`내전 종합 1위 ${count}회`}
+        testId={`badge-tooltip-${kind}`}
+        name={BADGE_COPY[kind].name}
+        quip={BADGE_COPY[kind].quip}
+        description={BADGE_COPY[kind].description}
+        statLine={`${STAT_LABEL[kind]} ${count}회`}
         artwork={
           <HexFrame size="6rem">
-            <Trophy />
+            <Trophy kind={kind} />
           </HexFrame>
         }
       />

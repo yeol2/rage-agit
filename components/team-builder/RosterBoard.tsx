@@ -241,6 +241,9 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
   // "초기화" 버튼 — 실수로 누르면 이번 내전 전체 계획(01/02/03)이 날아가므로
   // 바로 실행하지 않고, 경고 문구가 딸린 확인 버튼을 한 번 더 눌러야 진행된다.
+  // 저티어 내전 토글 — 우승팀이 받는 트로피만 달라진다(꽃게들의 왕). 기본은 꺼짐.
+  const [lowTier, setLowTier] = useState(roster?.lowTier ?? false);
+  const [lowTierError, setLowTierError] = useState<string | null>(null);
   const [resetConfirming, setResetConfirming] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -514,6 +517,26 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
   // "VIP 정렬" 버튼 — 서버가 참가 중인 VIP를 등수 순으로 스왑해 저장하고, 갱신된
   // 전체 명단을 돌려준다.
+  // 낙관적으로 먼저 바꾸고, 저장이 실패하면 되돌린다.
+  async function handleToggleLowTier() {
+    const next = !lowTier;
+    setLowTier(next);
+    setLowTierError(null);
+
+    try {
+      const response = await fetch('/api/scrim-roster/low-tier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rosterId, lowTier: next }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? '저티어 내전 설정을 저장하지 못했습니다.');
+    } catch (err) {
+      setLowTier(!next);
+      setLowTierError(err instanceof Error ? err.message : '저티어 내전 설정을 저장하지 못했습니다.');
+    }
+  }
+
   async function handleVipSort() {
     setVipSorting(true);
     setVipSortError(null);
@@ -674,7 +697,29 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         <p className="hud text-xs text-menu">
           마지막 갱신: {new Date(roster.fetchedAt).toLocaleString('ko-KR')}
         </p>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {/* 저티어 내전 토글 — 켜면 이 내전의 우승팀이 "꽃게들의 왕" 트로피를
+              받는다. 명단을 새로 올리면 다시 꺼진 상태로 시작한다. */}
+          <label className="mr-3 inline-flex cursor-pointer select-none items-center gap-2.5">
+            <span className="text-sm text-white">저티어 내전</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={lowTier}
+              aria-label="저티어 내전"
+              onClick={() => void handleToggleLowTier()}
+              className={`relative inline-flex h-4 w-9 shrink-0 items-center rounded-full transition-colors ${
+                lowTier ? 'bg-accent/45' : 'bg-white/20'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`absolute h-5 w-5 rounded-full border-[3px] transition-all ${
+                  lowTier ? 'left-[calc(100%-1.25rem)] border-accent bg-accent' : 'left-0 border-[#6B6B70] bg-white'
+                }`}
+              />
+            </button>
+          </label>
           <button
             type="button"
             onClick={() => void handleUndo()}
@@ -710,6 +755,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
         </div>
       </div>
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+      {lowTierError && <p className="mt-2 text-sm text-red-400">{lowTierError}</p>}
 
       {showAddForm && (
         <form onSubmit={handleAddManualEntry} className="mt-3 flex flex-wrap items-center gap-2">
