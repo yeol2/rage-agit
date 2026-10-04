@@ -105,7 +105,7 @@ export function WinBadge({
 
         <span
           aria-hidden="true"
-          className="absolute bottom-0 left-1/2 min-w-[1.3em] -translate-x-1/2 translate-y-[38%] rounded-full px-[0.3em] text-center text-[0.68em] font-bold leading-[1.45] tabular-nums text-[#FFD365]"
+          className="absolute bottom-0 left-1/2 min-w-[1.3em] -translate-x-1/2 translate-y-[38%] rounded-full px-[0.3em] text-center text-[0.68em] font-bold leading-[1.45] tabular-nums text-white"
           style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
         >
           {count}
