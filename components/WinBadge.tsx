@@ -46,7 +46,24 @@ const STAT_LABEL: Record<TrophyKind, string> = {
   crabKing: '저티어 내전 종합 1위',
 };
 
+// 꽃게들의 왕 그림은 받침대가 내전우승 트로피와 같은 자리·크기가 되도록 그렸고, 그 위의
+// 꽃게는 원래 칸(256)을 넘는다. 그래서 그림을 사방으로 넓힌 캔버스(416 = 256 + 80*2)에
+// 그려두고 여기서 그만큼(416/256) 키워 가운데를 맞춘다 — 받침대는 트로피와 겹치고,
+// 꽃게만 틀 밖으로 조금 나온다.
+const ART_OVERSCAN: Record<TrophyKind, number> = {
+  scrimWin: 1,
+  crabKing: 416 / 256,
+};
+
+// 육각 테두리 색. 꽃게들의 왕은 꽃게 색(빨강)에 맞춘다.
+const FRAME_STROKE: Record<TrophyKind, string | undefined> = {
+  scrimWin: undefined,
+  crabKing: '#FF5A5A',
+};
+
 function Trophy({ kind }: { kind: TrophyKind }) {
+  const overscan = ART_OVERSCAN[kind];
+  const inset = `${((1 - overscan) / 2) * 100}%`;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- 목록 안 작은 아이콘이라 next/image 의 최적화가 이득이 없다
     <img
@@ -54,8 +71,12 @@ function Trophy({ kind }: { kind: TrophyKind }) {
       alt=""
       aria-hidden="true"
       data-testid={kind === 'scrimWin' ? 'trophy-art' : 'crab-king-art'}
-      className="h-full w-full"
-      style={{ objectFit: 'contain' }}
+      className={overscan === 1 ? 'h-full w-full' : 'absolute max-w-none'}
+      style={
+        overscan === 1
+          ? { objectFit: 'contain' }
+          : { objectFit: 'contain', width: `${overscan * 100}%`, height: `${overscan * 100}%`, left: inset, top: inset }
+      }
     />
   );
 }
@@ -78,13 +99,13 @@ export function WinBadge({
       {/* 횟수는 육각형 **맨 아래 꼭짓점**에 걸쳐 놓는다. 트로피 몸통 위에 얹으면
           그림 한가운데를 가려서 무엇인지 잘 안 보인다. */}
       <span className="relative inline-flex">
-        <HexFrame size={size}>
+        <HexFrame size={size} stroke={FRAME_STROKE[kind]}>
           <Trophy kind={kind} />
         </HexFrame>
 
         <span
           aria-hidden="true"
-          className="absolute bottom-0 left-1/2 min-w-[1.3em] -translate-x-1/2 translate-y-[38%] rounded-full px-[0.3em] text-center text-[0.68em] font-bold leading-[1.45] tabular-nums text-[#FFD365]"
+          className="absolute bottom-0 left-1/2 min-w-[1.3em] -translate-x-1/2 translate-y-[38%] rounded-full px-[0.3em] text-center text-[0.68em] font-bold leading-[1.45] tabular-nums text-white"
           style={{ background: chipColor, boxShadow: `0 0 0 1px ${chipColor}` }}
         >
           {count}
@@ -98,7 +119,7 @@ export function WinBadge({
         description={BADGE_COPY[kind].description}
         statLine={`${STAT_LABEL[kind]} ${count}회`}
         artwork={
-          <HexFrame size="6rem">
+          <HexFrame size="6rem" stroke={FRAME_STROKE[kind]}>
             <Trophy kind={kind} />
           </HexFrame>
         }
