@@ -251,7 +251,7 @@ export function RoundSheet({
       const response = await fetch('/api/scrim-roster/round-sheet/confirm-win', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scrimDate: data?.scrimDate, lowTier }),
+        body: JSON.stringify({ scrimDate: data?.scrimDate, lowTier, rosterId }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? '우승 확정에 실패했습니다.');

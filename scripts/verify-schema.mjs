@@ -680,6 +680,22 @@ check(
   'session_standing_dates 가 내전마다 저티어 여부를 내보낸다',
 );
 
+console.log('\n0047 — 확정된 일반 내전만 지표에 센다');
+
+for (const view of [
+  'member_ranking_games',
+  'member_partner_stats',
+  'member_hexagon_stats',
+  'member_map_stats',
+  'member_playstyle_stats',
+]) {
+  const def = (await client.query(`select pg_get_viewdef($1::regclass) as def`, [view])).rows[0].def;
+  check(
+    def.includes('ranked_matches') && !def.includes('countable_matches'),
+    `${view} 가 확정된 내전(ranked_matches)만 본다`,
+  );
+}
+
 await client.end();
 
 console.log('');

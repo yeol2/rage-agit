@@ -133,6 +133,17 @@ describe('sortEntriesByTier', () => {
     expect(sortEntriesByTier(entries).map((e) => e.id)).toEqual(['b', 'c', 'a']);
   });
 
+  it('같은 티어 안에서는 점수가 높은 사람이 위로, 점수가 없는 사람은 맨 아래로 간다', () => {
+    const entries = [
+      entry({ id: 'low', tier: 2, memberId: 'm-low' }),
+      entry({ id: 'none', tier: 2, memberId: null }),
+      entry({ id: 'high', tier: 2, memberId: 'm-high' }),
+      entry({ id: 'top-tier', tier: 1, memberId: 'm-x' }),
+    ];
+    const scores = { 'm-low': 41, 'm-high': 77, 'm-x': 10 };
+    expect(sortEntriesByTier(entries, scores).map((e) => e.id)).toEqual(['top-tier', 'high', 'low', 'none']);
+  });
+
   it('tier가 없는 항목은 뒤로 보낸다', () => {
     const entries = [entry({ id: 'a', tier: null }), entry({ id: 'b', tier: 2 })];
     expect(sortEntriesByTier(entries).map((e) => e.id)).toEqual(['b', 'a']);

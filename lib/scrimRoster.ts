@@ -169,8 +169,17 @@ export interface Roster {
 // 화면(RosterBoard)의 티어 칸 안에서 기본 정렬 순서 — 이 클랜은 0티어가 최상위라
 // 숫자가 작을수록 상위 티어다. 오름차순으로 정렬해 실력 순으로 보이게 한다.
 // tier 가 없는 항목(미매칭)은 뒤로 보낸다.
-export function sortEntriesByTier(entries: RosterEntry[]): RosterEntry[] {
-  return [...entries].sort((a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity));
+// 점수(네임플레이트에 뜨는 최근 16경기 종합점수)를 주면 같은 티어 안에서 높은 점수가
+// 위로 온다. 점수가 없는 사람(미매칭·기록 없음)은 그 티어의 맨 아래다.
+export function sortEntriesByTier(
+  entries: RosterEntry[],
+  scoreByMemberId: Record<string, number> = {},
+): RosterEntry[] {
+  const scoreOf = (entry: RosterEntry) =>
+    entry.memberId && entry.memberId in scoreByMemberId ? scoreByMemberId[entry.memberId] : -Infinity;
+  return [...entries].sort(
+    (a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity) || scoreOf(b) - scoreOf(a),
+  );
 }
 
 // 드래그 앤 드롭으로 한 사람을 다른 티어 칸(1~4)이나 미매칭(null)으로 옮긴다 —
