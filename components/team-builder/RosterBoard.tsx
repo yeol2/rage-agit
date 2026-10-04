@@ -652,7 +652,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
     }
   }
 
-  const unassigned = sortEntriesByTier(entries.filter((entry) => entry.tierSlot === null));
+  const unassigned = sortEntriesByTier(entries.filter((entry) => entry.tierSlot === null), scoreByMemberId);
   const targetPerTier = targetPerTierFor(entries.length);
   const allTiersFull = TIER_SLOTS.every(
     (slot) => entries.filter((entry) => entry.tierSlot === slot).length === targetPerTier,
@@ -744,7 +744,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TIER_SLOTS.map((slot) => {
-          const slotEntries = sortEntriesByTier(entries.filter((entry) => entry.tierSlot === slot));
+          const slotEntries = sortEntriesByTier(entries.filter((entry) => entry.tierSlot === slot), scoreByMemberId);
           return (
             <section
               key={slot}

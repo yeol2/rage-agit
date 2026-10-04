@@ -133,6 +133,17 @@ describe('sortEntriesByTier', () => {
     expect(sortEntriesByTier(entries).map((e) => e.id)).toEqual(['b', 'c', 'a']);
   });
 
+  it('같은 티어 안에서는 점수가 높은 사람이 위로, 점수가 없는 사람은 맨 아래로 간다', () => {
+    const entries = [
+      entry({ id: 'low', tier: 2, memberId: 'm-low' }),
+      entry({ id: 'none', tier: 2, memberId: null }),
+      entry({ id: 'high', tier: 2, memberId: 'm-high' }),
+      entry({ id: 'top-tier', tier: 1, memberId: 'm-x' }),
+    ];
+    const scores = { 'm-low': 41, 'm-high': 77, 'm-x': 10 };
+    expect(sortEntriesByTier(entries, scores).map((e) => e.id)).toEqual(['top-tier', 'high', 'low', 'none']);
+  });
+
   it('tier가 없는 항목은 뒤로 보낸다', () => {
     const entries = [entry({ id: 'a', tier: null }), entry({ id: 'b', tier: 2 })];
     expect(sortEntriesByTier(entries).map((e) => e.id)).toEqual(['b', 'a']);
@@ -255,6 +266,18 @@ describe('assignTeamNumbers', () => {
     expect(result.get('b')).toBe(1);
     expect(result.get('c')).toBe(1);
     expect(result.get('d')).toBe(1);
+  });
+
+  it('같은 티어 안에서는 점수가 높은 사람이 앞 번호 팀으로 간다(01 화면 순서와 같다)', () => {
+    const entries = [
+      entry({ id: 'low', memberId: 'm-low', tier: 1, tierSlot: 1 }),
+      entry({ id: 'high', memberId: 'm-high', tier: 1, tierSlot: 1 }),
+      entry({ id: 'top', memberId: 'm-top', tier: 0, tierSlot: 1 }),
+    ];
+    const result = assignTeamNumbers(entries, { 'm-low': 30, 'm-high': 80, 'm-top': 5 });
+    expect(result.get('top')).toBe(1); // 티어가 먼저
+    expect(result.get('high')).toBe(2);
+    expect(result.get('low')).toBe(3);
   });
 
   it('tierSlot이 null인 항목은 결과에 안 들어간다', () => {

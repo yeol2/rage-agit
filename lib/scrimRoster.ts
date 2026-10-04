@@ -169,8 +169,17 @@ export interface Roster {
 // 화면(RosterBoard)의 티어 칸 안에서 기본 정렬 순서 — 이 클랜은 0티어가 최상위라
 // 숫자가 작을수록 상위 티어다. 오름차순으로 정렬해 실력 순으로 보이게 한다.
 // tier 가 없는 항목(미매칭)은 뒤로 보낸다.
-export function sortEntriesByTier(entries: RosterEntry[]): RosterEntry[] {
-  return [...entries].sort((a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity));
+// 점수(네임플레이트에 뜨는 최근 16경기 종합점수)를 주면 같은 티어 안에서 높은 점수가
+// 위로 온다. 점수가 없는 사람(미매칭·기록 없음)은 그 티어의 맨 아래다.
+export function sortEntriesByTier(
+  entries: RosterEntry[],
+  scoreByMemberId: Record<string, number> = {},
+): RosterEntry[] {
+  const scoreOf = (entry: RosterEntry) =>
+    entry.memberId && entry.memberId in scoreByMemberId ? scoreByMemberId[entry.memberId] : -Infinity;
+  return [...entries].sort(
+    (a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity) || scoreOf(b) - scoreOf(a),
+  );
 }
 
 // 드래그 앤 드롭으로 한 사람을 다른 티어 칸(1~4)이나 미매칭(null)으로 옮긴다 —
@@ -209,19 +218,27 @@ export function groupEntriesByTier(sortedEntries: RosterEntry[]): TierGroup[] {
 
 export interface TeamAssignmentInput {
   id: string;
+  memberId?: string | null;
   tier: number | null;
   tierSlot: 1 | 2 | 3 | 4 | null;
 }
 
-// "팀 구성" 버튼을 누르면 01의 각 티어 칸에 보이는 순서(실제 티어 오름차순) 그대로
-// 1번팀부터 차례로 매긴다. 네 칸 모두 인원수가 같다는 전제(호출하는 쪽에서 검증)
-// 하에 각 팀은 티어별로 정확히 한 명씩 받는다.
-export function assignTeamNumbers(entries: TeamAssignmentInput[]): Map<string, number> {
+// "팀 구성" 버튼을 누르면 01의 각 티어 칸에 보이는 순서(실제 티어 오름차순, 같은
+// 티어 안에서는 점수 내림차순 — sortEntriesByTier 와 같은 규칙) 그대로 1번팀부터
+// 차례로 매긴다. 네 칸 모두 인원수가 같다는 전제(호출하는 쪽에서 검증) 하에 각 팀은
+// 티어별로 정확히 한 명씩 받는다. 입력은 화면과 같은 기준(id)으로 정렬돼 있어야
+// 점수까지 같을 때의 순서도 화면과 맞는다.
+export function assignTeamNumbers(
+  entries: TeamAssignmentInput[],
+  scoreByMemberId: Record<string, number> = {},
+): Map<string, number> {
+  const scoreOf = (entry: TeamAssignmentInput) =>
+    entry.memberId && entry.memberId in scoreByMemberId ? scoreByMemberId[entry.memberId] : -Infinity;
   const teamNumberById = new Map<string, number>();
   for (const slot of [1, 2, 3, 4] as const) {
     const slotEntries = entries
       .filter((entry) => entry.tierSlot === slot)
-      .sort((a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity));
+      .sort((a, b) => (a.tier ?? Infinity) - (b.tier ?? Infinity) || scoreOf(b) - scoreOf(a));
     slotEntries.forEach((entry, index) => teamNumberById.set(entry.id, index + 1));
   }
   return teamNumberById;

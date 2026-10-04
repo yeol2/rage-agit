@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// 이 테스트가 지키는 것은 하나다: **등수 스냅샷이 내전보다 먼저 찍히지 않는다.**
+// 이 테스트가 지키는 것: **폴링은 등수 스냅샷을 찍지 않고**(확정 때 찍는다, 0047), 라운드는
+// 로스터 날짜 기준으로 센다(아래 버그 참고).
 //
 // 2026-09-03 내전에서 스냅샷이 20:35:08 에 찍혔고 1라운드는 20:36:25 에 들어왔다.
 // 경기가 한 판도 없는 시점의 순위가 "오늘 내전 결과"로 저장된 것이라, 리더보드의
@@ -109,15 +110,16 @@ describe('폴링 라우트 — 등수 스냅샷 캡처 시점', () => {
     expect(captureRankingSnapshotForRoster).not.toHaveBeenCalled();
   });
 
-  // 못 잡았다고 무조건 건너뛰면, 4번째가 다른 경로(CLI 폴링 등)로 먼저 들어간 뒤
-  // 버튼을 눌렀을 때 캡처를 영영 놓친다. 그 구제는 그대로 살아 있어야 한다.
-  it('못 잡았어도 오늘 4라운드가 다 차 있으면 찍는다', async () => {
+  // 지표는 "우승 확정"을 누른 내전만 센다(0047). 4라운드가 다 차도 폴링 시점의
+  // 리더보드는 아직 안 바뀌었으므로, 여기서 찍으면 변동이 0 인 스냅샷이 저장된다.
+  // 스냅샷과 리더보드 갱신은 confirm-win 이 한다.
+  it('4라운드가 다 차도 폴링은 스냅샷을 찍지 않고 리더보드도 건드리지 않는다', async () => {
     buildRoundSheet.mockResolvedValue({ roundCount: 4 });
 
     await POST(pollRequest());
 
-    expect(captureRankingSnapshotForRoster).toHaveBeenCalledWith(expect.anything(), 'roster-1');
-    expect(revalidatePath).toHaveBeenCalledWith('/dashboard');
+    expect(captureRankingSnapshotForRoster).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalledWith('/dashboard');
   });
 
   it('매치를 잡았으면 그 매치의 날짜를 센다 — 로스터 날짜보다 이쪽이 우선이다', async () => {
@@ -130,6 +132,5 @@ describe('폴링 라우트 — 등수 스냅샷 캡처 시점', () => {
     await POST(pollRequest());
 
     expect(buildRoundSheet).toHaveBeenCalledWith(expect.anything(), '2026-09-03');
-    expect(captureRankingSnapshotForRoster).toHaveBeenCalled();
   });
 });

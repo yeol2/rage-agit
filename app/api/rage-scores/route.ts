@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
-import {
-  RAGE_SCORE_STEEPNESS,
-  TIER_SCORE_BANDS,
-  eligibleForRanking,
-  fetchRankingStats,
-  rageScores,
-  type RankingWindow,
-} from '@/lib/rankingStats';
+import { type RankingWindow } from '@/lib/rankingStats';
+import { fetchRageScoreMap } from '@/lib/rageScoreMap';
 
 // team-builder "01 티어 테이블"이 관리자 전용 종합점수 배지를 그리는 데 쓴다.
 // RosterBoard는 다른 데이터를 전부 REST 라우트로만 받으므로(브라우저에서
@@ -16,12 +10,7 @@ export async function GET(request: Request) {
   const window: RankingWindow = windowParam === 'alltime' ? 'alltime' : 'recent16';
 
   try {
-    const rows = await fetchRankingStats(window);
-    const eligible = eligibleForRanking(rows);
-    const scored = rageScores(eligible, TIER_SCORE_BANDS, RAGE_SCORE_STEEPNESS);
-    const scores: Record<string, number> = {};
-    for (const row of scored) scores[row.memberId] = row.score;
-    return NextResponse.json({ scores });
+    return NextResponse.json({ scores: await fetchRageScoreMap(window) });
   } catch (error) {
     const message = error instanceof Error ? error.message : '점수를 불러오지 못했습니다.';
     return NextResponse.json({ error: message }, { status: 500 });

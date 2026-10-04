@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { runPolling } from '@/supabase/functions/_shared/polling.mjs';
-import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
 import { revalidateRecordPages } from '@/lib/revalidateRecordPages';
 import { buildRoundSheet } from '@/lib/roundSheetData';
 import {
@@ -178,36 +176,24 @@ export async function POST(request: Request) {
     const pollingMs = Date.now() - pollingStartedAt;
     const persistStartedAt = Date.now();
 
-    // 등수 스냅샷 캡처·리더보드 갱신은 폴링의 본 목적(매치 기록)에 딸린 부수
-    // 효과다 — 실패해도 폴링 응답 자체는 정상으로 돌려준다(사용자는 "폴링
-    // 성공"만 신경 쓴다). 이미 캡처됐으면 captureRankingSnapshotForRoster가
-    // 알아서 아무것도 안 하므로, 여러 번 폴링해도 안전하다.
+    // 리더보드·등수 변동 스냅샷은 여기서 건드리지 않는다. 지표는 "우승 확정"을
+    // 누른 내전만 세므로(0047) 폴링 시점에는 랭킹 숫자가 움직이지 않는다 —
+    // 스냅샷 캡처와 리더보드 갱신은 confirm-win 이 한다.
     //
-    // 리더보드(app/dashboard/page.tsx)는 revalidate:false 라 시간이 지나도
-    // 저절로 안 바뀐다 — 딱 여기, 이 세션의 라운드 4개가 처음 확인된 순간에만
-    // revalidatePath 로 갱신한다. 1~3매치만 폴링된 상태로는 리더보드 화면이
-    // 전혀 안 바뀌어야 등수 변동(4매치 확인 후 스냅샷)과 타이밍이 맞는다.
     // 라운드 수는 시트와 같은 기준(날짜)으로 센다. 이번에 매치를 잡았으면 그
-    // 매치의 날짜를, 못 잡았으면 이 로스터의 날짜를 쓴다 — 못 잡았다고 건너뛰면
-    // 4번째 매치가 다른 경로(CLI 폴링 등)로 이미 들어간 뒤에 버튼을 눌렀을 때
-    // 스냅샷 캡처와 리더보드 갱신을 영영 놓친다.
-    //
-    // 여기서 "가장 최근 내전"을 쓰면 안 된다. 왜 안 되는지는 rosterScrimDate 참고.
+    // 매치의 날짜를, 못 잡았으면 이 로스터의 날짜를 쓴다. 여기서 "가장 최근
+    // 내전"을 쓰면 안 된다. 왜 안 되는지는 rosterScrimDate 참고.
     let roundCount = 0;
     const scrimDate = result.scrims[0]?.playedAt
       ? toKstDate(result.scrims[0].playedAt)
       : await rosterScrimDate(supabase, rosterId).catch(() => null);
     if (scrimDate) {
       roundCount = await countRounds(supabase, scrimDate);
-      if (roundCount >= 4 && rosterId) {
-        const { captured } = await captureRankingSnapshotForRoster(supabase, rosterId).catch(
-          () => ({ captured: false }),
-        );
-        revalidatePath('/dashboard');
-        // 스냅샷이 **실제로 찍힌** 그 한 번에만 알린다. roundCount >= 4 만 보면
-        // 버튼을 다시 누를 때마다 같은 명단이 또 온다.
-        if (captured) await notifyUnlinkedPlayers(supabase, scrimDate);
-      }
+      // 미연결 참가자 명단은 확정 **전에** 정리하라고 보내는 알림이다. 이번
+      // 폴링이 4번째 라운드를 들여온 그 한 번에만 보낸다 — roundCount >= 4 만
+      // 보면 버튼을 다시 누를 때마다 같은 명단이 또 온다.
+      const reachedFourNow = roundCount >= 4 && roundCount - result.scrimsFound < 4;
+      if (reachedFourNow) await notifyUnlinkedPlayers(supabase, scrimDate).catch(() => {});
     }
 
     // 리더보드를 뺀 나머지 기록 화면은 라운드가 하나 들어올 때마다 갱신한다 —

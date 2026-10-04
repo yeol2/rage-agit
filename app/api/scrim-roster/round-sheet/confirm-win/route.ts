@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { revalidateRecordPages } from '@/lib/revalidateRecordPages';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { buildRoundSheet } from '@/lib/roundSheetData';
+import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
 
 // 내전우승은 그날 라운드를 다 치른 뒤에야 정해진다. 한두 라운드만 기록된 상태로
 // 확정하면 그때까지 앞서 있던 팀이 우승으로 박힌다.
@@ -24,6 +25,8 @@ const REQUIRED_ROUNDS = 4;
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const scrimDate = typeof body.scrimDate === 'string' ? body.scrimDate : null;
+  // 등수 변동 스냅샷을 한 번만 찍기 위한 표시가 명단에 있다. 명단이 없으면 안 찍는다.
+  const rosterId = typeof body.rosterId === 'string' ? body.rosterId : null;
   if (!scrimDate) {
     return NextResponse.json({ error: 'scrimDate 가 필요합니다.' }, { status: 400 });
   }
@@ -97,7 +100,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '등수 기록을 저장하지 못했습니다.' }, { status: 500 });
   }
 
-  // 우승 횟수(뱃지 열·클랜원 화면)와 종합등수 줄이 바로 보여야 한다.
+  // 리더보드·지표는 확정된 일반 내전만 센다(0047) — 바로 위 insert 로 이 내전이
+  // 집계에 들어갔으니, 리더보드를 갱신하기 전에 등수 변동 스냅샷을 찍는다.
+  // 저티어 내전은 집계가 안 바뀌므로 찍지 않는다(찍으면 변동 표시가 전부 지워진다).
+  // 로스터마다 한 번만 찍히므로 확정을 다시 눌러도 안전하다. 스냅샷은 부수
+  // 효과라 실패해도 확정 자체는 성공으로 돌려준다.
+  if (!lowTier && rosterId) {
+    await captureRankingSnapshotForRoster(supabase, rosterId).catch(() => null);
+  }
+
+  // 우승 횟수(뱃지 열·클랜원 화면)와 종합등수 줄, 리더보드 집계가 바로 보여야 한다.
   revalidatePath('/dashboard');
   revalidateRecordPages();
 

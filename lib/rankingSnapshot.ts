@@ -109,7 +109,8 @@ export async function fetchRankingSnapshots(): Promise<RankingSnapshotRow[]> {
   }));
 }
 
-// 03 폴링이 라운드 4개 도달을 감지했을 때 호출한다(캡처 API 라우트도 이
+// 03 시트에서 일반 내전의 "우승 확정"을 눌렀을 때 호출한다 — 지표가 확정된 내전만
+// 세므로(0047) 그 순간이 곧 리더보드가 바뀌는 순간이다(캡처 API 라우트도 이
 // 함수를 그대로 가져다 쓴다). 이미 캡처된 로스터면 아무것도 안 하고
 // { captured: false } 를 낸다 — 여러 번 호출돼도 안전하다.
 export async function captureRankingSnapshotForRoster(
