@@ -32,7 +32,7 @@ function makeRoster(entries: RosterEntry[]): Roster {
 const ROUND_SHEET_GET_URL = '/api/scrim-roster/round-sheet';
 const EMPTY_ROUND_SHEET = { roundCount: 0, teams: [] };
 
-// 01(내전 시트)이 항상 같이 마운트돼서 모든 렌더가 이 GET을 한 번씩 부른다 —
+// 03(내전 시트)이 항상 같이 마운트돼서 모든 렌더가 이 GET을 한 번씩 부른다 —
 // 02/03 관련 동작을 검증하는 테스트가 이 호출까지 일일이 신경 쓰지 않도록,
 // 그 URL만 가로채고 나머지는 각 테스트가 준 대로 응답하는 라우터를 만든다.
 function stubFetch(handler: (url: string, init?: RequestInit) => unknown) {
@@ -162,7 +162,7 @@ describe('RosterBoard - 팀 구성', () => {
     expect(within(teamTable()).getAllByText('Ez_Test').length).toBe(4);
   });
 
-  it('01 내전 시트는 팀 구성 여부와 무관하게 처음부터 보인다', async () => {
+  it('03 내전 시트는 팀 구성 여부와 무관하게 처음부터 보인다', async () => {
     const roster = makeRoster([makeEntry({ id: 'a', tierSlot: 1 })]);
     stubFetch(() => ({ ok: true, json: async () => EMPTY_ROUND_SHEET }));
 

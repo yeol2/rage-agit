@@ -262,7 +262,7 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
     };
   }, [isAdmin]);
 
-  // 명단이 없어도 01 시트는 보여준다 — 시트는 실제 매치만 보므로 로스터와
+  // 명단이 없어도 03 시트는 보여준다 — 시트는 실제 매치만 보므로 로스터와
   // 무관하다. "초기화"로 명단을 지우고 다음 내전을 준비하는 동안에도 지난
   // 내전 결과를 계속 볼 수 있어야 한다.
   if (!roster) {
@@ -272,24 +272,24 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
           <span className="mr-3" style={{ color: '#322F36' }}>
             01
           </span>{' '}
-          내전 시트
-        </h2>
-        <div className="mt-10">
-          <RoundSheet />
-        </div>
-
-        <div aria-hidden="true" className="mt-16 border-t border-white/10" />
-
-        <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
-          <span className="mr-3" style={{ color: '#322F36' }}>
-            02
-          </span>{' '}
           티어 테이블
         </h2>
         <div className="mt-10">
           <RosterUploadForm />
         </div>
         <p className="mt-10 text-menu">아직 업로드된 명단이 없습니다. 파일을 업로드하세요.</p>
+
+        <div aria-hidden="true" className="mt-16 border-t border-white/10" />
+
+        <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
+          <span className="mr-3" style={{ color: '#322F36' }}>
+            03
+          </span>{' '}
+          내전 시트
+        </h2>
+        <div className="mt-10">
+          <RoundSheet />
+        </div>
       </div>
     );
   }
@@ -660,25 +660,10 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
 
   return (
     <div>
-      {/* 01 내전 시트 — 실제 매치가 폴링되면 team_number(02/03) 진행 여부와
-          무관하게 PUBG API의 실제 팀(team_id) 기준으로 채워진다. 그래서 앞
-          단계를 마쳐야 열리는 버튼이 필요 없다 — 로스터만 있으면 항상 보인다. */}
+      {/* 01 티어 테이블 */}
       <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
         <span className="mr-3" style={{ color: '#322F36' }}>
           01
-        </span>{' '}
-        내전 시트
-      </h2>
-      <div className="mt-10">
-        <RoundSheet rosterId={rosterId} />
-      </div>
-
-      <div aria-hidden="true" className="mt-16 border-t border-white/10" />
-
-      {/* 02 티어 테이블 */}
-      <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
-        <span className="mr-3" style={{ color: '#322F36' }}>
-          02
         </span>{' '}
         티어 테이블
       </h2>
@@ -882,11 +867,11 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
       </div>
 
       <div className="mt-16 border-t border-white/10 pt-10">
-        {/* 03 팀 구성 테이블 — 팀 구성 버튼을 누르기 전에도 항상 보인다. 아직
+        {/* 02 팀 구성 테이블 — 팀 구성 버튼을 누르기 전에도 항상 보인다. 아직
             팀 번호가 없으면 자리마다 점선 빈 칸으로 표시된다(Nameplate 분기). */}
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
           <span className="mr-3" style={{ color: '#322F36' }}>
-            03
+            02
           </span>{' '}
           팀 구성 테이블
         </h2>
@@ -1054,6 +1039,21 @@ export function RosterBoard({ roster }: { roster: Roster | null }) {
             </div>
           </div>
         </div>
+
+      <div aria-hidden="true" className="mt-16 border-t border-white/10" />
+
+      {/* 03 내전 시트 — 실제 매치가 폴링되면 team_number(01/02) 진행 여부와
+          무관하게 PUBG API의 실제 팀(team_id) 기준으로 채워진다. 그래서 앞
+          단계를 마쳐야 열리는 버튼이 필요 없다 — 로스터만 있으면 항상 보인다. */}
+      <h2 className="mt-16 text-3xl font-bold tracking-tight md:text-4xl">
+        <span className="mr-3" style={{ color: '#322F36' }}>
+          03
+        </span>{' '}
+        내전 시트
+      </h2>
+      <div className="mt-10">
+        <RoundSheet rosterId={rosterId} />
+      </div>
 
       <div aria-hidden="true" className="mt-16 border-t border-white/10" />
 
