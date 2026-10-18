@@ -47,9 +47,10 @@ async function countRounds(supabase: SupabaseClient, scrimDate: string): Promise
 }
 
 /**
- * 이 로스터가 가리키는 내전 날짜(한국시간). 명단을 올린 저녁이 곧 그 내전이다.
+ * 이 로스터를 올린 시각. 한국시간 날짜로 바꾸면 곧 그 내전 날짜다 — 명단을 올린
+ * 저녁이 그 내전이다. 폴링을 어디서부터 볼지(sinceHoursFromRoster)도 이 시각으로 정한다.
  *
- * 폴링이 매치를 못 잡았을 때 "몇 라운드까지 왔나"를 셀 기준이다. 예전엔 그
+ * 날짜는 폴링이 매치를 못 잡았을 때 "몇 라운드까지 왔나"를 셀 기준이다. 예전엔 그
  * 자리에 latestScrimDate(= DB 에서 가장 최근 내전)를 썼는데, 그것이 등수 변동을
  * 한 내전씩 밀리게 만든 원인이었다.
  *
@@ -63,7 +64,7 @@ async function countRounds(supabase: SupabaseClient, scrimDate: string): Promise
  * 다른 경로(CLI 폴링 등)로 먼저 들어간 뒤 버튼을 누른 경우를 구제하려던 원래
  * 의도는 그대로다 — 그때도 오늘 날짜를 세어 4가 나온다.
  */
-async function rosterScrimDate(
+async function rosterFetchedAt(
   supabase: SupabaseClient,
   rosterId: string | null,
 ): Promise<string | null> {
@@ -73,7 +74,29 @@ async function rosterScrimDate(
     .select('fetched_at')
     .eq('id', rosterId)
     .maybeSingle();
-  return data?.fetched_at ? toKstDate(data.fetched_at as string) : null;
+  return (data?.fetched_at as string | undefined) ?? null;
+}
+
+const MIN_SINCE_HOURS = 3;
+// PUBG 는 매치를 14일만 보관한다 — 그보다 멀리 볼 이유가 없다.
+const MAX_SINCE_HOURS = 14 * 24;
+
+/**
+ * 폴링이 얼마나 되돌아볼지 — 이 로스터를 올린 시각부터다.
+ *
+ * 예전엔 고정 3시간이었다. 2026-10-15 내전은 20:01~21:41 에 4라운드를 치렀는데
+ * 버튼이 그날 밤 00:03 에야 처음 성공했고, 그때 3시간 기준(21:03)보다 이른
+ * 1·2라운드는 아예 보지도 않고 지나갔다. 명단은 내전 직전에 올리므로 그 시각부터
+ * 보면 늦게 눌러도 그날 라운드를 다 잡는다. 이미 본 매치는 polled_matches 가
+ * 걸러내므로 기간이 길어도 PUBG 호출은 늘지 않는다.
+ *
+ * 로스터를 모르면 예전처럼 3시간. 막 올린 로스터라도 3시간보다 짧게 보지는 않는다.
+ */
+function sinceHoursFromRoster(fetchedAt: string | null): number {
+  if (!fetchedAt) return MIN_SINCE_HOURS;
+  const hours = (Date.now() - new Date(fetchedAt).getTime()) / 3600_000;
+  if (!Number.isFinite(hours)) return MIN_SINCE_HOURS;
+  return Math.min(MAX_SINCE_HOURS, Math.max(MIN_SINCE_HOURS, hours));
 }
 
 /**
@@ -164,11 +187,13 @@ export async function POST(request: Request) {
       knownAccountId = members?.member_pubg_accounts.find((a) => a.pubg_account_id)?.pubg_account_id ?? null;
     }
 
+    const fetchedAt = await rosterFetchedAt(supabase, rosterId).catch(() => null);
+
     const pollingStartedAt = Date.now();
     const result = await runPolling({
       supabase,
       apiKey,
-      sinceHours: 3,
+      sinceHours: sinceHoursFromRoster(fetchedAt),
       maxMatches: 50,
       playerRetries: 2,
       knownAccountId,
@@ -182,11 +207,13 @@ export async function POST(request: Request) {
     //
     // 라운드 수는 시트와 같은 기준(날짜)으로 센다. 이번에 매치를 잡았으면 그
     // 매치의 날짜를, 못 잡았으면 이 로스터의 날짜를 쓴다. 여기서 "가장 최근
-    // 내전"을 쓰면 안 된다. 왜 안 되는지는 rosterScrimDate 참고.
+    // 내전"을 쓰면 안 된다. 왜 안 되는지는 rosterFetchedAt 참고.
     let roundCount = 0;
     const scrimDate = result.scrims[0]?.playedAt
       ? toKstDate(result.scrims[0].playedAt)
-      : await rosterScrimDate(supabase, rosterId).catch(() => null);
+      : fetchedAt
+        ? toKstDate(fetchedAt)
+        : null;
     if (scrimDate) {
       roundCount = await countRounds(supabase, scrimDate);
       // 미연결 참가자 명단은 확정 **전에** 정리하라고 보내는 알림이다. 이번
