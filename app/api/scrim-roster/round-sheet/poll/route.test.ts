@@ -134,3 +134,46 @@ describe('폴링 라우트 — 등수 스냅샷 캡처 시점', () => {
     expect(buildRoundSheet).toHaveBeenCalledWith(expect.anything(), '2026-09-03');
   });
 });
+
+// 2026-10-15 내전은 20:01~21:41 에 4라운드를 치렀는데 버튼이 00:03 에야 처음
+// 성공했고, 고정 3시간 기준이라 1·2라운드를 영영 못 봤다.
+describe('폴링 라우트 — 되돌아보는 기간', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function sinceHoursPassed(): number {
+    return runPolling.mock.calls[0][0].sinceHours as number;
+  }
+
+  it('로스터를 올린 시각부터 본다 — 늦게 눌러도 1라운드까지 닿는다', async () => {
+    // 로스터 19:41 KST, 버튼은 그날 밤 00:11 KST — 4.5시간 뒤.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-03T15:11:03.427Z'));
+    buildRoundSheet.mockResolvedValue({ roundCount: 0 });
+
+    await POST(pollRequest());
+
+    expect(sinceHoursPassed()).toBeCloseTo(4.5);
+  });
+
+  it('로스터를 막 올렸어도 3시간보다 짧게 보지는 않는다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-03T10:51:03.427Z'));
+    buildRoundSheet.mockResolvedValue({ roundCount: 0 });
+
+    await POST(pollRequest());
+
+    expect(sinceHoursPassed()).toBe(3);
+  });
+
+  it('PUBG 보관 기간(14일)보다 멀리는 안 본다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-03T10:41:03.427Z'));
+    buildRoundSheet.mockResolvedValue({ roundCount: 0 });
+
+    await POST(pollRequest());
+
+    expect(sinceHoursPassed()).toBe(14 * 24);
+  });
+});
