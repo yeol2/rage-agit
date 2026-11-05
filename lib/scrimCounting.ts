@@ -30,8 +30,13 @@ export const MIN_SCRIMS_FOR_RANKING = 4;
  */
 export const RECENT_WINDOW_SCRIMS = 4;
 
-/** 최근 이 개월 수 안에 참가한 적이 없으면 집계에서 뺀다. */
-export const ACTIVE_WITHIN_MONTHS = 3;
+/**
+ * 최근 이 개월 수 안에 참가한 적이 없으면 집계에서 뺀다.
+ *
+ * 2026-11-05 에 3 → 2 로 줄였다. 3개월은 한참 안 나오는 사람이 리더보드에
+ * 계속 남아 있다는 지적이 나올 만큼 길었다. 줄인 날 기준으로 8명이 내려갔다.
+ */
+export const ACTIVE_WITHIN_MONTHS = 2;
 
 /**
  * 표본이 얇을수록 차이를 0 쪽으로 당기는 정도(내전 회차 단위).
