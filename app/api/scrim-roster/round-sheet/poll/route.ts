@@ -107,7 +107,11 @@ function sinceHoursFromRoster(fetchedAt: string | null): number {
  *
  * 스냅샷 캡처와 같은 자리라 같은 조건으로 딱 한 번 돈다.
  */
-async function notifyUnlinkedPlayers(supabase: SupabaseClient, scrimDate: string) {
+async function notifyUnlinkedPlayers(
+  supabase: SupabaseClient,
+  scrimDate: string,
+  rosterId: string | null,
+) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
 
@@ -128,13 +132,47 @@ async function notifyUnlinkedPlayers(supabase: SupabaseClient, scrimDate: string
 
     const { data: rows } = await supabase
       .from('match_participants')
-      .select('pubg_ign')
-      .in('pubg_match_id', matchIds)
-      .is('member_id', null);
-    const players = [...new Set((rows ?? []).map((row) => row.pubg_ign as string))].sort();
-    if (players.length === 0) return;
+      .select('pubg_ign, member_id')
+      .in('pubg_match_id', matchIds);
+    if (!rows || rows.length === 0) return;
 
-    await sendDiscord(webhookUrl, formatUnlinkedPlayersMessage({ scrimDate, players }));
+    const accounts = [
+      ...new Set(rows.filter((row) => !row.member_id).map((row) => row.pubg_ign as string)),
+    ].sort();
+    if (accounts.length === 0) return;
+
+    // 안 묶인 계정이 "누구의 것인지"는 명단에서 구한다 — 명단에 올렸는데 그날
+    // 기록이 하나도 없는 사람이 곧 그 계정의 주인이다. 본계정으로 안 뛰었으니
+    // 기록이 없는 것이고, 명단에는 팀 번호와 티어 칸이 이미 적혀 있다.
+    //
+    // 같은 팀 팀원들의 티어에서 빈 칸을 역산하는 방법도 써봤는데 못 쓴다 —
+    // 한 팀에 3티어가 둘(3.0/3.5) 들어가는 일이 흔해서 칸이 안 좁혀진다.
+    // 2026-11-05 내전에서 4명 중 1명만 맞혔다.
+    const playedMemberIds = new Set(
+      rows.filter((row) => row.member_id).map((row) => row.member_id as string),
+    );
+    const { data: rosterRows } = await supabase
+      .from('scrim_roster_entries')
+      .select('discord_nickname, tier_slot, team_number, member_id, roster_id')
+      .eq('roster_id', rosterId ?? '')
+      .not('member_id', 'is', null);
+
+    const players = (rosterRows ?? [])
+      .filter((row) => !playedMemberIds.has(row.member_id as string))
+      .map((row) => ({
+        ign: row.discord_nickname as string,
+        teamNumber: row.team_number as number | null,
+        tierSlot: row.tier_slot as 1 | 2 | 3 | 4 | null,
+      }))
+      .sort((a, b) => (a.teamNumber ?? 99) - (b.teamNumber ?? 99) || (a.tierSlot ?? 9) - (b.tierSlot ?? 9));
+
+    await sendDiscord(
+      webhookUrl,
+      // 명단에서 주인을 못 찾으면(명단 미업로드 등) PUBG 닉만이라도 알린다.
+      players.length > 0
+        ? formatUnlinkedPlayersMessage({ scrimDate, players, accounts })
+        : formatUnlinkedPlayersMessage({ scrimDate, players: accounts }),
+    );
   } catch {
     // 알림 실패는 조용히 넘긴다 — 폴링 응답에는 영향을 주지 않는다.
   }
@@ -220,7 +258,7 @@ export async function POST(request: Request) {
       // 폴링이 4번째 라운드를 들여온 그 한 번에만 보낸다 — roundCount >= 4 만
       // 보면 버튼을 다시 누를 때마다 같은 명단이 또 온다.
       const reachedFourNow = roundCount >= 4 && roundCount - result.scrimsFound < 4;
-      if (reachedFourNow) await notifyUnlinkedPlayers(supabase, scrimDate).catch(() => {});
+      if (reachedFourNow) await notifyUnlinkedPlayers(supabase, scrimDate, rosterId).catch(() => {});
     }
 
     // 리더보드를 뺀 나머지 기록 화면은 라운드가 하나 들어올 때마다 갱신한다 —

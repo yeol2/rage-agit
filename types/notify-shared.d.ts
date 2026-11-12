@@ -22,11 +22,22 @@ declare module '@/supabase/functions/_shared/notify.mjs' {
 
   /**
    * 그 내전에서 아직 클랜원과 안 묶인 참가자를 알리는 문구.
-   * players 는 PUBG 닉네임 목록이다.
+   * players 는 PUBG 닉네임 문자열이거나, 시트에서 찾아갈 자리를 같이 담은
+   * 객체다 — teamNumber/tierSlot 이 있으면 "3번팀 2티어 미연결" 로 적는다.
    */
   export function formatUnlinkedPlayersMessage(args: {
     scrimDate: string;
-    players: string[];
+    players: (
+      | string
+      | {
+          ign: string;
+          name?: string | null;
+          teamNumber?: number | null;
+          tierSlot?: 1 | 2 | 3 | 4 | null;
+        }
+    )[];
+    /** 실제로 뛴 PUBG 닉 목록 — 묶을 때 복사해 쓰라고 따로 적는다. */
+    accounts?: string[];
   }): string;
 
   /**

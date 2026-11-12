@@ -120,12 +120,37 @@ export function formatRosterUploadMessage({ totalCount, matchedCount, missing })
  * 하고 발견했다. 그래서 그날 바로 알도록 한다.
  *
  * 대개는 외부인이 아니라 우리 클랜원의 부계정이다. 묶는 방법까지 같이 적어둔다.
+ *
+ * 닉네임만 적으면 시트에서 그 사람을 눈으로 찾는 데 시간이 걸린다. 그래서
+ * **몇 번 팀 몇 번째 칸**인지 같이 적는다 — 02 표에서 바로 그 자리를 짚을 수
+ * 있고, 그 자리의 명단 이름이 곧 "누구의 부계정인지"에 대한 답이기 때문이다.
+ * 그 값은 호출부가 명단(로스터)에서 구해 넘긴다 — 명단에 있는데 그날 기록이
+ * 없는 사람이 곧 안 묶인 계정의 주인이다. 명단이 없으면 PUBG 닉만 적는다.
+ *
+ * accounts 는 실제로 뛴 PUBG 닉 목록이다. 묶을 때 복사해 쓰라고 따로 적는다 —
+ * 한 줄에 붙이려면 누가 어느 계정인지 짝을 지어야 하는데, 명단 팀 번호와
+ * PUBG 가 매긴 팀 번호가 자주 어긋나서 그 짝짓기를 믿을 수 없다.
  */
-export function formatUnlinkedPlayersMessage({ scrimDate, players }) {
+export function formatUnlinkedPlayersMessage({ scrimDate, players, accounts = [] }) {
   const lines = [`**미등록 참가자** ${scrimDate} 내전 — ${players.length}명이 클랜원과 안 묶였다.`, ''];
-  for (const ign of players.slice(0, MAX_LISTED_MISSING)) lines.push(`· \`${ign}\``);
+  for (const player of players.slice(0, MAX_LISTED_MISSING)) {
+    // 예전 호출부는 닉네임 문자열만 넘겼다 — 둘 다 받는다.
+    const { ign, teamNumber = null, tierSlot = null } =
+      typeof player === 'string' ? { ign: player } : player;
+    const where = [
+      teamNumber === null ? null : `${teamNumber}번팀`,
+      // 칸 번호는 "티어"가 아니라 "몇 번째 칸"으로 적는다 — 3번째 칸에 3.5티어가
+      // 앉기도 해서, 티어로 읽으면 그 사람 티어로 오해한다.
+      tierSlot === null ? null : `${tierSlot}번째 칸`,
+    ].filter(Boolean);
+    lines.push(where.length ? `· ${where.join(' ')} 미연결 — ${ign}` : `· \`${ign}\``);
+  }
   if (players.length > MAX_LISTED_MISSING) {
     lines.push(`· … 외 ${players.length - MAX_LISTED_MISSING}명`);
+  }
+  if (accounts.length > 0) {
+    lines.push('');
+    lines.push(`안 묶인 계정: ${accounts.map((ign) => `\`${ign}\``).join(', ')}`);
   }
   lines.push('');
   lines.push('시트에는 이 닉네임 그대로 뜨고 팀 점수에도 들어간다.');

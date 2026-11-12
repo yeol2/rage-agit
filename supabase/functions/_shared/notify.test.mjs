@@ -137,6 +137,30 @@ describe('formatUnlinkedPlayersMessage', () => {
     expect(message).toContain('link-alt-account.mjs');
   });
 
+  it('명단 기준으로 몇번팀 몇번째 칸인지와 그 자리의 이름을 적는다', () => {
+    const message = formatUnlinkedPlayersMessage({
+      scrimDate: '2026-11-05',
+      players: [
+        { ign: 'Ez_LaPaz(현석/94)', name: 'Ez_LaPaz(현석/94)', teamNumber: 4, tierSlot: 1 },
+        { ign: 'Ez_ZINZZAYO(성현/96)', name: 'Ez_ZINZZAYO(성현/96)', teamNumber: 10, tierSlot: 2 },
+      ],
+      accounts: ['Ez_HyunkaTory', 'Ez_ZINZZAAYO'],
+    });
+    expect(message).toContain('· 4번팀 1번째 칸 미연결 — Ez_LaPaz(현석/94)');
+    expect(message).toContain('· 10번팀 2번째 칸 미연결 — Ez_ZINZZAYO(성현/96)');
+    // 묶을 때 복사해 쓸 PUBG 닉은 따로 모아 적는다.
+    expect(message).toContain('안 묶인 계정: `Ez_HyunkaTory`, `Ez_ZINZZAAYO`');
+  });
+
+  it('팀 번호를 모르면 PUBG 닉만 적는다 — 명단이 없을 때', () => {
+    const message = formatUnlinkedPlayersMessage({
+      scrimDate: '2026-11-05',
+      players: ['Ez_x'],
+    });
+    expect(message).toContain('· `Ez_x`');
+    expect(message).not.toContain('번팀');
+  });
+
   it('시트에는 보이지만 개인 기록에는 안 남는다는 것을 밝힌다', () => {
     const message = formatUnlinkedPlayersMessage({ scrimDate: '2026-09-03', players: ['Ez_x'] });
     expect(message).toContain('팀 점수에도 들어간다');
