@@ -1,4 +1,9 @@
-import type { RecordBoard } from '@/lib/hallOfFame';
+import { TierBadge } from '@/components/TierBadge';
+import type { RecordBoard, RecordPlayer } from '@/lib/hallOfFame';
+
+function teamNames(players: RecordPlayer[]): string {
+  return players.map((p) => p.name).join(' · ');
+}
 
 // 명예의 전당 카드 하나 — 기록 하나의 1~10등.
 // 메달은 내전 기록·리더보드와 같은 금·은·동 색을 쓴다.
@@ -24,7 +29,7 @@ export function RecordCard({ board }: { board: RecordBoard }) {
         <ol className="mt-4 space-y-1.5">
           {board.entries.map((entry, i) => (
             <li
-              key={`${entry.date}-${entry.names.join()}-${i}`}
+              key={`${entry.date}-${teamNames(entry.players)}-${i}`}
               className={`grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2.5 ${
                 entry.rank <= 3 ? 'bg-white/[0.04]' : ''
               }`}
@@ -33,14 +38,25 @@ export function RecordCard({ board }: { board: RecordBoard }) {
                 {MEDAL[entry.rank] ?? <span className="text-sm">{entry.rank}</span>}
               </span>
               <span className="min-w-0">
-                {/* 휴대폰에선 팀원 넷 이름이 한 줄에 안 들어가 잘리면 둘만 보인다 —
-                    좁은 화면은 줄을 넘기고, 넓은 화면만 한 줄로 자른다. */}
-                <span
-                  className="block text-sm font-bold text-foreground sm:truncate"
-                  title={entry.names.join(' · ')}
-                >
-                  {entry.names.join(' · ')}
-                </span>
+                {board.kind === 'player' ? (
+                  // 개인 기록 — 이름 옆에 리더보드와 같은 티어 뱃지(지금 티어).
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-bold text-foreground">{entry.players[0]?.name}</span>
+                    {entry.players[0]?.tier != null && (
+                      <TierBadge tier={entry.players[0].tier} className="shrink-0" />
+                    )}
+                  </span>
+                ) : (
+                  // 팀 기록 — 팀원은 고티어 → 저티어 순(lib/hallOfFame 의 byTier).
+                  // 휴대폰에선 넷 이름이 한 줄에 안 들어가 잘리면 둘만 보인다 —
+                  // 좁은 화면은 줄을 넘기고, 넓은 화면만 한 줄로 자른다.
+                  <span
+                    className="block text-sm font-bold text-foreground sm:truncate"
+                    title={teamNames(entry.players)}
+                  >
+                    {teamNames(entry.players)}
+                  </span>
+                )}
                 <span className="mt-0.5 block text-[11px] tabular-nums text-subtext">
                   {entry.date}
                   {entry.map && <span className="ml-1.5 text-menu">{entry.map}</span>}

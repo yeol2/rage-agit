@@ -48,17 +48,19 @@ function displayName(nickname: string): string {
   return stripTrailingKoreanTag(cleanDisplayName(nickname));
 }
 
-async function loadNames(supabase: SupabaseClient): Promise<Map<string, string>> {
-  const rows = await selectAll<{ id: string; discord_nickname: string }>((from, to) =>
-    supabase.from('members').select('id, discord_nickname').order('id').range(from, to),
+async function loadMembers(supabase: SupabaseClient): Promise<Map<string, { name: string; tier: number }>> {
+  const rows = await selectAll<{ id: string; discord_nickname: string; tier: number }>((from, to) =>
+    supabase.from('members').select('id, discord_nickname, tier').order('id').range(from, to),
   );
-  return new Map(rows.map((r) => [r.id, displayName(r.discord_nickname)]));
+  return new Map(rows.map((r) => [r.id, { name: displayName(r.discord_nickname), tier: r.tier }]));
 }
 
 export async function fetchHallOfFame(): Promise<RecordBoard[]> {
   const supabase = getSupabaseServer();
-  const names = await loadNames(supabase);
-  const nameOf = (memberId: string | null, ign: string) => (memberId ? names.get(memberId) ?? ign : ign);
+  const members = await loadMembers(supabase);
+  const nameOf = (memberId: string | null, ign: string) => (memberId ? members.get(memberId)?.name ?? ign : ign);
+  // 티어는 지금 티어다. 안 묶인 계정(게스트·탈퇴자)은 티어가 없다.
+  const tierOf = (memberId: string | null) => (memberId ? members.get(memberId)?.tier ?? null : null);
 
   const [rankedGames, apiMatches, screenshotRows, roundMaps, winners] = await Promise.all([
     // 점수에 세는 경기(확정 + 저티어 아님) — 스크린샷·dak.gg·PUBG API 다 들어 있다.
@@ -140,6 +142,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
   const killStats: PlayerGameStat[] = rankedGames.map((g) => ({
     key: g.member_id,
     name: nameOf(g.member_id, '?'),
+    tier: tierOf(g.member_id),
     date: kstDate(g.played_at),
     value: g.kills,
   }));
@@ -149,7 +152,9 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     const match = matchById.get(p.pubg_match_id)!;
     const date = kstDate(match.played_at);
     if (!p.member_id || date < DAMAGE_SINCE) return [];
-    return [{ key: p.member_id, name: nameOf(p.member_id, p.pubg_ign), date, value: Number(p.damage_dealt) }];
+    return [
+      { key: p.member_id, name: nameOf(p.member_id, p.pubg_ign), tier: tierOf(p.member_id), date, value: Number(p.damage_dealt) },
+    ];
   });
 
   // --- 매치 당 최다 점수: 한 경기 한 팀(PUBG API + 스크린샷, dak.gg 는 팀 번호가 틀려 뺀다) ---
@@ -165,6 +170,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
         map: mapLabel(match.map_name),
         teamRank: p.team_rank,
         name: nameOf(p.member_id, p.pubg_ign),
+        tier: tierOf(p.member_id),
         kills: p.kills,
       };
     }),
@@ -174,6 +180,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       map: mapLabel(roundMapOverride.get(`${r.scrim_date}#${r.round_no}`) ?? DEFAULT_ROUND_MAPS[r.round_no] ?? null),
       teamRank: r.team_rank,
       name: nameOf(r.member_id, r.pubg_ign),
+      tier: tierOf(r.member_id),
       kills: r.kills,
     })),
   ];
@@ -186,6 +193,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     placePoints: w.place_points,
     kills: w.kills,
     name: nameOf(w.member_id, '?'),
+    tier: tierOf(w.member_id),
   }));
   const wins = winningScores(winnerRows);
 
@@ -194,6 +202,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
   return [
     {
       id: 'dayKills',
+      kind: 'player',
       title: '내전 최다 킬',
       description: '하루 내전(4경기) 동안 혼자 올린 킬 합계',
       unit: '킬',
@@ -202,6 +211,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     },
     {
       id: 'dayDamage',
+      kind: 'player',
       title: '내전 최다 딜',
       description: '하루 내전(4경기) 동안 혼자 넣은 딜량 합계',
       unit: '딜',
@@ -210,6 +220,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     },
     {
       id: 'matchTeamScore',
+      kind: 'team',
       title: '매치 당 최다 점수',
       description: '한 경기에서 한 팀이 얻은 점수(순위점수 + 팀 킬)',
       unit: '점',
@@ -218,6 +229,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     },
     {
       id: 'highestWin',
+      kind: 'team',
       title: '최고 점수 우승',
       description: '그날 내전을 가장 높은 총점으로 우승한 팀',
       unit: '점',
@@ -226,6 +238,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     },
     {
       id: 'lowestWin',
+      kind: 'team',
       title: '최저 점수 우승',
       description: '그날 내전을 가장 낮은 총점으로 우승한 팀',
       unit: '점',
