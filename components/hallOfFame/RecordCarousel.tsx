@@ -18,6 +18,7 @@ function gapFor(width: number): number {
   return width >= 560 ? 20 : 12;
 }
 const SIDE_SCALE = 0.86;
+const GLOW_ROOM_PX = 28; // RecordCard 테두리 빛(24px 번짐)이 잘리지 않을 위아래 여유
 const SWIPE_PX = 40; // 이만큼 이상 밀어야 넘긴다(살짝 건드린 건 무시)
 
 // 가운데 카드 폭 = 보이는 칸 × 이 비율. 옆 카드는 가운데 쪽 모서리를 기준으로 작아지므로
@@ -112,7 +113,8 @@ export function RecordCarousel({ children }: { children: React.ReactNode }) {
           ref={viewRef}
           data-testid="record-carousel"
           className="relative touch-pan-y overflow-hidden transition-[height] duration-500 ease-out"
-          style={{ height: height ?? undefined }}
+          // 카드 위아래로 빛(테두리 glow)이 번질 자리를 남긴다 — 칸이 넘침을 잘라내서 딱 맞추면 잘렸다.
+          style={{ height: height === null ? undefined : height + GLOW_ROOM_PX * 2 }}
           onPointerDown={(e) => {
             swipeStart.current = e.clientX;
           }}

@@ -25,7 +25,10 @@ export function RecordCard({ board }: { board: RecordBoard }) {
   return (
     <section
       data-testid={`record-${board.id}`}
-      className="rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-3 sm:p-5"
+      // 테두리는 강조색(#FF9233)을 은은하게 + 바깥으로 번지는 빛(2026-11-15 사용자 요청).
+      // 리더보드 펼침 칸이 티어 색으로 빛나는 것과 같은 배합(테두리 40% / 번짐 20%).
+      className="rounded-2xl border bg-[#1B1B23] p-3 sm:p-5"
+      style={{ borderColor: '#FF923366', boxShadow: '0 0 24px #FF923333' }}
     >
       {/* 카드 머리(제목·설명·티어 탭)만 가운데 정렬 — 아래 1~10등 줄은 그대로(2026-11-15). */}
       {/* 제목 강조 — 한 단계 크게(20px) + 아래 가운데 짧은 주황 밑줄(사이트 강조색). 2026-11-15. */}
