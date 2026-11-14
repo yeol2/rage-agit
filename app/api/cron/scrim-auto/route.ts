@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 /**
  * 목·일 내전 자동 폴링 + 자동 확정.
  *
- * Supabase pg_cron 이 내전 날 밤(KST 20:00~00:55) 5분마다 pg_net 으로 이 라우트를
+ * Supabase pg_cron 이 내전 날 밤(KST 20:00~22:55) 5분마다 pg_net 으로 이 라우트를
  * 부른다(scripts/setup-scrim-cron.mjs). Vercel Cron 을 안 쓰는 건 Hobby 요금제가
  * 하루 1회만 허용해서다.
  *

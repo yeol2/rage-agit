@@ -1,6 +1,6 @@
 // 목·일 내전 자동 폴링 + 자동 확정 예약(pg_cron)을 만들거나 갱신한다.
 // 사용법: node scripts/setup-scrim-cron.mjs [cron표현식] [사이트주소]
-//   기본값: '*/5 11-15 * * 0,4'  (UTC 11:00~15:55 목·일 = 한국시간 20:00~00:55, 5분마다)
+//   기본값: '*/5 11-13 * * 0,4'  (UTC 11:00~13:55 목·일 = 한국시간 20:00~22:55, 5분마다)
 //           https://www.rageclan.site
 //   예약 지우기: node scripts/setup-scrim-cron.mjs --remove
 //
@@ -23,7 +23,7 @@ const [serviceRoleKey] = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 const JOB_NAME = 'scrim-auto-poll';
 const SECRET_NAME = 'poll_matches_service_key';
 const remove = process.argv[2] === '--remove';
-const schedule = (!remove && process.argv[2]) || '*/5 11-15 * * 0,4';
+const schedule = (!remove && process.argv[2]) || '*/5 11-13 * * 0,4';
 const siteUrl = process.argv[3] ?? 'https://www.rageclan.site';
 
 const client = await connectPostgres();
