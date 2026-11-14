@@ -20,6 +20,7 @@ import {
   MIN_GAMES_FOR_HEXAGON,
   buildHexagonAxes,
   cleanDisplayName,
+  fetchAllMembers,
   fetchMember,
   fetchMemberHexagonStats,
   fetchMemberWinCounts,
@@ -43,6 +44,22 @@ import { siteConfig } from '@/lib/siteConfig';
 // revalidateRecordPages 로 즉시 지우지만, 크론 폴링처럼 그 라우트를 안 거치는
 // 경로도 있어서 시간 상한을 같이 둔다.
 export const revalidate = 300;
+
+/**
+ * 빌드할 때 클랜원 전원의 페이지를 미리 만들어 둔다.
+ *
+ * 안 하면 배포 직후 각 페이지는 누군가 처음 열 때 그 자리에서 만들어지는데, 페이지
+ * 하나에 Supabase 조회가 10번 남짓이라 운영에서 1.9~3초가 걸렸다(2026-11-14 실측).
+ * 미리 만들어 두면 다른 탭처럼 바로 열린다. 그 뒤 갱신은 지금처럼 ISR 이 한다 —
+ * 지난 페이지를 바로 보여주고 뒤에서 새로 만든다.
+ *
+ * 목록에 없는 id(새로 등록된 사람 등)는 예전처럼 처음 열 때 만들어진다
+ * (dynamicParams 기본값 true).
+ */
+export async function generateStaticParams() {
+  const members = await fetchAllMembers();
+  return members.map((member) => ({ memberId: member.id }));
+}
 
 export default async function MemberDetailPage({
   params,
