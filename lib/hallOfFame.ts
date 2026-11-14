@@ -234,9 +234,10 @@ export function winningScores(rows: WinnerRow[]): Candidate[] {
 //
 // 줄 세우는 값 = 딜량 − 킬 × DAMAGE_PER_KILL. "1킬이면 이만큼은 넣는다"를 빼고 남는
 // 딜이 클수록 위다. 화면엔 이 계산값이 아니라 '1킬 990딜'처럼 킬과 딜을 그대로 적는다.
-// 기준값은 사용자가 제안한 75딜. 실제 내전(PUBG API 경기)은 1킬당 약 103딜(회귀
-// 기울기)~186딜(전체 딜 ÷ 전체 킬)이라, 값을 올리면 킬 적은 경기가 더 위로 온다.
-export const DAMAGE_PER_KILL = 75;
+// 기준값 185딜 — 클랜원 PUBG API 경기의 총딜 ÷ 총킬(2026-11-15 실측 185.3). "딜딸의 신"
+// 뱃지와 같은 정의다. 뱃지는 티어 그룹마다 기준선을 따로 잡지만(176~202) 명예의 전당은
+// 티어 무관 순위라 전체 값 하나로 고정했다(사용자 결정). 데이터가 쌓여도 저절로 바뀌지 않는다.
+export const DAMAGE_PER_KILL = 185;
 
 export interface DealerRow {
   name: string;
