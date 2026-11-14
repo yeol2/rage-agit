@@ -42,8 +42,8 @@ const TROPHY_IMAGE: Record<TrophyKind, string> = {
 };
 
 const STAT_LABEL: Record<TrophyKind, string> = {
-  scrimWin: '내전 종합 1위',
-  crabKing: '저티어 내전 종합 1위',
+  scrimWin: '내전 종합 1등',
+  crabKing: '저티어 내전 종합 1등',
 };
 
 // 꽃게들의 왕 그림은 받침대가 내전우승 트로피와 같은 자리·크기가 되도록 그렸고, 그 위의

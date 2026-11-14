@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { SCORE_HISTORY_TAG } from '@/lib/scoreHistoryData';
 import { revalidateRecordPages } from '@/lib/revalidateRecordPages';
 import { buildRoundSheet, type RoundSheetTeam } from '@/lib/roundSheetData';
 import { captureRankingSnapshotForRoster } from '@/lib/rankingSnapshot';
@@ -126,6 +127,9 @@ export async function confirmScrimWin(
     await captureRankingSnapshotForRoster(supabase, rosterId).catch(() => null);
   }
 
+  // 점수 변동 그래프의 캐시부터 버린다 — 이 내전이 점수에 막 들어갔으니, 아래에서
+  // 다시 그려질 리더보드·클랜원 화면이 옛 이력을 읽으면 그래프만 한 칸 늦는다.
+  revalidateTag(SCORE_HISTORY_TAG);
   // 우승 횟수(뱃지 열·클랜원 화면)와 종합등수 줄, 리더보드 집계가 바로 보여야 한다.
   revalidatePath('/dashboard');
   revalidateRecordPages();

@@ -117,11 +117,12 @@ export function MapRecords({ stats }: { stats: MapStat[] }) {
       </p>
 
       {stats.length === 0 ? (
-        <p className="mt-3.5 rounded-2xl border border-white/[0.06] bg-[#1B1B23] px-4 py-8 text-center text-sm text-menu">
+        // 칸 전체가 이미 카드라(클랜원 상세의 SECTION_CARD) 안에서 또 카드를 씌우지 않는다.
+        <p className="mt-3.5 py-8 text-center text-sm text-menu">
           아직 맵별로 나눠 볼 기록이 없습니다.
         </p>
       ) : (
-        <ul className="mt-3.5 rounded-2xl border border-white/[0.06] bg-[#1B1B23] px-5 pb-2 pt-3">
+        <ul className="mt-4 pb-1">
           {/* 가운데선이 무엇인지는 선 바로 위에 적는다. 칸 밖에 문장으로 적어두면
               읽는 사람이 그 문장과 선을 눈으로 이어붙여야 한다. */}
           <li aria-hidden="true" className="grid grid-cols-[3.5rem_1fr_auto] items-end gap-4 pb-1">

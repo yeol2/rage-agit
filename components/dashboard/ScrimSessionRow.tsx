@@ -226,7 +226,7 @@ export function ScrimSessionRow({
                                       : 'text-foreground'
                                   }`}
                                 >
-                                  {team.teamRank}위
+                                  {team.teamRank}등
                                 </span>
                                 <span className="text-menu">팀 {team.teamId}</span>
                               </div>

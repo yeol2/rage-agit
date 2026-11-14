@@ -25,12 +25,12 @@ export const BADGE_COPY: Record<BadgeKey, BadgeCopy> = {
   scrimWin: {
     name: '내전 우승',
     quip: '오늘 저녁은 치킨이닭!',
-    description: '내전 종합 1위',
+    description: '내전 종합 1등',
   },
   crabKing: {
     name: '꽃게들의 왕',
     quip: '내가 "킹" 크랩이다',
-    description: '저티어 내전 종합 1위',
+    description: '저티어 내전 종합 1등',
   },
   damageFarmer: {
     name: '딜딸의 신',

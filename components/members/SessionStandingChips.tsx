@@ -28,17 +28,25 @@ export interface SessionStandingChipsProps {
   /** 날짜 → 그날 종합등수. 없는 날짜는 그 사람이 안 나온 회차다. */
   standingByDate: Map<string, number>;
   compact?: boolean;
+  /** 왼쪽 여백(px). 아래 점수 변동 그래프와 세로로 맞출 때 그 눈금 칸 폭을 준다. */
+  leftGutter?: number;
 }
 
 export function SessionStandingChips({
   sessions,
   standingByDate,
   compact = false,
+  leftGutter = 0,
 }: SessionStandingChipsProps) {
   const badgeHeight = compact ? 22 : 26;
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1" data-testid="session-standing-chips">
+    <div
+      className="flex gap-2 overflow-x-auto pb-1"
+      // 아래 점수 변동 그래프의 눈금 칸만큼 비워서, 칩 가운데와 그래프 점이 세로로 맞게 한다.
+      style={leftGutter ? { paddingLeft: leftGutter } : undefined}
+      data-testid="session-standing-chips"
+    >
       {sessions.map((session) => {
         const standing = standingByDate.get(session.scrimDate);
         const medal = standing === undefined ? null : medalRank(standing);
@@ -47,7 +55,9 @@ export function SessionStandingChips({
           <div
             key={session.scrimDate}
             data-testid={`standing-chip-${session.scrimDate}`}
-            className={`min-w-[66px] flex-1 shrink-0 rounded-xl border py-2 text-center ${
+            // 그래프 눈금 칸만큼 왼쪽을 비우면 66px 로는 클랜원 상세 카드에서 4px 넘쳐
+            // 가로 스크롤이 생기고, 칩 간격이 그래프 점 공식과 어긋난다. 그때만 조금 줄인다.
+            className={`${leftGutter ? 'min-w-[60px]' : 'min-w-[66px]'} flex-1 shrink-0 rounded-xl border py-2 text-center ${
               medal
                 ? MEDAL_CHIP_CLASS[medal]
                 : standing === undefined
@@ -88,7 +98,7 @@ export function SessionStandingChips({
               ) : (
                 <>
                   {standing}
-                  <span className="ml-px text-[11px] font-bold opacity-70">위</span>
+                  <span className="ml-px text-[11px] font-bold opacity-70">등</span>
                 </>
               )}
             </div>
@@ -101,7 +111,7 @@ export function SessionStandingChips({
             {session.lowTier && <LowTierTag className="mt-1.5" />}
 
             <span className="sr-only">
-              {session.label} {standing === undefined ? '불참' : `종합 ${standing}위`}
+              {session.label} {standing === undefined ? '불참' : `종합 ${standing}등`}
             </span>
           </div>
         );

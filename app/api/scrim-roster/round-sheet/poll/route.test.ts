@@ -17,7 +17,11 @@ const captureRankingSnapshotForRoster = vi.fn();
 const revalidatePath = vi.fn();
 const revalidateRecordPages = vi.fn();
 
-vi.mock('next/cache', () => ({ revalidatePath: (...args: unknown[]) => revalidatePath(...args) }));
+vi.mock('next/cache', () => ({
+  revalidatePath: (...args: unknown[]) => revalidatePath(...args),
+  revalidateTag: vi.fn(),
+  unstable_cache: (fn: unknown) => fn,
+}));
 vi.mock('@/supabase/functions/_shared/polling.mjs', () => ({
   runPolling: (...args: unknown[]) => runPolling(...args),
 }));

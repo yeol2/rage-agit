@@ -7,6 +7,8 @@ import { fetchRankingStats } from '@/lib/rankingStats';
 import { fetchRankingSnapshots } from '@/lib/rankingSnapshot';
 import { fetchRecentSessions, fetchSessionStandings } from '@/lib/memberDashboard';
 import { fetchPlaystyleBadges } from '@/lib/playstyleBadges';
+import { carrySeries, type SeriesPoint } from '@/lib/scoreHistory';
+import { fetchScoreHistory } from '@/lib/scoreHistoryData';
 import { siteConfig } from '@/lib/siteConfig';
 
 export const metadata: Metadata = {
@@ -37,6 +39,16 @@ export default async function DashboardPage() {
   // 크기가 정해져 있고(약 640행), 어차피 누굴 펼칠지 미리 알 수 없다.
   const standings = await fetchSessionStandings(sessions.map((s) => s.scrimDate));
 
+  // 펼침 칸의 점수 변동 그래프 — 최근 10회만 그리지만 "지난 내전 대비"를 내려면
+  // 그 앞 한 칸이 더 필요해서 11칸씩 넘긴다. 실패해도 리더보드는 떠야 하므로 빈 값.
+  const scoreHistory = await fetchScoreHistory().catch(() => null);
+  const scoreSeries: Record<string, SeriesPoint[]> = {};
+  if (scoreHistory) {
+    for (const [memberId, points] of Object.entries(scoreHistory.byMember)) {
+      scoreSeries[memberId] = carrySeries(scoreHistory.dates, points).slice(-11);
+    }
+  }
+
   return (
     <main className="min-h-screen">
       <Nav />
@@ -49,6 +61,7 @@ export default async function DashboardPage() {
         sessions={sessions}
         standings={standings}
         playstyleBadges={playstyleBadges}
+        scoreSeries={scoreSeries}
       />
       <Footer />
     </main>

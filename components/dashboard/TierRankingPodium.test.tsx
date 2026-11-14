@@ -161,7 +161,7 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
 
     const row4 = screen.getByTestId('ranking-row-4');
     // 마우스를 올리면 뜨는 설명표(와 스크린리더용 글)가 횟수를 말한다.
-    expect(badge(row4).textContent).toContain('내전 종합 1위 3회');
+    expect(badge(row4).textContent).toContain('내전 종합 1등 3회');
     // 줄에 놓인 트로피 하나 + 설명표 안의 큰 트로피 하나
     expect(badge(row4).querySelectorAll('[data-testid="trophy-art"]')).toHaveLength(2);
     expect(within(badge(row4)).getByText('3')).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     const row4 = screen.getByTestId('ranking-row-4');
     expect(badge(row4).querySelectorAll('[data-testid="trophy-art"]')).toHaveLength(2);
     expect(within(badge(row4)).getByText('11')).toBeInTheDocument();
-    expect(badge(row4).textContent).toContain('내전 종합 1위 11회');
+    expect(badge(row4).textContent).toContain('내전 종합 1등 11회');
   });
 
   // 말풍선은 CSS 로만 열고 닫는다(group-hover) — 상태를 두지 않아 표 수십 줄에
@@ -192,7 +192,7 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     // 설명표는 이름·설명·근거 세 줄이다.
     expect(bubble.textContent).toContain('내전 우승');
     expect(bubble.textContent).toContain('오늘 저녁은 치킨이닭!');
-    expect(bubble.textContent).toContain('내전 종합 1위 2회');
+    expect(bubble.textContent).toContain('내전 종합 1등 2회');
   });
 
   it('우승이 없으면 뱃지 칸이 - 로 남는다', () => {
@@ -209,9 +209,9 @@ describe('TierRankingPodium — 뱃지(내전우승)', () => {
     const row4 = screen.getByTestId('ranking-row-4');
     const crab = within(row4).getByTestId('crab-king-badge');
     expect(crab.querySelectorAll('[data-testid="crab-king-art"]')).toHaveLength(2);
-    expect(within(crab).getByTestId('badge-tooltip-crabKing').textContent).toContain('저티어 내전 종합 1위 2회');
+    expect(within(crab).getByTestId('badge-tooltip-crabKing').textContent).toContain('저티어 내전 종합 1등 2회');
     // 일반 우승 트로피는 일반 내전 횟수만 그대로 보여준다.
-    expect(badge(row4).textContent).toContain('내전 종합 1위 1회');
+    expect(badge(row4).textContent).toContain('내전 종합 1등 1회');
   });
 
   it('꽃게들의 왕만 있어도 뱃지 칸에 - 가 붙지 않는다', () => {

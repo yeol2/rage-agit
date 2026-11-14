@@ -3,9 +3,11 @@
 import { useId, useState } from 'react';
 import { ScoreRing } from '@/components/members/ScoreRing';
 import { SessionStandingChips } from '@/components/members/SessionStandingChips';
+import { ScoreTrend, TREND_GUTTER_PX } from '@/components/members/ScoreTrend';
 import { centeredPercent, type DashboardWindowStats, type RecentSession } from '@/lib/memberDashboard';
 import type { TierColorRamp } from '@/lib/memberStats';
 import { SCRIM_LABEL } from '@/lib/scrimCounting';
+import type { SeriesPoint } from '@/lib/scoreHistory';
 
 type Window = 'alltime' | 'recent16';
 
@@ -95,6 +97,12 @@ export interface MemberDashboardProps {
   compact?: boolean;
   /** compact 일 때 바깥(리더보드)이 정한 창. */
   window?: Window;
+  /**
+   * 내전별 점수(쉰 날은 이어 그린 값). 주면 점수 변동 그래프를 그린다 — 리더보드는
+   * 칩 아래에 최근 10회만, 상세 페이지는 전적 요약 다음 칸에 최근 10회/전체 토글로.
+   * 그래프는 위에서 고른 집계 창을 따라가서 끝점이 링의 점수와 같다.
+   */
+  scoreSeries?: SeriesPoint[];
 }
 
 export function MemberDashboard({
@@ -104,10 +112,13 @@ export function MemberDashboard({
   ramp,
   compact = false,
   window: forcedWindow,
+  scoreSeries,
 }: MemberDashboardProps) {
   const [ownWindow, setOwnWindow] = useState<Window>('alltime');
   const activeWindow = compact ? (forcedWindow ?? 'recent16') : ownWindow;
   const current = stats[activeWindow];
+  // 리더보드 칸은 종합점수가 있을 때만(자격 미달이면 링도 없다), 상세 페이지는 늘.
+  const showTrend: boolean = scoreSeries !== undefined && (compact ? current !== null : true);
   const gradientId = useId().replace(/:/g, '');
 
   return (
@@ -163,7 +174,7 @@ export function MemberDashboard({
               ramp={ramp}
               compact={compact}
               gradientId={`ring-${gradientId}`}
-              caption={`${current.groupLabel} 중 ${current.scoreRank}위`}
+              caption={`${current.groupLabel} 중 ${current.scoreRank}등`}
             />
           </div>
 
@@ -219,6 +230,26 @@ export function MemberDashboard({
             sessions={sessions}
             standingByDate={standingByDate}
             compact={compact}
+            leftGutter={showTrend ? TREND_GUTTER_PX : 0}
+          />
+        </div>
+      )}
+
+      {/* 점수 변동 — 칩 카드와 같은 안쪽 여백(p-4)이라 그래프 점이 칩 가운데와 세로로 맞는다.
+          상세 페이지에서는 전적 요약 다음, 맵별 기록 앞의 카드 하나다. */}
+      {showTrend && scoreSeries && (
+        <div
+          className={`rounded-2xl border border-white/[0.06] p-4 ${
+            compact ? 'mt-2.5 bg-white/[0.02]' : 'mt-4 bg-[#1B1B23]'
+          }`}
+        >
+          <ScoreTrend
+            series={scoreSeries}
+            window={activeWindow}
+            ramp={ramp}
+            compact={compact}
+            alignDates={sessions.map((s) => s.scrimDate)}
+            standingByDate={standingByDate}
           />
         </div>
       )}

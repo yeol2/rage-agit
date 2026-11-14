@@ -31,6 +31,7 @@ import { TierBadge } from '@/components/TierBadge';
 import { siteConfig } from '@/lib/siteConfig';
 import { ACTIVE_WITHIN_MONTHS, MIN_SCRIMS_FOR_RANKING, RECENT_WINDOW_SCRIMS, SCRIM_LABEL, matchesFor } from '@/lib/scrimCounting';
 import { useAdmin } from '@/components/admin/AdminProvider';
+import type { SeriesPoint } from '@/lib/scoreHistory';
 
 // 사용자에게 보여줄 집계 기준 — 소프트맥스/z-score 같은 계산 방식은 여기 안 적는다.
 const AGGREGATION_RULES = [
@@ -268,7 +269,9 @@ function MemberStandingPanel({
   sessions,
   standingByDate,
   arrowRank,
+  scoreSeries,
 }: {
+  scoreSeries?: SeriesPoint[];
   member: RankingStatsRow;
   activeWindow: Window;
   recent16: RankingStatsRow[];
@@ -333,6 +336,7 @@ function MemberStandingPanel({
         ramp={tierColorRamp(member.tier)}
         compact
         window={activeWindow}
+        scoreSeries={scoreSeries}
       />
       <div className="mt-2.5 text-right">
         <Link
@@ -361,6 +365,8 @@ export interface TierRankingPodiumProps {
    * 정해지는 값이라 줄마다 따로 조회할 수 없어, 페이지가 한 번 받아 넘겨준다.
    */
   playstyleBadges?: Map<string, PlaystyleBadgeHolder[]>;
+  /** memberId → 최근 내전별 점수(펼침 칸의 점수 변동 그래프). 없으면 그래프를 안 그린다. */
+  scoreSeries?: Record<string, SeriesPoint[]>;
 }
 
 function formatMetricValue(
@@ -484,6 +490,7 @@ export function TierRankingPodium({
   sessions = [],
   standings = [],
   playstyleBadges,
+  scoreSeries,
 }: TierRankingPodiumProps) {
   const { isAdmin } = useAdmin();
   const [activeMetric, setActiveMetric] = useState<Metric>('rageScore');
@@ -887,6 +894,7 @@ export function TierRankingPodium({
             sessions={sessions}
             standingByDate={standingByMember.get(podiumMember.memberId) ?? EMPTY_STANDINGS}
             arrowRank={(podiumIndex + 1) as 1 | 2 | 3}
+            scoreSeries={scoreSeries?.[podiumMember.memberId]}
           />
         );
       })()}
@@ -1081,6 +1089,7 @@ export function TierRankingPodium({
                           alltime={alltime}
                           sessions={sessions}
                           standingByDate={standingByMember.get(member.memberId) ?? EMPTY_STANDINGS}
+                          scoreSeries={scoreSeries?.[member.memberId]}
                         />
                       )}
                       {showAverageDivider && dividerIndexInRest === indexInRest + 1 && (

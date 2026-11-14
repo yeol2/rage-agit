@@ -8,7 +8,11 @@ const captureRankingSnapshotForRoster = vi.fn();
 const revalidatePath = vi.fn();
 const inserted: unknown[][] = [];
 
-vi.mock('next/cache', () => ({ revalidatePath: (...args: unknown[]) => revalidatePath(...args) }));
+vi.mock('next/cache', () => ({
+  revalidatePath: (...args: unknown[]) => revalidatePath(...args),
+  revalidateTag: vi.fn(),
+  unstable_cache: (fn: unknown) => fn,
+}));
 vi.mock('@/lib/revalidateRecordPages', () => ({ revalidateRecordPages: vi.fn() }));
 vi.mock('@/lib/roundSheetData', () => ({
   buildRoundSheet: (...args: unknown[]) => buildRoundSheet(...args),

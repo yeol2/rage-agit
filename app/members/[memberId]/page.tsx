@@ -38,12 +38,20 @@ import {
 } from '@/lib/partnerStats';
 import { fetchMemberMapStats } from '@/lib/mapStats';
 import { fetchPlaystyleBadges } from '@/lib/playstyleBadges';
+import { carrySeries } from '@/lib/scoreHistory';
+import { fetchScoreHistory } from '@/lib/scoreHistoryData';
 import { siteConfig } from '@/lib/siteConfig';
 
 // 다른 기록 화면들과 같은 기준이다(/members, /matches). 폴링·우승 확정이
 // revalidateRecordPages 로 즉시 지우지만, 크론 폴링처럼 그 라우트를 안 거치는
 // 경로도 있어서 시간 상한을 같이 둔다.
 export const revalidate = 300;
+
+// 칸(점수 변동·맵·깐부·6각형) 하나하나를 리더보드 펼침 칸처럼 카드로 띄운다.
+// 예전엔 칸 사이에 가로선을 그었는데, 칸 안의 가로줄(그래프 눈금, 표 줄)과
+// 구분이 안 돼서 어디서 칸이 바뀌는지 안 보였다(2026-11-14). 점수 변동 카드는
+// MemberDashboard 안에서 같은 모양으로 그린다.
+const SECTION_CARD = 'mt-4 rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-4 text-left sm:p-5';
 
 /**
  * 빌드할 때 클랜원 전원의 페이지를 미리 만들어 둔다.
@@ -92,6 +100,13 @@ export default async function MemberDetailPage({
     // 그래서 이 사람 것만 받아올 수가 없고, 전원 집계를 받아 여기서 꺼내 쓴다.
     fetchPlaystyleBadges(),
   ]);
+
+  // 점수 변동 그래프. 클랜 전체를 한 번 계산해 캐시한 것에서 이 사람 것만 꺼낸다.
+  // 실패해도 나머지 화면은 보여야 하므로 그래프만 뺀다.
+  const scoreHistory = await fetchScoreHistory().catch(() => null);
+  const scoreSeries = scoreHistory
+    ? carrySeries(scoreHistory.dates, scoreHistory.byMember[member.id] ?? [])
+    : undefined;
 
   // 양 끝에 선 사람들만 이름이 필요하다 — 후보 전원을 조회하지 않는다.
   // 동률이면 한 칸에 여러 명이 서므로 개수는 정해져 있지 않다.
@@ -166,24 +181,27 @@ export default async function MemberDetailPage({
           </div>
 
           {/* 숫자를 먼저 보고 6각형으로 넘어가는 흐름 — 대시보드가 6각형 위에 온다. */}
-          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+          {/* 전적 요약은 안에 이미 카드(링·평균등수·평균킬·등수 칩)가 있어 겉 카드를 또
+              씌우지 않는다 — 리더보드 펼침 칸과 같은 모양이다. */}
+          <div className="mt-8 text-left">
             <MemberDashboard
               stats={dashboardStats}
               sessions={sessions}
               standingByDate={standingByDate}
               ramp={ramp}
+              scoreSeries={scoreSeries}
             />
           </div>
 
           {/* 혼자 얼마나 잘했나(전적 요약) 다음은 **어디서** 잘했나다 — 같은
               사람의 성적을 맵으로 쪼갠 것이라 바로 이어 읽힌다. 라운드 순서대로. */}
-          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+          <div className={SECTION_CARD}>
             <MapRecords stats={mapStats} />
           </div>
 
           {/* 그다음이 **누구와** 잘했나다. 여기서부터는 자기 기록만으로는 안
               나오는 이야기라, 혼자짜리 지표들을 다 보고 난 뒤에 온다. */}
-          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+          <div className={SECTION_CARD}>
             <PartnerChemistry
               best={toPartnerCards(partners.best)}
               worst={toPartnerCards(partners.worst)}
@@ -194,7 +212,7 @@ export default async function MemberDetailPage({
               띄우고(absolute) 6각형만 칸 한가운데에 둔다 — 설명을 흐름 안에 두면
               그 폭만큼 그림이 오른쪽으로 밀려 가운데가 아니게 된다. 좁은 화면에서는
               겹칠 자리가 없어 위아래로 쌓는다. */}
-          <div className="mt-8 border-t border-white/[0.08] pt-6 text-left">
+          <div className={SECTION_CARD}>
             <div className="relative">
               <div className="sm:absolute sm:left-0 sm:top-0 sm:max-w-[15rem]">
                 <p className="hud text-sm font-bold text-foreground">
