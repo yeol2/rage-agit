@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { TierBadge } from '@/components/TierBadge';
+import { TrophySquare } from '@/components/TrophySquare';
+import { MEDAL_BORDER, MEDAL_GRADIENT, medalOf } from '@/lib/medalStyles';
 import type { RecordBoard, RecordPlayer } from '@/lib/hallOfFame';
 
 function teamNames(players: RecordPlayer[]): string {
@@ -9,9 +11,8 @@ function teamNames(players: RecordPlayer[]): string {
 }
 
 // 명예의 전당 카드 하나 — 기록 하나의 1~10등.
-// 메달은 내전 기록·리더보드와 같은 금·은·동 색을 쓴다.
-
-const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+// 1~3등 줄은 내전 기록의 1~3위 팀 박스와 같은 금·은·동 테두리 + 그라데이션(lib/medalStyles),
+// 등수 칸은 리더보드 시상대와 같은 금·은·동 트로피(TrophySquare)다(2026-11-15 사용자 요청).
 
 function formatValue(value: number): string {
   return value.toLocaleString('ko-KR');
@@ -25,10 +26,7 @@ export function RecordCard({ board }: { board: RecordBoard }) {
   return (
     <section
       data-testid={`record-${board.id}`}
-      // 테두리는 강조색(#FF9233)을 은은하게 + 바깥으로 번지는 빛(2026-11-15 사용자 요청).
-      // 리더보드 펼침 칸이 티어 색으로 빛나는 것과 같은 배합(테두리 40% / 번짐 20%).
-      className="rounded-2xl border bg-[#1B1B23] p-3 sm:p-5"
-      style={{ borderColor: '#FF923366', boxShadow: '0 0 24px #FF923333' }}
+      className="rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-3 sm:p-5"
     >
       {/* 카드 머리(제목·설명·티어 탭)만 가운데 정렬 — 아래 1~10등 줄은 그대로(2026-11-15). */}
       {/* 제목 강조 — 한 단계 크게(20px) + 아래 가운데 짧은 주황 밑줄(사이트 강조색). 2026-11-15. */}
@@ -63,15 +61,17 @@ export function RecordCard({ board }: { board: RecordBoard }) {
         <p className="py-8 text-center text-sm text-menu">아직 기록이 없습니다.</p>
       ) : (
         <ol className="mt-2.5 space-y-1.5">
-          {entries.map((entry, i) => (
+          {entries.map((entry, i) => {
+            const medal = medalOf(entry.rank);
+            return (
             <li
               key={`${entry.date}-${teamNames(entry.players)}-${i}`}
               className={`grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-2.5 py-2.5 sm:grid-cols-[2rem_minmax(0,1fr)_auto] sm:gap-3 sm:px-3 ${
-                entry.rank <= 3 ? 'bg-white/[0.04]' : ''
+                medal ? `border ${MEDAL_BORDER[medal]} ${MEDAL_GRADIENT[medal]}` : 'border border-transparent'
               }`}
             >
-              <span className="text-center text-lg font-bold tabular-nums text-menu" aria-label={`${entry.rank}등`}>
-                {MEDAL[entry.rank] ?? <span className="text-sm">{entry.rank}</span>}
+              <span className="flex justify-center text-sm font-bold tabular-nums text-menu" aria-label={`${entry.rank}등`}>
+                {medal ? <TrophySquare rank={medal} size="sm" /> : entry.rank}
               </span>
               <span className="min-w-0">
                 {board.kind === 'player' ? (
@@ -112,7 +112,8 @@ export function RecordCard({ board }: { board: RecordBoard }) {
                 </span>
               )}
             </li>
-          ))}
+            );
+          })}
         </ol>
       )}
 

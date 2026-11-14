@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { TROPHY_VIEWBOX, TrophyPaths } from '@/components/TrophyGlyph';
+import { TrophySquare } from '@/components/TrophySquare';
 import { WinBadge } from '@/components/WinBadge';
 import { PlaystyleBadges } from '@/components/badges/PlaystyleBadges';
 import type { PlaystyleBadgeHolder } from '@/lib/playstyleBadges';
@@ -143,29 +143,7 @@ function RankChangeBadge({
 // 표 한 줄의 배경. 시상대 박스(PEDESTAL_GRADIENT)와 같은 그래파이트 계열로 맞췄다.
 const RANKING_ROW_BG = '#1B1B23';
 
-// 순위별 트로피 배지 색 — 1위 금색은 사용자가 지정한 #FFD365 다.
-// 2·3위는 같은 배지를 은/동으로 낮춘 것(순위가 색으로도 읽히게).
-const TROPHY_COLORS: Record<1 | 2 | 3, { bg: string; icon: string }> = {
-  1: { bg: '#FFD365', icon: '#5A4413' },
-  2: { bg: '#CDCDCD', icon: '#44464A' },
-  3: { bg: '#B38A48', icon: '#3F2D11' },
-};
-
-// 박스 윗면·정면 경계에 절반 걸치는 둥근 사각 트로피 배지.
-// 트로피 글리프 자체는 components/TrophyGlyph.tsx 에 있다(클랜원 화면과 공용).
-function TrophySquare({ rank }: { rank: 1 | 2 | 3 }) {
-  const { bg, icon } = TROPHY_COLORS[rank];
-  return (
-    <span
-      className="flex h-10 w-10 items-center justify-center rounded-xl sm:h-11 sm:w-11"
-      style={{ background: bg, boxShadow: '0 8px 20px 0 rgba(0, 0, 0, 0.35)' }}
-    >
-      <svg viewBox={TROPHY_VIEWBOX} fill={icon} className="h-5 w-5 sm:h-[22px] sm:w-[22px]">
-        <TrophyPaths />
-      </svg>
-    </span>
-  );
-}
+// 순위별 트로피 배지(TrophySquare)는 components/TrophySquare.tsx 로 옮겼다 — 명예의 전당과 같이 쓴다.
 
 // 아바타 자리의 더미 이미지 — 실제 프로필 사진이 없어서 참고 이미지의 인물 사진 위치에
 // 넣는 자리표시자(placeholder) 아이콘이다. 멤버별로 다르지 않고 고정 그림이다.
