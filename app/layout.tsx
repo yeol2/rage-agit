@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="relative overflow-x-hidden bg-background text-foreground">
+      <body className="relative overflow-x-clip bg-background text-foreground">
         <AdminProvider>
           <div className="relative">{children}</div>
         </AdminProvider>
