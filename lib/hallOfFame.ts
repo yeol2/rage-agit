@@ -13,7 +13,6 @@
 // 이 파일 앞부분은 순수 계산이라 Supabase 없이 테스트한다.
 
 import { placementPoints } from '@/lib/placementPoints.mjs';
-import { computeRoundSheet, type TeamRoundResult } from '@/lib/roundSheet';
 
 /** 기록에 오른 사람. 티어는 지금 티어다(뱃지 규칙과 같다). 안 묶인 계정은 null. */
 export interface RecordPlayer {
@@ -34,13 +33,13 @@ export interface RecordEntry {
   detail: string | null;
   /**
    * 오른쪽 큰 글씨를 숫자+단위 대신 이 글로 쓴다. 줄 세우는 값(value)과 보여줄 값이
-   * 다를 때 — 딜딸러는 '1킬 990딜', 역전의 명수는 '3R 11등 → 우승'.
+   * 다를 때 — 딜딸러는 '1킬 990딜'.
    */
   valueLabel?: string;
 }
 
 export interface RecordBoard {
-  id: 'dayKills' | 'matchKills' | 'dayDamage' | 'dealer' | 'matchTeamScore' | 'comeback' | 'highestWin' | 'lowestWin';
+  id: 'dayKills' | 'matchKills' | 'dayDamage' | 'dealer' | 'matchTeamScore' | 'highestWin' | 'lowestWin';
   /** 개인 기록은 이름 옆에 티어 뱃지를, 팀 기록은 이름만 늘어놓는다. */
   kind: 'player' | 'team';
   title: string;
@@ -259,51 +258,3 @@ export function dealerCandidates(rows: DealerRow[], damagePerKill = DAMAGE_PER_K
   }));
 }
 
-// ---------------------------------------------------------------------------
-// 역전의 명수 — 3라운드까지 누적 순위는 아래였는데 4라운드 끝에 종합 1등 한 팀.
-//
-// 순위는 내전 시트와 똑같이 계산한다(computeRoundSheet — 총점, 같으면 순위점수,
-// 그것도 같으면 팀 번호). 3라운드 순위가 낮았을수록(숫자가 클수록) 위 등수다.
-// 3라운드에도 1등이던 우승은 역전이 아니라 뺀다.
-
-/** 내전 하루치 — 라운드(경기)마다 팀 결과, 그리고 팀 번호별 팀원. */
-export interface SessionRounds {
-  date: string;
-  rounds: TeamRoundResult[][];
-  playersByTeam: Map<number, RecordPlayer[]>;
-  /**
-   * 우승 확정 때 저장된 팀별 총점(session_standings). 다시 계산한 총점이 한 팀이라도
-   * 이와 다르면 그날은 뺀다 — 탈퇴자 기록이 빠져 남은 경기 데이터로는 순위가 틀리는
-   * 날이 있다(2026-05-31: 우승팀 킬 19 → 남은 데이터 11, 엉뚱한 팀이 우승으로 잡혔다).
-   * 저장된 값이 없는 날(확정 전)도 뺀다.
-   */
-  recordedTotals?: Map<number, number>;
-}
-
-export function comebackWins(sessions: SessionRounds[]): Candidate[] {
-  return sessions.flatMap((session) => {
-    if (session.rounds.length < 4) return [];
-    const teamNumbers = [...new Set(session.rounds.flat().map((r) => r.teamNumber))];
-    const final = computeRoundSheet(session.rounds.slice(0, 4), teamNumbers);
-    const recorded = session.recordedTotals;
-    if (!recorded || recorded.size === 0) return [];
-    const complete = [...recorded].every(([team, total]) => final.find((row) => row.teamNumber === team)?.totalScore === total);
-    if (!complete) return [];
-    const afterThree = computeRoundSheet(session.rounds.slice(0, 3), teamNumbers);
-    const winner = final[0];
-    const standingAfterThree = afterThree.find((row) => row.teamNumber === winner.teamNumber)?.standing ?? 1;
-    if (standingAfterThree <= 1) return [];
-    const leaderAfterThree = afterThree[0];
-    const winnerAfterThree = afterThree.find((row) => row.teamNumber === winner.teamNumber)!;
-    return [
-      {
-        players: byTier(session.playersByTeam.get(winner.teamNumber) ?? []),
-        value: standingAfterThree,
-        date: session.date,
-        map: null,
-        detail: `3R 1등과 ${leaderAfterThree.totalScore - winnerAfterThree.totalScore}점 차 · 최종 ${winner.totalScore}점`,
-        valueLabel: `3R ${standingAfterThree}등 → 우승`,
-      },
-    ];
-  });
-}

@@ -95,7 +95,7 @@ export function RecordCard({ board }: { board: RecordBoard }) {
                 </span>
               </span>
               {entry.valueLabel ? (
-                // 줄 세운 값과 보여줄 값이 다른 기록 — '1킬 990딜', '3R 11등 → 우승'.
+                // 줄 세운 값과 보여줄 값이 다른 기록 — 딜딸러의 '1킬 990딜'.
                 <span className="whitespace-nowrap text-right text-sm font-bold tabular-nums text-foreground">
                   {entry.valueLabel}
                 </span>
