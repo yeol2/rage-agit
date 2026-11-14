@@ -46,7 +46,10 @@ export function SessionStandingChips({
   return (
     <div
       ref={scrollRef}
-      className="flex gap-2 overflow-x-auto pb-1"
+      // relative — 칩마다 있는 스크린리더용 글자(sr-only, 절대 위치)가 이 스크롤 칸에
+      // 갇히게 한다. 없으면 그 글자들이 화면 밖 제자리(756px)에 남아 휴대폰에서
+      // 페이지 전체가 옆으로 밀렸다(2026-11-14 실측).
+      className="relative flex gap-2 overflow-x-auto pb-1"
       // 아래 점수 변동 그래프의 눈금 칸만큼 비워서, 칩 가운데와 그래프 점이 세로로 맞게 한다.
       style={leftGutter ? { paddingLeft: leftGutter } : undefined}
       data-testid="session-standing-chips"
