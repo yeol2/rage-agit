@@ -67,7 +67,7 @@ describe('teamMatchScores', () => {
       value: 22,
       date: '2026-10-01',
       map: '에란겔',
-      detail: '1등 · 순위 10 + 킬 12',
+      detail: '1등 · 순위 점수 10 + 킬 점수 12',
     });
   });
 });
@@ -92,7 +92,7 @@ describe('winningScores', () => {
           { name: 'Ez_B', tier: 1.5 },
           { name: 'Ez_A', tier: 4 },
         ],
-        value: 60, date: '2026-10-01', map: null, detail: '순위 30 + 킬 30' },
+        value: 60, date: '2026-10-01', map: null, detail: '순위 점수 30 + 킬 점수 30' },
     ]);
   });
 });

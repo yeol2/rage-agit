@@ -135,7 +135,7 @@ export function teamMatchScores(rows: TeamGameRow[]): Candidate[] {
       value: place + t.kills,
       date: t.date,
       map: t.map,
-      detail: `${t.teamRank}등 · 순위 ${place} + 킬 ${t.kills}`,
+      detail: `${t.teamRank}등 · 순위 점수 ${place} + 킬 점수 ${t.kills}`,
     };
   });
 }
@@ -165,7 +165,7 @@ export function winningScores(rows: WinnerRow[]): Candidate[] {
       value: r.totalScore,
       date: r.date,
       map: null,
-      detail: `순위 ${r.placePoints} + 킬 ${r.kills}`,
+      detail: `순위 점수 ${r.placePoints} + 킬 점수 ${r.kills}`,
       placePoints: r.placePoints,
       kills: r.kills,
     });

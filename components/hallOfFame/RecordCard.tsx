@@ -18,7 +18,7 @@ export function RecordCard({ board }: { board: RecordBoard }) {
   return (
     <section
       data-testid={`record-${board.id}`}
-      className="rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-4 sm:p-5"
+      className="rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-3 sm:p-5"
     >
       <h2 className="text-base font-bold text-foreground">{board.title}</h2>
       <p className="mt-1 text-xs text-menu">{board.description}</p>
@@ -30,7 +30,7 @@ export function RecordCard({ board }: { board: RecordBoard }) {
           {board.entries.map((entry, i) => (
             <li
               key={`${entry.date}-${teamNames(entry.players)}-${i}`}
-              className={`grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2.5 ${
+              className={`grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-2.5 py-2.5 sm:grid-cols-[2rem_minmax(0,1fr)_auto] sm:gap-3 sm:px-3 ${
                 entry.rank <= 3 ? 'bg-white/[0.04]' : ''
               }`}
             >
@@ -40,18 +40,19 @@ export function RecordCard({ board }: { board: RecordBoard }) {
               <span className="min-w-0">
                 {board.kind === 'player' ? (
                   // 개인 기록 — 이름 옆에 리더보드와 같은 티어 뱃지(지금 티어).
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-sm font-bold text-foreground">{entry.players[0]?.name}</span>
+                  // 좁은 카드(휴대폰)에서 자리가 모자라면 이름을 자르지 않고 뱃지를 아래 줄로 내린다.
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="text-sm font-bold text-foreground">{entry.players[0]?.name}</span>
                     {entry.players[0]?.tier != null && (
                       <TierBadge tier={entry.players[0].tier} className="shrink-0" />
                     )}
                   </span>
                 ) : (
                   // 팀 기록 — 팀원은 고티어 → 저티어 순(lib/hallOfFame 의 byTier).
-                  // 휴대폰에선 넷 이름이 한 줄에 안 들어가 잘리면 둘만 보인다 —
-                  // 좁은 화면은 줄을 넘기고, 넓은 화면만 한 줄로 자른다.
+                  // 한 줄에 안 들어가면 "…"로 잘려 둘만 보였다 — 카드가 세 장씩 놓이는
+                  // 넓은 화면에서도 좁아서, 어느 폭이든 줄을 넘겨 넷 다 보여준다.
                   <span
-                    className="block text-sm font-bold text-foreground sm:truncate"
+                    className="block text-sm font-bold text-foreground"
                     title={teamNames(entry.players)}
                   >
                     {teamNames(entry.players)}

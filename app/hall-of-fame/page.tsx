@@ -3,6 +3,7 @@ import { Nav } from '@/components/Nav';
 import { LiveRefresh } from '@/components/LiveRefresh';
 import { Footer } from '@/components/Footer';
 import { RecordCard } from '@/components/hallOfFame/RecordCard';
+import { RecordCarousel } from '@/components/hallOfFame/RecordCarousel';
 import { fetchHallOfFame } from '@/lib/hallOfFameData';
 import { siteConfig } from '@/lib/siteConfig';
 
@@ -30,10 +31,12 @@ export default async function HallOfFamePage() {
         <h1 className="mt-6 text-3xl font-bold tracking-tight md:text-4xl">{copy.heading}</h1>
         <p className="mt-3 text-sm text-menu">{copy.description}</p>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-2">
-          {boards.map((board) => (
-            <RecordCard key={board.id} board={board} />
-          ))}
+        <div className="mt-10">
+          <RecordCarousel>
+            {boards.map((board) => (
+              <RecordCard key={board.id} board={board} />
+            ))}
+          </RecordCarousel>
         </div>
       </section>
       <Footer />
