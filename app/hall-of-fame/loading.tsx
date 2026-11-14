@@ -20,7 +20,8 @@ export default function HallOfFameLoading() {
   return (
     <PageSkeleton>
       <HeadingBones />
-      <Bone className="mt-3 h-5 w-full max-w-[520px]" />
+      {/* 읽는 법 박스(번호 네 줄) */}
+      <Bone className="mt-5 h-[130px] w-full max-w-xl rounded-2xl" />
       <div className="mt-10 flex items-start gap-4">
         <Bone className="mt-40 hidden h-12 w-12 shrink-0 rounded-full sm:block" />
         <div className="relative flex min-w-0 flex-1 justify-center overflow-hidden">
