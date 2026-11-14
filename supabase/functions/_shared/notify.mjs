@@ -131,7 +131,22 @@ export function formatRosterUploadMessage({ totalCount, matchedCount, missing })
  * 한 줄에 붙이려면 누가 어느 계정인지 짝을 지어야 하는데, 명단 팀 번호와
  * PUBG 가 매긴 팀 번호가 자주 어긋나서 그 짝짓기를 믿을 수 없다.
  */
-export function formatUnlinkedPlayersMessage({ scrimDate, players, accounts = [] }) {
+export function formatUnlinkedPlayersMessage(args) {
+  return [
+    formatUnlinkedSummary(args),
+    '',
+    '시트에는 이 닉네임 그대로 뜨고 팀 점수에도 들어간다.',
+    '다만 개인 기록(리더보드·깐부·맵)에는 안 남으니, 부계정이면 묶어줄 것:',
+    '`node scripts/link-alt-account.mjs <본계정> <부계정>` → `node scripts/relink-participants.mjs`',
+  ].join('\n');
+}
+
+/**
+ * 미등록 참가자 알림의 본문(제목 · 누가 어디 · 안 묶인 계정)만. 자동 확정 알림이
+ * 따로 보내지 않고 자기 메시지 안에 끼워 넣을 때 쓴다 — 자동화가 돌 때는 DM 이
+ * 한 번만 와야 한다(사용자 요청, 2026-11-14).
+ */
+export function formatUnlinkedSummary({ scrimDate, players, accounts = [] }) {
   const lines = [`**미등록 참가자** ${scrimDate} 내전 — ${players.length}명이 클랜원과 안 묶였다.`, ''];
   for (const player of players.slice(0, MAX_LISTED_MISSING)) {
     // 예전 호출부는 닉네임 문자열만 넘겼다 — 둘 다 받는다.
@@ -152,10 +167,6 @@ export function formatUnlinkedPlayersMessage({ scrimDate, players, accounts = []
     lines.push('');
     lines.push(`안 묶인 계정: ${accounts.map((ign) => `\`${ign}\``).join(', ')}`);
   }
-  lines.push('');
-  lines.push('시트에는 이 닉네임 그대로 뜨고 팀 점수에도 들어간다.');
-  lines.push('다만 개인 기록(리더보드·깐부·맵)에는 안 남으니, 부계정이면 묶어줄 것:');
-  lines.push('`node scripts/link-alt-account.mjs <본계정> <부계정>` → `node scripts/relink-participants.mjs`');
   return lines.join('\n');
 }
 
@@ -206,6 +217,8 @@ export function formatAutoConfirmMessage({
   teams,
   savedTeams,
   savedMembers,
+  // { players, accounts } — formatUnlinkedSummary 와 같은 모양. 없거나 비었으면 안 적는다.
+  unlinked = null,
 }) {
   const medals = ['🥇', '🥈', '🥉'];
   const lines = [
@@ -227,7 +240,14 @@ export function formatAutoConfirmMessage({
   lines.push('');
   lines.push(`리더보드 저장: ${savedTeams}팀 · ${savedMembers}명`);
   if (lowTier) lines.push('저티어 내전이라 우승팀은 꽃게들의 왕, 리더보드 집계에는 안 들어간다.');
-  lines.push('미연결 참가자를 정리했다면 03 시트에서 우승 확정을 다시 누르면 덮어쓴다.');
+  // 자동화가 돌 때는 DM 이 한 번만 와야 한다 — 미연결 명단을 따로 보내지 않고
+  // 여기 끼운다. 미연결이 없으면 재확정 안내도 필요 없다.
+  if (unlinked && unlinked.players.length > 0) {
+    lines.push('');
+    lines.push(formatUnlinkedSummary({ scrimDate, ...unlinked }));
+    lines.push('');
+    lines.push('미연결 참가자를 정리했다면 03 시트에서 우승 확정을 다시 누르면 덮어쓴다.');
+  }
   return lines.join('\n');
 }
 

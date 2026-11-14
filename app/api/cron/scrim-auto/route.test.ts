@@ -7,14 +7,19 @@ const pollScrim = vi.fn();
 const confirmScrimWin = vi.fn();
 const sendDiscord = vi.fn();
 
-vi.mock('@/lib/scrimPoll', () => ({ pollScrim: (...a: unknown[]) => pollScrim(...a) }));
+const findUnlinkedPlayers = vi.fn();
+const formatAutoConfirmMessage = vi.fn(() => 'auto-confirm-message');
+vi.mock('@/lib/scrimPoll', () => ({
+  pollScrim: (...a: unknown[]) => pollScrim(...a),
+  findUnlinkedPlayers: (...a: unknown[]) => findUnlinkedPlayers(...a),
+}));
 vi.mock('@/lib/scrimConfirm', () => ({
   REQUIRED_ROUNDS: 4,
   confirmScrimWin: (...a: unknown[]) => confirmScrimWin(...a),
 }));
 vi.mock('@/supabase/functions/_shared/notify.mjs', () => ({
   sendDiscord: (...a: unknown[]) => sendDiscord(...a),
-  formatAutoConfirmMessage: () => 'auto-confirm-message',
+  formatAutoConfirmMessage: (...a: unknown[]) => formatAutoConfirmMessage(...(a as [])),
 }));
 
 let tables: Record<string, unknown> = {};
@@ -62,6 +67,7 @@ beforeEach(() => {
   process.env.DISCORD_WEBHOOK_URL = 'https://discord.test/hook';
   tables = { scrim_rosters: ROSTER, session_standings: null };
   sendDiscord.mockResolvedValue(undefined);
+  findUnlinkedPlayers.mockResolvedValue(null);
   confirmScrimWin.mockResolvedValue({
     ok: true,
     scrimDate: '2026-11-12',
@@ -105,7 +111,7 @@ describe('자동 폴링 크론', () => {
     pollScrim.mockResolvedValue({ found: true, scrimDate: '2026-11-12', roundCount: 3, sinceHours: 3 });
     const body = await (await cron()).json();
     expect(body.status).toBe('waiting');
-    expect(pollScrim).toHaveBeenCalledWith(expect.anything(), { apiKey: 'pubg', rosterId: 'roster-1' });
+    expect(pollScrim).toHaveBeenCalledWith(expect.anything(), { apiKey: 'pubg', rosterId: 'roster-1', notifyUnlinked: false });
     expect(confirmScrimWin).not.toHaveBeenCalled();
     expect(sendDiscord).not.toHaveBeenCalled();
   });
@@ -134,5 +140,14 @@ describe('자동 폴링 크론', () => {
     const body = await (await cron()).json();
     expect(body.status).toBe('waiting');
     expect(confirmScrimWin).not.toHaveBeenCalled();
+  });
+
+  it('미연결 명단은 따로 보내지 않고 확정 DM 하나에 담는다', async () => {
+    const unlinked = { players: [{ ign: 'Ez_reummang (름망)', teamNumber: 14, tierSlot: 3 }], accounts: ['Ez_reummang2'] };
+    findUnlinkedPlayers.mockResolvedValue(unlinked);
+    pollScrim.mockResolvedValue({ found: true, scrimDate: '2026-11-12', roundCount: 4, sinceHours: 3 });
+    await cron();
+    expect(sendDiscord).toHaveBeenCalledTimes(1);
+    expect(formatAutoConfirmMessage).toHaveBeenCalledWith(expect.objectContaining({ unlinked }));
   });
 });

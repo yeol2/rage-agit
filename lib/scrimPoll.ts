@@ -117,30 +117,53 @@ async function notifyUnlinkedPlayers(
   if (!webhookUrl) return;
 
   try {
+    const unlinked = await findUnlinkedPlayers(supabase, scrimDate, rosterId);
+    if (unlinked) await sendDiscord(webhookUrl, formatUnlinkedPlayersMessage({ scrimDate, ...unlinked }));
+  } catch {
+    // 알림 실패는 조용히 넘긴다 — 폴링 응답에는 영향을 주지 않는다.
+  }
+}
+
+export interface UnlinkedPlayers {
+  /** 명단에서 찾은 주인(몇 번 팀 몇 번째 칸). 명단에서 못 찾으면 PUBG 닉 문자열. */
+  players: ({ ign: string; teamNumber: number | null; tierSlot: 1 | 2 | 3 | 4 | null } | string)[];
+  accounts: string[];
+}
+
+/**
+ * 그 내전에서 클랜원과 안 묶인 참가자. 없으면 null.
+ * 버튼 폴링은 따로 알리고, 자동 확정은 자기 결과 DM 안에 끼워 넣는다.
+ */
+export async function findUnlinkedPlayers(
+  supabase: SupabaseClient,
+  scrimDate: string,
+  rosterId: string | null,
+): Promise<UnlinkedPlayers | null> {
+  {
     const { data: session } = await supabase
       .from('scrim_sessions')
       .select('id')
       .eq('scrim_date', scrimDate)
       .maybeSingle();
-    if (!session) return;
+    if (!session) return null;
 
     const { data: matchRows } = await supabase
       .from('countable_matches')
       .select('pubg_match_id')
       .eq('scrim_session_id', session.id);
     const matchIds = (matchRows ?? []).map((row) => row.pubg_match_id as string);
-    if (matchIds.length === 0) return;
+    if (matchIds.length === 0) return null;
 
     const { data: rows } = await supabase
       .from('match_participants')
       .select('pubg_ign, member_id')
       .in('pubg_match_id', matchIds);
-    if (!rows || rows.length === 0) return;
+    if (!rows || rows.length === 0) return null;
 
     const accounts = [
       ...new Set(rows.filter((row) => !row.member_id).map((row) => row.pubg_ign as string)),
     ].sort();
-    if (accounts.length === 0) return;
+    if (accounts.length === 0) return null;
 
     // 안 묶인 계정이 "누구의 것인지"는 명단에서 구한다 — 명단에 올렸는데 그날
     // 기록이 하나도 없는 사람이 곧 그 계정의 주인이다. 본계정으로 안 뛰었으니
@@ -167,15 +190,8 @@ async function notifyUnlinkedPlayers(
       }))
       .sort((a, b) => (a.teamNumber ?? 99) - (b.teamNumber ?? 99) || (a.tierSlot ?? 9) - (b.tierSlot ?? 9));
 
-    await sendDiscord(
-      webhookUrl,
-      // 명단에서 주인을 못 찾으면(명단 미업로드 등) PUBG 닉만이라도 알린다.
-      players.length > 0
-        ? formatUnlinkedPlayersMessage({ scrimDate, players, accounts })
-        : formatUnlinkedPlayersMessage({ scrimDate, players: accounts }),
-    );
-  } catch {
-    // 알림 실패는 조용히 넘긴다 — 폴링 응답에는 영향을 주지 않는다.
+    // 명단에서 주인을 못 찾으면(명단 미업로드 등) PUBG 닉만이라도 알린다.
+    return players.length > 0 ? { players, accounts } : { players: accounts, accounts: [] };
   }
 }
 
@@ -185,6 +201,11 @@ export interface PollScrimOptions {
   /** 버튼을 누른 시각. 있을 때만 라운드별 "폴링 완료" 알림을 보낸다 — 자동 폴링은 안 넘긴다. */
   pressedAt?: string | null;
   attempt?: number;
+  /**
+   * 4번째 경기를 잡은 순간 미연결 명단을 따로 보낼지. 자동 확정 크론은 끈다 —
+   * 확정 결과 DM 하나에 같이 담아 보낸다.
+   */
+  notifyUnlinked?: boolean;
 }
 
 export interface PollScrimResult {
@@ -204,7 +225,7 @@ export interface PollScrimResult {
  */
 export async function pollScrim(
   supabase: SupabaseClient,
-  { apiKey, rosterId, pressedAt = null, attempt = 1 }: PollScrimOptions,
+  { apiKey, rosterId, pressedAt = null, attempt = 1, notifyUnlinked = true }: PollScrimOptions,
 ): Promise<PollScrimResult> {
   // rosterId가 있으면 이번 내전 참가자가 이미 확정돼 있다(01/02/03을 거침) —
   // 후보 30명을 훑는 대신 1번팀에서 한 명만 고정 씨앗으로 써서 API 호출을
@@ -268,7 +289,7 @@ export async function pollScrim(
     // 라운드를 들여온 그 한 번에만 보낸다 — roundCount >= 4 만 보면 버튼을
     // 다시 누를 때마다(또는 크론이 돌 때마다) 같은 명단이 또 온다.
     const reachedFourNow = roundCount >= 4 && roundCount - result.scrimsFound < 4;
-    if (reachedFourNow) await notifyUnlinkedPlayers(supabase, scrimDate, rosterId).catch(() => {});
+    if (reachedFourNow && notifyUnlinked) await notifyUnlinkedPlayers(supabase, scrimDate, rosterId).catch(() => {});
   }
 
   // 리더보드를 뺀 나머지 기록 화면은 라운드가 하나 들어올 때마다 갱신한다 —

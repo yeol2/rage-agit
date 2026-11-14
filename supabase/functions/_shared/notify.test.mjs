@@ -235,3 +235,36 @@ describe('formatAutoConfirmMessage', () => {
     expect(formatAutoConfirmMessage({ ...args, lowTier: true })).toContain('저티어 내전 —');
   });
 });
+
+describe('formatAutoConfirmMessage — 미연결 명단을 한 DM 에', () => {
+  const args = {
+    scrimDate: '2026-11-12',
+    confirmedAt: '2026-11-12T12:47:00.000Z',
+    lowTier: false,
+    teams: [{ standing: 1, teamNumber: 9, totalScore: 53, totalPlacementPoints: 16, totalKills: 37, players: [] }],
+    savedTeams: 16,
+    savedMembers: 63,
+  };
+
+  it('미연결이 있으면 몇 번 팀 몇 번째 칸 누구인지와 재확정 안내를 붙인다', () => {
+    const msg = formatAutoConfirmMessage({
+      ...args,
+      unlinked: {
+        players: [{ ign: 'Ez_reummang (름망)', teamNumber: 14, tierSlot: 3 }],
+        accounts: ['Ez_reummang2'],
+      },
+    });
+    expect(msg).toContain('**미등록 참가자** 2026-11-12 내전 — 1명이 클랜원과 안 묶였다.');
+    expect(msg).toContain('· 14번팀 3번째 칸 미연결 — Ez_reummang (름망)');
+    expect(msg).toContain('안 묶인 계정: `Ez_reummang2`');
+    expect(msg).toContain('우승 확정을 다시 누르면 덮어쓴다');
+    // 따로 보내는 알림의 스크립트 안내는 빠진다.
+    expect(msg).not.toContain('link-alt-account');
+  });
+
+  it('미연결이 없으면 미등록 블록도 재확정 안내도 없다', () => {
+    const msg = formatAutoConfirmMessage(args);
+    expect(msg).not.toContain('미등록 참가자');
+    expect(msg).not.toContain('다시 누르면');
+  });
+});

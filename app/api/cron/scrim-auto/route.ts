@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabaseServer';
-import { pollScrim } from '@/lib/scrimPoll';
+import { findUnlinkedPlayers, pollScrim } from '@/lib/scrimPoll';
 import { confirmScrimWin, REQUIRED_ROUNDS } from '@/lib/scrimConfirm';
 import { formatAutoConfirmMessage, sendDiscord } from '@/supabase/functions/_shared/notify.mjs';
 import { toKstDate } from '@/supabase/functions/_shared/sessions.mjs';
@@ -122,7 +122,8 @@ export async function POST(request: Request) {
   const startedAt = now.toISOString();
   let poll;
   try {
-    poll = await pollScrim(supabase, { apiKey, rosterId: roster.id });
+    // 미연결 명단은 따로 보내지 않는다 — 확정 결과 DM 에 같이 담는다.
+    poll = await pollScrim(supabase, { apiKey, rosterId: roster.id, notifyUnlinked: false });
   } catch (error) {
     const message = error instanceof Error ? error.message : '폴링에 실패했습니다.';
     await recordRun(supabase, { startedAt, sinceHours: 0, succeeded: false, errorMessage: message });
@@ -159,6 +160,8 @@ export async function POST(request: Request) {
 
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (webhookUrl) {
+    // 자동화가 돌 때 DM 은 이것 하나다 — 미연결 명단(몇 번 팀 몇 번째 칸 누구)도 여기 담는다.
+    const unlinked = await findUnlinkedPlayers(supabase, scrimDate, roster.id).catch(() => null);
     await sendDiscord(
       webhookUrl,
       formatAutoConfirmMessage({
@@ -168,6 +171,7 @@ export async function POST(request: Request) {
         teams: result.teams,
         savedTeams: result.savedTeams,
         savedMembers: result.savedMembers,
+        unlinked,
       }),
     ).catch(() => null);
   }

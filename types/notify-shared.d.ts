@@ -62,6 +62,24 @@ declare module '@/supabase/functions/_shared/notify.mjs' {
     }[];
     savedTeams: number;
     savedMembers: number;
+    /** 미연결 명단. 있으면 같은 DM 안에 미등록 참가자 블록을 붙인다. */
+    unlinked?: {
+      players: (
+        | string
+        | { ign: string; teamNumber?: number | null; tierSlot?: 1 | 2 | 3 | 4 | null }
+      )[];
+      accounts?: string[];
+    } | null;
+  }): string;
+
+  /** 미등록 참가자 알림의 본문(제목 · 누가 어디 · 안 묶인 계정)만. */
+  export function formatUnlinkedSummary(args: {
+    scrimDate: string;
+    players: (
+      | string
+      | { ign: string; teamNumber?: number | null; tierSlot?: 1 | 2 | 3 | 4 | null }
+    )[];
+    accounts?: string[];
   }): string;
 
   /** 디스코드 웹훅으로 메시지를 보낸다. 응답이 실패면 던진다. */
