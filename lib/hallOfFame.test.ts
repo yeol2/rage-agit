@@ -4,13 +4,13 @@ import { dayTotals, rankTop, teamMatchScores, winningScores } from './hallOfFame
 const c = (value: number, date = '2026-10-01') => ({ players: [{ name: 'A', tier: 2 }], value, date, map: null, detail: null });
 
 describe('rankTop', () => {
-  it('큰 값부터 줄 세우고 동률은 같은 등수, 다음 등수는 건너뛴다', () => {
-    const ranked = rankTop([c(5), c(9), c(9), c(7)], 'desc');
-    expect(ranked.map((e) => [e.rank, e.value])).toEqual([
-      [1, 9],
-      [1, 9],
-      [3, 7],
-      [4, 5],
+  it('큰 값부터 줄 세우고, 같은 기록은 먼저 달성한 사람(이른 날짜)이 위 등수다', () => {
+    const ranked = rankTop([c(5), c(9, '2026-10-08'), c(9, '2026-10-01'), c(7)], 'desc');
+    expect(ranked.map((e) => [e.rank, e.value, e.date])).toEqual([
+      [1, 9, '2026-10-01'],
+      [2, 9, '2026-10-08'],
+      [3, 7, '2026-10-01'],
+      [4, 5, '2026-10-01'],
     ]);
   });
 
@@ -18,20 +18,13 @@ describe('rankTop', () => {
     expect(rankTop([c(40), c(35), c(39)], 'asc').map((e) => e.value)).toEqual([35, 39, 40]);
   });
 
-  it('limit 등에 동률이 걸리면 다 넣고, 그 밖은 자른다', () => {
-    const many = [10, 9, 8, 8, 8, 1].map((v) => c(v));
-    expect(rankTop(many, 'desc', 3).map((e) => [e.rank, e.value])).toEqual([
-      [1, 10],
-      [2, 9],
-      [3, 8],
-      [3, 8],
-      [3, 8],
+  it('딱 limit 개만 남긴다 — limit 등 뒤에 같은 기록이 더 있어도 자른다', () => {
+    const many = [10, 9, 8, 8, 8, 1].map((v, i) => c(v, `2026-10-0${i + 1}`));
+    expect(rankTop(many, 'desc', 3).map((e) => [e.rank, e.value, e.date])).toEqual([
+      [1, 10, '2026-10-01'],
+      [2, 9, '2026-10-02'],
+      [3, 8, '2026-10-03'],
     ]);
-  });
-
-  it('값이 같으면 먼저 세운 기록(이른 날짜)이 위', () => {
-    const ranked = rankTop([c(9, '2026-10-08'), c(9, '2026-10-01')], 'desc');
-    expect(ranked.map((e) => e.date)).toEqual(['2026-10-01', '2026-10-08']);
   });
 });
 

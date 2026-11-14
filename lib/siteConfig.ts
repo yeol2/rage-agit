@@ -169,7 +169,8 @@ export const siteConfig = {
   hallOfFame: {
     eyebrow: 'HALL OF FAME',
     heading: '명예의 전당',
-    description: '내전 역사에 남은 기록들. 한 사람이 여러 번 이름을 올릴 수 있고, 같은 기록은 같은 등수입니다.',
+    description:
+      '내전 역사에 남은 기록들. 한 사람이 여러 번 이름을 올릴 수 있어요. 기록이 같으면 먼저 달성한 사람이 위 등수이고, 기록마다 상위 10개까지만 보여줍니다.',
   },
 
   memberDirectory: {

@@ -21,7 +21,7 @@ export interface RecordPlayer {
 }
 
 export interface RecordEntry {
-  /** 동률이면 같은 등수, 다음 등수는 건너뛴다(1, 1, 3). */
+  /** 1 ~ 10. 기록이 같으면 먼저 달성한 쪽이 위 등수다(같은 등수를 나눠 갖지 않는다). */
   rank: number;
   /** 개인 기록은 한 명, 팀 기록은 팀원 전원(고티어 → 저티어 순). */
   players: RecordPlayer[];
@@ -50,23 +50,20 @@ type Candidate = Omit<RecordEntry, 'rank'>;
 export const RECORD_LIMIT = 10;
 
 /**
- * 값으로 줄 세워 1~limit 등까지 자른다. 동률은 같은 등수고 다음 등수를 건너뛴다.
- * limit 등에 동률이 걸리면 그 사람들도 다 넣는다 — 같은 기록인데 누구는 빠지면 이상하다.
- * 값이 같으면 먼저 세운 기록(날짜가 이른 것)이 위에 온다.
+ * 값으로 줄 세워 딱 limit 개만 남긴다(2026-11-15 사용자 결정).
+ *
+ * 기록이 같으면 **먼저 달성한 쪽(날짜가 이른 쪽)이 위 등수**다 — 같은 등수를 나눠 갖지
+ * 않는다. 그래서 등수는 늘 1, 2, 3 … limit 이고, limit 등 뒤에 같은 기록이 더 있어도
+ * 자른다. (예전엔 동률을 같은 등수로 묶고 limit 등의 동률을 다 넣어서 16줄까지 늘었다.)
+ * 같은 날 같은 기록이면 원래 순서를 지킨다.
  */
 export function rankTop(candidates: Candidate[], order: 'desc' | 'asc', limit = RECORD_LIMIT): RecordEntry[] {
-  const sorted = [...candidates].sort((a, b) =>
-    a.value === b.value ? a.date.localeCompare(b.date) : order === 'desc' ? b.value - a.value : a.value - b.value,
-  );
-  const out: RecordEntry[] = [];
-  let prevRank = 0;
-  for (const [i, c] of sorted.entries()) {
-    const rank = i > 0 && c.value === sorted[i - 1].value ? prevRank : i + 1;
-    if (rank > limit) break; // 정렬돼 있으니 이 뒤는 전부 limit 밖이다
-    out.push({ ...c, rank });
-    prevRank = rank;
-  }
-  return out;
+  return [...candidates]
+    .sort((a, b) =>
+      a.value === b.value ? a.date.localeCompare(b.date) : order === 'desc' ? b.value - a.value : a.value - b.value,
+    )
+    .slice(0, limit)
+    .map((c, i) => ({ ...c, rank: i + 1 }));
 }
 
 const KST_OFFSET_MS = 9 * 3600 * 1000;

@@ -85,10 +85,10 @@ export function RecordCarousel({ children }: { children: React.ReactNode }) {
       type="button"
       onClick={() => move(direction)}
       aria-label={direction === -1 ? '이전 기록' : '다음 기록'}
-      // 카드가 900px 가까이 길어서 세로 가운데에 두면 처음 화면에서 안 보인다 —
-      // 화면 가운데에 붙어 따라오게(sticky) 한다. 휴대폰에선 숨긴다 — 버튼 두 개가
+      // 카드의 세로 가운데에 둔다(2026-11-15 사용자 요청 — 화면 높이에 붙어 따라오던 걸 바꿈).
+      // 휴대폰에선 숨긴다 — 버튼 두 개가
       // 좁은 폭을 먹어 가운데 카드가 너무 작아진다(휴대폰은 밀기·아래 점으로 넘긴다).
-      className="sticky top-[45vh] hidden h-12 w-12 shrink-0 items-center justify-center self-start rounded-full border border-white/10 bg-[#1B1B23] text-xl text-foreground transition-colors hover:border-white/25 sm:flex"
+      className="hidden h-12 w-12 shrink-0 items-center justify-center self-center rounded-full border border-white/10 bg-[#1B1B23] text-xl text-foreground transition-colors hover:border-white/25 sm:flex"
     >
       <span aria-hidden="true">{direction === -1 ? '‹' : '›'}</span>
     </button>
@@ -102,7 +102,8 @@ export function RecordCarousel({ children }: { children: React.ReactNode }) {
 
   return (
     <div>
-      <div className="flex items-start gap-4">
+      {/* 버튼과 카드 사이를 넉넉히 띄운다(사용자 요청). */}
+      <div className="flex items-start gap-4 sm:gap-8 lg:gap-12">
         {arrow(-1)}
         <div
           ref={viewRef}
