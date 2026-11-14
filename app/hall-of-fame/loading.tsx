@@ -20,11 +20,10 @@ export default function HallOfFameLoading() {
   return (
     <PageSkeleton>
       <HeadingBones />
-      {/* 읽는 법 박스(번호 네 줄) */}
-      <Bone className="mt-5 h-[130px] w-full max-w-xl rounded-2xl" />
-      <div className="mt-10 flex items-start gap-4">
-        <Bone className="mt-40 hidden h-12 w-12 shrink-0 rounded-full sm:block" />
-        <div className="relative flex min-w-0 flex-1 justify-center overflow-hidden">
+      <Bone className="mt-3 h-5 w-full max-w-[720px]" />
+      {/* 카드 칸은 페이지 너비를 꽉 채운다(화살표는 그 바깥 — 뼈대에선 생략). */}
+      <div className="mt-10">
+        <div className="relative flex justify-center overflow-hidden">
           {/* 양옆 카드 — 작고 흐리게, 절반 아래로만 보인다 */}
           <div className="absolute left-0 top-0 hidden w-[21%] scale-[0.86] opacity-40 blur-[3px] sm:block">
             <CardBones />
@@ -36,7 +35,6 @@ export default function HallOfFameLoading() {
             <CardBones />
           </div>
         </div>
-        <Bone className="mt-40 hidden h-12 w-12 shrink-0 rounded-full sm:block" />
       </div>
     </PageSkeleton>
   );

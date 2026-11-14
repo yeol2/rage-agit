@@ -29,15 +29,7 @@ export default async function HallOfFamePage() {
           <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
         </div>
         <h1 className="mt-6 text-3xl font-bold tracking-tight md:text-4xl">{copy.heading}</h1>
-        {/* 읽는 법 — 번호 매긴 네 줄을 박스 하나에. */}
-        <ol className="mt-5 max-w-xl space-y-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-4 text-sm text-menu">
-          {copy.rules.map((rule, i) => (
-            <li key={rule} className="flex gap-2.5">
-              <span className="w-4 shrink-0 font-bold tabular-nums text-accent">{i + 1}.</span>
-              <span>{rule}</span>
-            </li>
-          ))}
-        </ol>
+        <p className="mt-3 text-sm text-menu">{copy.description}</p>
 
         <div className="mt-10">
           <RecordCarousel>

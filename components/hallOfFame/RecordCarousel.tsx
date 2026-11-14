@@ -85,10 +85,13 @@ export function RecordCarousel({ children }: { children: React.ReactNode }) {
       type="button"
       onClick={() => move(direction)}
       aria-label={direction === -1 ? '이전 기록' : '다음 기록'}
-      // 카드의 세로 가운데에 둔다(2026-11-15 사용자 요청 — 화면 높이에 붙어 따라오던 걸 바꿈).
-      // 휴대폰에선 숨긴다 — 버튼 두 개가
-      // 좁은 폭을 먹어 가운데 카드가 너무 작아진다(휴대폰은 밀기·아래 점으로 넘긴다).
-      className="hidden h-12 w-12 shrink-0 items-center justify-center self-center rounded-full border border-white/10 bg-[#1B1B23] text-xl text-foreground transition-colors hover:border-white/25 sm:flex"
+      // 카드 칸은 페이지 너비를 꽉 채우고, 화살표는 그 너비 **바깥** 여백에 둔다
+      // (2026-11-15 사용자 요청). 세로는 카드 칸 가운데.
+      // 1280px 미만은 바깥 여백이 화살표보다 좁아 칸 안쪽 가장자리(흐린 옆 카드 위)에
+      // 띄우고, 휴대폰은 숨긴다(밀기·아래 점으로 넘긴다).
+      className={`absolute top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#1B1B23] text-xl text-foreground transition-colors hover:border-white/25 sm:flex ${
+        direction === -1 ? 'left-2 xl:left-auto xl:right-full xl:mr-4 2xl:mr-8' : 'right-2 xl:left-full xl:right-auto xl:ml-4 2xl:ml-8'
+      }`}
     >
       <span aria-hidden="true">{direction === -1 ? '‹' : '›'}</span>
     </button>
@@ -102,13 +105,13 @@ export function RecordCarousel({ children }: { children: React.ReactNode }) {
 
   return (
     <div>
-      {/* 버튼과 카드 사이를 넉넉히 띄운다(사용자 요청). */}
-      <div className="flex items-start gap-4 sm:gap-8 lg:gap-12">
+      {/* 카드 칸이 페이지(제목·설명)와 같은 너비. 화살표는 이 상자 기준으로 바깥에 붙는다. */}
+      <div className="relative">
         {arrow(-1)}
         <div
           ref={viewRef}
           data-testid="record-carousel"
-          className="relative min-w-0 flex-1 touch-pan-y overflow-hidden transition-[height] duration-500 ease-out"
+          className="relative touch-pan-y overflow-hidden transition-[height] duration-500 ease-out"
           style={{ height: height ?? undefined }}
           onPointerDown={(e) => {
             swipeStart.current = e.clientX;
