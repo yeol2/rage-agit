@@ -137,15 +137,16 @@ export function RecordCarousel({ children }: { children: React.ReactNode }) {
                 data-active={active}
                 aria-hidden={!active}
                 onClick={active ? undefined : () => go(i)}
-                className={`absolute left-0 top-0 ${jumped ? '' : 'transition-[transform,filter,opacity] duration-500 ease-out'} ${
+                className={`absolute left-0 top-1/2 ${jumped ? '' : 'transition-[transform,filter,opacity] duration-500 ease-out'} ${
                   active ? '' : 'cursor-pointer select-none'
                 }`}
                 style={{
                   width: ready ? cardW : '100%',
                   // 옆 카드는 가운데 쪽 위 모서리를 기준으로 작아진다 — 가운데 기준이면
                   // 좁은 화면에서 옆 카드가 화면 밖으로 숨어 버렸다.
-                  transformOrigin: d < 0 ? 'right top' : d > 0 ? 'left top' : 'center top',
-                  transform: `translateX(${ready ? x : 0}px) scale(${active ? 1 : SIDE_SCALE})`,
+                  // 세로는 가운데 카드의 가운데에 맞춘다(2026-11-14 사용자 지적 — 위로 붙어 보였다).
+                  transformOrigin: d < 0 ? 'right center' : d > 0 ? 'left center' : 'center center',
+                  transform: `translateX(${ready ? x : 0}px) translateY(-50%) scale(${active ? 1 : SIDE_SCALE})`,
                   filter: active ? 'none' : 'blur(3px)',
                   opacity: active ? 1 : Math.abs(d) === 1 ? 0.45 : 0,
                   zIndex: active ? 2 : 1,
