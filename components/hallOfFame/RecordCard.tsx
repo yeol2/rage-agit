@@ -94,10 +94,17 @@ export function RecordCard({ board }: { board: RecordBoard }) {
                   {entry.detail && <span className="ml-1.5">· {entry.detail}</span>}
                 </span>
               </span>
-              <span className="text-right text-base font-bold tabular-nums text-foreground">
-                {formatValue(entry.value)}
-                <span className="ml-0.5 text-[11px] font-bold text-menu">{board.unit}</span>
-              </span>
+              {entry.valueLabel ? (
+                // 줄 세운 값과 보여줄 값이 다른 기록 — '1킬 990딜', '3R 11등 → 우승'.
+                <span className="whitespace-nowrap text-right text-sm font-bold tabular-nums text-foreground">
+                  {entry.valueLabel}
+                </span>
+              ) : (
+                <span className="text-right text-base font-bold tabular-nums text-foreground">
+                  {formatValue(entry.value)}
+                  <span className="ml-0.5 text-[11px] font-bold text-menu">{board.unit}</span>
+                </span>
+              )}
             </li>
           ))}
         </ol>

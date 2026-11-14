@@ -2,17 +2,24 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { mapLabel } from '@/lib/mapNames';
 import { TIER_GROUPS } from '@/lib/dashboardData';
+import type { TeamRoundResult } from '@/lib/roundSheet';
 import { cleanDisplayName, stripTrailingKoreanTag } from '@/lib/memberStats';
 import {
   dayTotals,
   kstDate,
   rankByTierGroup,
   rankTop,
+  comebackWins,
+  dealerCandidates,
+  DAMAGE_PER_KILL,
   singleGameCandidates,
   teamMatchScores,
   winningScores,
   type PlayerGameStat,
   type RecordBoard,
+  type RecordPlayer,
+  type DealerRow,
+  type SessionRounds,
   type SingleGameRow,
   type TeamGameRow,
   type WinnerRow,
@@ -66,7 +73,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
   // 티어는 지금 티어다. 안 묶인 계정(게스트·탈퇴자)은 티어가 없다.
   const tierOf = (memberId: string | null) => (memberId ? members.get(memberId)?.tier ?? null : null);
 
-  const [rankedGames, apiMatches, screenshotRows, roundMaps, winners] = await Promise.all([
+  const [rankedGames, apiMatches, screenshotRows, roundMaps, winners, teamTotals] = await Promise.all([
     // 점수에 세는 경기(확정 + 저티어 아님) — 스크린샷·dak.gg·PUBG API 다 들어 있다.
     selectAll<{ member_id: string; kills: number; played_at: string }>((from, to) =>
       supabase
@@ -115,6 +122,16 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
         .from('session_standings')
         .select('scrim_date, team_no, total_score, place_points, kills, member_id')
         .eq('standing', 1)
+        .eq('low_tier', false)
+        .order('scrim_date')
+        .order('member_id')
+        .range(from, to),
+    ),
+    // 팀별 총점(역전의 명수 검증용) — 일반 내전, 사람 단위라 팀원 수만큼 겹친다.
+    selectAll<{ scrim_date: string; team_no: number | null; total_score: number }>((from, to) =>
+      supabase
+        .from('session_standings')
+        .select('scrim_date, team_no, total_score')
         .eq('low_tier', false)
         .order('scrim_date')
         .order('member_id')
@@ -228,6 +245,83 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     ),
   ];
 
+  // --- 딜딸러: 한 경기 딜량 − 킬 × 기준딜(클랜원, PUBG API 경기 — 딜량이 있는 기간) ---
+  const dealerRows: DealerRow[] = participants.flatMap((p) => {
+    const match = matchById.get(p.pubg_match_id)!;
+    const date = kstDate(match.played_at);
+    if (!p.member_id || match.source !== 'pubg_api' || date < DAMAGE_SINCE) return [];
+    return [
+      {
+        name: nameOf(p.member_id, p.pubg_ign),
+        tier: tierOf(p.member_id),
+        date,
+        map: mapLabel(match.map_name),
+        kills: p.kills,
+        damage: Number(p.damage_dealt),
+      },
+    ];
+  });
+
+  // --- 역전의 명수: 내전 하루를 라운드별 팀 결과로 다시 짠다 ---
+  // PUBG API 경기(팀 번호 = team_id, 경기 순서 = 라운드)와 스크린샷(팀 번호 = team_no).
+  // dak.gg 는 팀 번호가 틀려 뺀다(매치 당 최다 점수와 같은 이유).
+  const sessionRounds: SessionRounds[] = [];
+  const apiByDate = new Map<string, string[]>();
+  for (const m of apiMatches) {
+    if (m.source !== 'pubg_api') continue;
+    const date = kstDate(m.played_at);
+    apiByDate.set(date, [...(apiByDate.get(date) ?? []), m.pubg_match_id]);
+  }
+  const participantsByMatch = new Map<string, typeof participants>();
+  for (const p of participants) {
+    participantsByMatch.set(p.pubg_match_id, [...(participantsByMatch.get(p.pubg_match_id) ?? []), p]);
+  }
+  const roundOf = (rows: { team: number; teamRank: number; kills: number }[]): TeamRoundResult[] => {
+    const byTeam = new Map<number, TeamRoundResult>();
+    for (const r of rows) {
+      const cur = byTeam.get(r.team) ?? { teamNumber: r.team, kills: 0, teamRank: r.teamRank };
+      cur.kills = (cur.kills ?? 0) + r.kills;
+      byTeam.set(r.team, cur);
+    }
+    return [...byTeam.values()];
+  };
+  const addPlayer = (map: Map<number, RecordPlayer[]>, team: number, player: RecordPlayer) => {
+    const list = map.get(team) ?? [];
+    if (!list.some((x) => x.name === player.name)) list.push(player);
+    map.set(team, list);
+  };
+  for (const [date, ids] of apiByDate) {
+    // apiMatches 가 시각순이라 ids 도 경기 순서 그대로다.
+    const playersByTeam = new Map<number, RecordPlayer[]>();
+    const rounds = ids.map((id) => {
+      const rows = participantsByMatch.get(id) ?? [];
+      for (const p of rows) addPlayer(playersByTeam, p.team_id, { name: nameOf(p.member_id, p.pubg_ign), tier: tierOf(p.member_id) });
+      return roundOf(rows.map((p) => ({ team: p.team_id, teamRank: p.team_rank, kills: p.kills })));
+    });
+    sessionRounds.push({ date, rounds, playersByTeam });
+  }
+  const screenshotByDate = new Map<string, typeof screenshotRows>();
+  for (const r of screenshotRows) screenshotByDate.set(r.scrim_date, [...(screenshotByDate.get(r.scrim_date) ?? []), r]);
+  for (const [date, rows] of screenshotByDate) {
+    const playersByTeam = new Map<number, RecordPlayer[]>();
+    for (const r of rows) addPlayer(playersByTeam, r.team_no, { name: nameOf(r.member_id, r.pubg_ign), tier: tierOf(r.member_id) });
+    const roundNos = [...new Set(rows.map((r) => r.round_no))].sort((a, b) => a - b);
+    const rounds = roundNos.map((no) =>
+      roundOf(rows.filter((r) => r.round_no === no).map((r) => ({ team: r.team_no, teamRank: r.team_rank, kills: r.kills }))),
+    );
+    sessionRounds.push({ date, rounds, playersByTeam });
+  }
+
+  // 역전 기록을 믿을 수 있는 날만 쓰려고, 확정 때 저장된 팀별 총점을 붙여 둔다.
+  const recordedByDate = new Map<string, Map<number, number>>();
+  for (const t of teamTotals) {
+    if (t.team_no === null) continue;
+    const map = recordedByDate.get(t.scrim_date) ?? new Map<number, number>();
+    map.set(t.team_no, t.total_score);
+    recordedByDate.set(t.scrim_date, map);
+  }
+  for (const s of sessionRounds) s.recordedTotals = recordedByDate.get(s.date);
+
   // --- 최고/최저 점수 우승: 그날 종합 1등 팀(일반 내전) ---
   const winnerRows: WinnerRow[] = winners.map((w) => ({
     date: w.scrim_date,
@@ -274,6 +368,15 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       entries: rankTop(dayTotals(damageStats), 'desc'),
     },
     {
+      id: 'dealer',
+      kind: 'player',
+      title: '딜딸러',
+      description: `킬에 비해 딜량이 높은 경기 — 1킬을 ${DAMAGE_PER_KILL}딜로 치고 남는 딜이 많은 순`,
+      unit: '딜',
+      since: DAMAGE_SINCE,
+      entries: rankTop(dealerCandidates(dealerRows), 'desc'),
+    },
+    {
       id: 'matchTeamScore',
       kind: 'team',
       title: '매치 당 최다 점수',
@@ -281,6 +384,15 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       unit: '점',
       since: firstDate(teamRows.map((r) => r.date)),
       entries: rankTop(teamMatchScores(teamRows), 'desc'),
+    },
+    {
+      id: 'comeback',
+      kind: 'team',
+      title: '역전의 명수',
+      description: '3라운드까지 아래에 있다가 마지막 라운드에 종합 1등을 뒤집은 팀',
+      unit: '등',
+      since: firstDate(sessionRounds.map((s) => s.date)),
+      entries: rankTop(comebackWins(sessionRounds), 'desc'),
     },
     {
       id: 'highestWin',

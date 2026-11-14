@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { dayTotals, rankByTierGroup, rankTop, singleGameCandidates, teamMatchScores, winningScores } from './hallOfFame';
+import {
+  comebackWins,
+  dayTotals,
+  dealerCandidates,
+  rankByTierGroup,
+  rankTop,
+  singleGameCandidates,
+  teamMatchScores,
+  winningScores,
+} from './hallOfFame';
 
 const c = (value: number, date = '2026-10-01') => ({ players: [{ name: 'A', tier: 2 }], value, date, map: null, detail: null });
 
@@ -124,5 +133,59 @@ describe('singleGameCandidates', () => {
       [1, 14, '에란겔', '팀 3등'],
       [2, 6, '미라마', '팀 1등'],
     ]);
+  });
+});
+
+describe('dealerCandidates', () => {
+  it('딜 − 킬 × 기준딜로 줄 세우고, 화면엔 "N킬 M딜"을 그대로 적는다', () => {
+    const rows = [
+      { name: 'A', tier: 1, date: '2026-10-01', map: '에란겔', kills: 1, damage: 990 },
+      { name: 'B', tier: 2, date: '2026-10-01', map: '미라마', kills: 2, damage: 694 },
+      { name: 'C', tier: 3, date: '2026-10-01', map: '론도', kills: 9, damage: 1200 },
+    ];
+    // 990 − 75 = 915, 694 − 150 = 544, 1200 − 675 = 525 — 딜이 제일 많은 9킬보다
+    // 킬 대비 딜이 많은 1킬·2킬이 위다.
+    expect(rankTop(dealerCandidates(rows, 75), 'desc').map((e) => [e.valueLabel, e.value])).toEqual([
+      ['1킬 990딜', 915],
+      ['2킬 694딜', 544],
+      ['9킬 1,200딜', 525],
+    ]);
+  });
+});
+
+describe('comebackWins', () => {
+  // 3팀, 4라운드. 1번팀이 3라운드까지 앞서다가 4라운드에 3번팀이 뒤집는다.
+  const round = (rows: [team: number, rank: number, kills: number][]) =>
+    rows.map(([teamNumber, teamRank, kills]) => ({ teamNumber, teamRank, kills }));
+  const rounds = [
+    round([[1, 1, 5], [2, 2, 2], [3, 3, 0]]), // 1: 15, 2: 8, 3: 5
+    round([[1, 1, 5], [2, 2, 2], [3, 3, 0]]), // 1: 30, 2: 16, 3: 10
+    round([[1, 2, 0], [2, 3, 0], [3, 1, 0]]), // 1: 36, 2: 21, 3: 20  → 3번팀 3R 3등
+    round([[1, 16, 0], [2, 16, 0], [3, 1, 20]]), // 3번팀 50 으로 우승
+  ];
+  const playersByTeam = new Map([[3, [{ name: 'Ez_low', tier: 4 }, { name: 'Ez_high', tier: 1 }]]]);
+
+  it('3라운드 순위 → 우승을 적고, 팀원은 고티어부터', () => {
+    const [entry] = comebackWins([
+      { date: '2026-10-01', rounds, playersByTeam, recordedTotals: new Map([[1, 36], [2, 21], [3, 50]]) },
+    ]);
+    expect(entry.valueLabel).toBe('3R 3등 → 우승');
+    expect(entry.value).toBe(3);
+    expect(entry.detail).toBe('3R 1등과 16점 차 · 최종 50점');
+    expect(entry.players.map((p) => p.name)).toEqual(['Ez_high', 'Ez_low']);
+  });
+
+  it('저장된 팀 총점과 다시 계산한 총점이 다르면(데이터가 빠진 날) 그날은 뺀다', () => {
+    expect(
+      comebackWins([{ date: '2026-10-01', rounds, playersByTeam, recordedTotals: new Map([[3, 58]]) }]),
+    ).toEqual([]);
+    expect(comebackWins([{ date: '2026-10-01', rounds, playersByTeam }])).toEqual([]);
+  });
+
+  it('3라운드에도 1등이던 우승은 역전이 아니다', () => {
+    const steady = rounds.slice(0, 3).concat([round([[1, 1, 0], [2, 2, 0], [3, 3, 0]])]);
+    expect(
+      comebackWins([{ date: '2026-10-01', rounds: steady, playersByTeam, recordedTotals: new Map([[1, 46]]) }]),
+    ).toEqual([]);
   });
 });
