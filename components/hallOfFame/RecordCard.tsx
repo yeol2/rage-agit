@@ -27,12 +27,13 @@ export function RecordCard({ board }: { board: RecordBoard }) {
       data-testid={`record-${board.id}`}
       className="rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-3 sm:p-5"
     >
-      <h2 className="text-base font-bold text-foreground">{board.title}</h2>
-      <p className="mt-1 text-xs text-menu">{board.description}</p>
+      {/* 카드 머리(제목·설명·티어 탭)만 가운데 정렬 — 아래 1~10등 줄은 그대로(2026-11-15). */}
+      <h2 className="text-center text-base font-bold text-foreground">{board.title}</h2>
+      <p className="mt-1 text-center text-xs text-menu">{board.description}</p>
 
       {board.groups && (
         // 리더보드 티어 탭과 같은 경계. 카드가 좁아 '티어' 글자는 빼고 숫자만 적는다.
-        <div role="tablist" aria-label="티어 그룹" className="mt-3 flex flex-wrap gap-1 sm:gap-1.5">
+        <div role="tablist" aria-label="티어 그룹" className="mt-3 flex flex-wrap justify-center gap-1 sm:gap-1.5">
           {board.groups.map((group) => (
             <button
               key={group.id}
