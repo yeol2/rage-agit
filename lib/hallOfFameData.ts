@@ -280,7 +280,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       id: 'matchKills',
       kind: 'player',
       title: '단일 매치 최다 킬',
-      description: '한 경기에서 혼자 올린 킬 — 티어 무관',
+      description: '단일 매치에서 혼자 올린 킬 — 티어 무관',
       unit: '킬',
       since: firstDate(matchKillRows.map((r) => r.date)),
       entries: rankTop(singleGameCandidates(matchKillRows), 'desc'),
