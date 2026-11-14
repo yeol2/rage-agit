@@ -19,7 +19,7 @@ function formatValue(value: number): string {
 }
 
 export function RecordCard({ board }: { board: RecordBoard }) {
-  // 티어 그룹 탭(내전 최다 킬). 첫 칸은 '전체'. 그룹이 없는 기록은 entries 그대로.
+  // 티어 그룹 탭(내전 최다 킬). 처음엔 첫 탭(0~1.5). 그룹이 없는 기록은 entries 그대로.
   const [groupId, setGroupId] = useState(board.groups?.[0]?.id ?? null);
   const entries = board.groups?.find((g) => g.id === groupId)?.entries ?? board.entries;
 

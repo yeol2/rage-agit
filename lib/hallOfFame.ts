@@ -49,7 +49,7 @@ export interface RecordBoard {
   since: string;
   entries: RecordEntry[];
   /**
-   * 티어 그룹별 순위(카드 안 탭). 첫 칸은 '전체'로 entries 와 같다. 없으면 탭 없이
+   * 티어 그룹별 순위(카드 안 탭). 있으면 첫 탭이 처음 열린다(entries 는 안 보인다). 없으면 탭 없이
    * entries 만 보여준다 — 지금은 내전 최다 킬만 나눈다(2026-11-15 사용자 결정).
    */
   groups?: RecordGroup[];

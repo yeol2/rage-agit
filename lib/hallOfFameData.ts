@@ -272,8 +272,9 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       unit: '킬',
       since: firstDate(killStats.map((s) => s.date)),
       entries: rankTop(dayKillTotals, 'desc'),
-      // 티어 그룹별 탭(전체 · 0~1.5 · 2~2.5 · 3~3.5 · 4~5) — 리더보드와 같은 경계.
-      groups: rankByTierGroup(dayKillTotals, 'desc', TIER_GROUPS),
+      // 티어 그룹별 탭(0~1.5 · 2~2.5 · 3~3.5 · 4~5) — 리더보드와 같은 경계. '전체' 탭은
+      // 빼기로 했다(2026-11-15 사용자 결정) — 처음엔 0~1.5 가 열린다.
+      groups: rankByTierGroup(dayKillTotals, 'desc', TIER_GROUPS.filter((group) => group.tiers !== null)),
     },
     {
       id: 'matchKills',
