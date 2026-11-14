@@ -2,7 +2,14 @@ import { ScrimSessionRow } from './ScrimSessionRow';
 import { type ScrimSessionSummary } from '@/lib/scrimData';
 import { siteConfig } from '@/lib/siteConfig';
 
-export function RecentScrimsList({ sessions }: { sessions: ScrimSessionSummary[] }) {
+export function RecentScrimsList({
+  sessions,
+  children,
+}: {
+  sessions: ScrimSessionSummary[];
+  /** 제목과 목록 사이에 끼울 내용 — 내전 기록 화면은 최근 내전 시트를 넣는다. */
+  children?: React.ReactNode;
+}) {
   const recentScrimsCopy = siteConfig.dashboard.recentScrims;
 
   return (
@@ -14,6 +21,8 @@ export function RecentScrimsList({ sessions }: { sessions: ScrimSessionSummary[]
       <h2 className="mt-6 text-3xl font-bold tracking-tight md:text-4xl">
         {recentScrimsCopy.heading}
       </h2>
+
+      {children}
 
       {sessions.length === 0 ? (
         <p className="mt-10 text-menu">아직 수집된 내전이 없습니다.</p>
