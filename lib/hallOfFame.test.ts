@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayTotals, rankByTierGroup, rankTop, teamMatchScores, winningScores } from './hallOfFame';
+import { dayTotals, rankByTierGroup, rankTop, singleGameCandidates, teamMatchScores, winningScores } from './hallOfFame';
 
 const c = (value: number, date = '2026-10-01') => ({ players: [{ name: 'A', tier: 2 }], value, date, map: null, detail: null });
 
@@ -110,6 +110,19 @@ describe('rankByTierGroup', () => {
       ['all', ['1.X', '2.A', '3.B', '4.C']],
       ['0-1.5', ['1.A', '2.C']],
       ['3-3.5', ['1.B']],
+    ]);
+  });
+});
+
+describe('singleGameCandidates', () => {
+  it('한 경기 한 사람이 그대로 후보 하나 — 더하지 않고, 날짜·맵·그 경기 팀 순위를 단다', () => {
+    const rows = [
+      { name: 'Ez_A', tier: 1, date: '2026-09-17', map: '에란겔', teamRank: 3, value: 14 },
+      { name: 'Ez_A', tier: 1, date: '2026-09-17', map: '미라마', teamRank: 1, value: 6 },
+    ];
+    expect(rankTop(singleGameCandidates(rows), 'desc').map((e) => [e.rank, e.value, e.map, e.detail])).toEqual([
+      [1, 14, '에란겔', '팀 3등'],
+      [2, 6, '미라마', '팀 1등'],
     ]);
   });
 });

@@ -8,10 +8,12 @@ import {
   kstDate,
   rankByTierGroup,
   rankTop,
+  singleGameCandidates,
   teamMatchScores,
   winningScores,
   type PlayerGameStat,
   type RecordBoard,
+  type SingleGameRow,
   type TeamGameRow,
   type WinnerRow,
 } from '@/lib/hallOfFame';
@@ -74,13 +76,16 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
         .order('member_id')
         .range(from, to),
     ),
-    selectAll<{ pubg_match_id: string; played_at: string; map_name: string | null }>((from, to) =>
-      supabase
-        .from('ranked_matches')
-        .select('pubg_match_id, played_at, map_name')
-        .eq('source', 'pubg_api')
-        .order('played_at')
-        .range(from, to),
+    // PUBG API 와 dak.gg 경기 둘 다 — 단일 매치 최다 킬은 내전 최다 킬과 같은 범위
+    // (dak.gg 포함)를 보고, 딜량·팀 점수는 아래에서 PUBG API 것만 고른다.
+    selectAll<{ pubg_match_id: string; played_at: string; map_name: string | null; source: string }>(
+      (from, to) =>
+        supabase
+          .from('ranked_matches')
+          .select('pubg_match_id, played_at, map_name, source')
+          .order('played_at')
+          .order('pubg_match_id')
+          .range(from, to),
     ),
     selectAll<{
       scrim_date: string;
@@ -153,7 +158,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
   const damageStats: PlayerGameStat[] = participants.flatMap((p) => {
     const match = matchById.get(p.pubg_match_id)!;
     const date = kstDate(match.played_at);
-    if (!p.member_id || date < DAMAGE_SINCE) return [];
+    if (!p.member_id || match.source !== 'pubg_api' || date < DAMAGE_SINCE) return [];
     return [
       { key: p.member_id, name: nameOf(p.member_id, p.pubg_ign), tier: tierOf(p.member_id), date, value: Number(p.damage_dealt) },
     ];
@@ -164,8 +169,9 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     (roundMaps.data ?? []).map((r) => [`${r.scrim_date}#${r.round_no}`, r.map_name as string]),
   );
   const teamRows: TeamGameRow[] = [
-    ...participants.map((p) => {
+    ...participants.flatMap((p) => {
       const match = matchById.get(p.pubg_match_id)!;
+      if (match.source !== 'pubg_api') return [];
       return {
         teamKey: `${p.pubg_match_id}#${p.team_id}`,
         date: kstDate(match.played_at),
@@ -185,6 +191,41 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       tier: tierOf(r.member_id),
       kills: r.kills,
     })),
+  ];
+
+  // --- 단일 매치 최다 킬: 한 경기 개인 킬(클랜원, 티어 무관) ---
+  // 내전 최다 킬과 같은 범위 — PUBG API·dak.gg 경기(맵은 경기 기록) + 스크린샷(맵은 라운드 맵).
+  const roundMapOf = (date: string, roundNo: number) =>
+    mapLabel(roundMapOverride.get(`${date}#${roundNo}`) ?? DEFAULT_ROUND_MAPS[roundNo] ?? null);
+  const matchKillRows: SingleGameRow[] = [
+    ...participants.flatMap((p) => {
+      if (!p.member_id) return [];
+      const match = matchById.get(p.pubg_match_id)!;
+      return [
+        {
+          name: nameOf(p.member_id, p.pubg_ign),
+          tier: tierOf(p.member_id),
+          date: kstDate(match.played_at),
+          map: mapLabel(match.map_name),
+          teamRank: p.team_rank,
+          value: p.kills,
+        },
+      ];
+    }),
+    ...screenshotRows.flatMap((r) =>
+      r.member_id
+        ? [
+            {
+              name: nameOf(r.member_id, r.pubg_ign),
+              tier: tierOf(r.member_id),
+              date: r.scrim_date,
+              map: roundMapOf(r.scrim_date, r.round_no),
+              teamRank: r.team_rank,
+              value: r.kills,
+            },
+          ]
+        : [],
+    ),
   ];
 
   // --- 최고/최저 점수 우승: 그날 종합 1등 팀(일반 내전) ---
@@ -213,6 +254,15 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       entries: rankTop(dayKillTotals, 'desc'),
       // 티어 그룹별 탭(전체 · 0~1.5 · 2~2.5 · 3~3.5 · 4~5) — 리더보드와 같은 경계.
       groups: rankByTierGroup(dayKillTotals, 'desc', TIER_GROUPS),
+    },
+    {
+      id: 'matchKills',
+      kind: 'player',
+      title: '단일 매치 최다 킬',
+      description: '한 경기에서 혼자 올린 킬 — 티어 무관',
+      unit: '킬',
+      since: firstDate(matchKillRows.map((r) => r.date)),
+      entries: rankTop(singleGameCandidates(matchKillRows), 'desc'),
     },
     {
       id: 'dayDamage',

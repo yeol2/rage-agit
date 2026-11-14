@@ -34,7 +34,7 @@ export interface RecordEntry {
 }
 
 export interface RecordBoard {
-  id: 'dayKills' | 'dayDamage' | 'matchTeamScore' | 'highestWin' | 'lowestWin';
+  id: 'dayKills' | 'matchKills' | 'dayDamage' | 'matchTeamScore' | 'highestWin' | 'lowestWin';
   /** 개인 기록은 이름 옆에 티어 뱃지를, 팀 기록은 이름만 늘어놓는다. */
   kind: 'player' | 'team';
   title: string;
@@ -130,6 +130,27 @@ export function dayTotals(stats: PlayerGameStat[]): Candidate[] {
     date: d.date,
     map: null,
     detail: `${d.games}경기`,
+  }));
+}
+
+/** 사람 한 명이 한 경기에서 낸 값 — 단일 매치 기록(날짜·맵·그 경기 팀 등수까지). */
+export interface SingleGameRow {
+  name: string;
+  tier: number | null;
+  date: string;
+  map: string | null;
+  teamRank: number;
+  value: number;
+}
+
+/** 한 경기 한 사람이 그대로 기록 후보 하나다(더하지 않는다). */
+export function singleGameCandidates(rows: SingleGameRow[]): Candidate[] {
+  return rows.map((r) => ({
+    players: [{ name: r.name, tier: r.tier }],
+    value: r.value,
+    date: r.date,
+    map: r.map,
+    detail: `팀 ${r.teamRank}등`, // 그 경기 팀 순위 — 기록 등수와 헷갈리지 않게 "팀"을 붙인다
   }));
 }
 
