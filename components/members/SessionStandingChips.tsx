@@ -30,6 +30,8 @@ export interface SessionStandingChipsProps {
   compact?: boolean;
   /** 왼쪽 여백(px). 아래 점수 변동 그래프와 세로로 맞출 때 그 눈금 칸 폭을 준다. */
   leftGutter?: number;
+  /** 가로 스크롤 칸 — 아래 점수 변동 그래프와 스크롤을 묶을 때 쓴다. */
+  scrollRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function SessionStandingChips({
@@ -37,11 +39,13 @@ export function SessionStandingChips({
   standingByDate,
   compact = false,
   leftGutter = 0,
+  scrollRef,
 }: SessionStandingChipsProps) {
   const badgeHeight = compact ? 22 : 26;
 
   return (
     <div
+      ref={scrollRef}
       className="flex gap-2 overflow-x-auto pb-1"
       // 아래 점수 변동 그래프의 눈금 칸만큼 비워서, 칩 가운데와 그래프 점이 세로로 맞게 한다.
       style={leftGutter ? { paddingLeft: leftGutter } : undefined}

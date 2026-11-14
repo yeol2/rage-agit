@@ -77,6 +77,19 @@ describe('ScoreTrend', () => {
     expect(lastDot.style.background).not.toBe(ramp.from);
   });
 
+  it('좁은 화면이면 칩 최소 폭만큼 넓혀 옆으로 스크롤하고, 칩과 맞출 때만 스크롤을 묶는다', () => {
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 300 });
+    const chips = SERIES.slice(2).map((p) => p.date);
+    const { container } = render(<ScoreTrend series={SERIES} window="alltime" ramp={ramp} alignDates={chips} />);
+    const view = container.querySelector('[data-scroll-linked]') as HTMLElement;
+    expect(view.dataset.scrollLinked).toBe('true');
+    // 칩 10칸 × 60 + 간격 9 × 8 = 672 — 보이는 폭(300)보다 넓다.
+    expect((view.firstElementChild as HTMLElement).style.width).toBe('672px');
+    fireEvent.click(screen.getByRole('tab', { name: '전체' }));
+    expect(view.dataset.scrollLinked).toBe('false');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 700 });
+  });
+
   it('기록이 없으면 이유를 적는다', () => {
     render(<ScoreTrend series={[]} window="alltime" ramp={ramp} />);
     expect(screen.getByText(/아직 점수 기록이 없습니다/)).toBeInTheDocument();

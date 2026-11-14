@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ScoreRing } from '@/components/members/ScoreRing';
 import { SessionStandingChips } from '@/components/members/SessionStandingChips';
 import { ScoreTrend, TREND_GUTTER_PX } from '@/components/members/ScoreTrend';
@@ -119,6 +119,33 @@ export function MemberDashboard({
   const current = stats[activeWindow];
   // 리더보드 칸은 종합점수가 있을 때만(자격 미달이면 링도 없다), 상세 페이지는 늘.
   const showTrend: boolean = scoreSeries !== undefined && (compact ? current !== null : true);
+
+  // 좁은 화면(휴대폰)에서는 칩 줄도 그래프도 옆으로 스크롤된다. 한쪽을 밀면 다른
+  // 쪽도 같은 만큼 밀어서 칩 가운데와 그래프 점이 계속 세로로 맞게 한다. 두 칸의
+  // 스크롤 가능한 길이는 같다(칩 쪽 왼쪽 여백 = 그래프 눈금 칸, 칩·점 최소 폭도 같다).
+  const chipsScrollRef = useRef<HTMLDivElement>(null);
+  const trendScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const a = chipsScrollRef.current;
+    const b = trendScrollRef.current;
+    if (!a || !b) return;
+    const follow = (from: HTMLDivElement, to: HTMLDivElement) => () => {
+      // 그래프가 "전체" 보기면 칩과 칸이 안 맞으므로 묶지 않는다.
+      if (b.dataset.scrollLinked !== 'true') return;
+      // 이미 같은 자리면 건드리지 않는다 — 서로를 계속 다시 미는 걸 막는다.
+      if (Math.abs(to.scrollLeft - from.scrollLeft) >= 1) to.scrollLeft = from.scrollLeft;
+    };
+    const onA = follow(a, b);
+    const onB = follow(b, a);
+    a.addEventListener('scroll', onA, { passive: true });
+    b.addEventListener('scroll', onB, { passive: true });
+    // 그래프가 묶이기 전에 먼저 오른쪽 끝(최근 회차)으로 가 있었을 수 있다 — 한 번 맞춘다.
+    a.scrollLeft = b.scrollLeft;
+    return () => {
+      a.removeEventListener('scroll', onA);
+      b.removeEventListener('scroll', onB);
+    };
+  }, [showTrend, activeWindow]);
   const gradientId = useId().replace(/:/g, '');
 
   return (
@@ -231,6 +258,7 @@ export function MemberDashboard({
             standingByDate={standingByDate}
             compact={compact}
             leftGutter={showTrend ? TREND_GUTTER_PX : 0}
+            scrollRef={chipsScrollRef}
           />
         </div>
       )}
@@ -250,6 +278,7 @@ export function MemberDashboard({
             compact={compact}
             alignDates={sessions.map((s) => s.scrimDate)}
             standingByDate={standingByDate}
+            scrollRef={trendScrollRef}
           />
         </div>
       )}

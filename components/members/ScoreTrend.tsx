@@ -26,6 +26,10 @@ const RECENT_COUNT = 10;
 const UP = '#4ADE80'; // 리더보드 등수 변동(text-green-400)과 같은 색
 const DOWN = '#F87171'; // text-red-400
 const PLOT_PAD_Y = 12; // 맨 위·맨 아래 점이 잘리지 않게
+/** 칩 최소 폭(SessionStandingChips 가 그래프와 붙을 때의 min-w). 좁은 화면에서 둘이 같은 폭으로 스크롤된다. */
+const CHIP_MIN_PX = 60;
+const MIN_POINT_GAP_PX = 28; // 전체 보기에서 점 사이 최소 간격
+const DATE_BAND_PX = 24; // 그래프 아래 날짜 줄 — 스크롤 칸 안에 같이 둔다(밖에 두면 잘린다)
 const NEAR_PX = 26; // 기준선 이름(두 줄)끼리 이보다 가까우면 겹친다
 
 function formatDelta(delta: number): string {
@@ -75,8 +79,9 @@ function project(series: SeriesPoint[], window: ScoreWindow, dates: string[]): D
   });
 }
 
-function useSize<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
+function useSize<T extends HTMLElement>(external?: React.RefObject<T>) {
+  const own = useRef<T>(null);
+  const ref = external ?? own;
   const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const el = ref.current;
@@ -86,18 +91,37 @@ function useSize<T extends HTMLElement>() {
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [ref]);
   return [ref, size] as const;
 }
 
-export function ScoreTrend({
+type ScoreTrendProps = Parameters<typeof ScoreTrendChart>[0];
+
+export function ScoreTrend(props: ScoreTrendProps) {
+  if (props.series.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-menu">
+        아직 점수 기록이 없습니다. 집계 기준(통산 16경기)을 채운 뒤부터 쌓입니다.
+      </p>
+    );
+  }
+  return <ScoreTrendChart {...props} />;
+}
+
+function ScoreTrendChart({
   series,
   window,
   ramp,
   compact = false,
   alignDates,
   standingByDate,
+  scrollRef,
 }: {
+  /**
+   * 그래프의 가로 스크롤 칸. 위 칩 줄과 같이 움직이게 묶을 때 바깥(MemberDashboard)이
+   * 넘긴다 — 좁은 화면에서 칩 줄이 옆으로 밀리면 그래프도 같이 밀려야 정렬이 산다.
+   */
+  scrollRef?: React.RefObject<HTMLDivElement>;
   /** 내전 날짜순 전체 점수(쉰 날은 이어 그린 값). */
   series: SeriesPoint[];
   /** 지금 보고 있는 집계 기준 — 그래프 끝점이 화면의 종합점수와 같아진다. */
@@ -112,15 +136,10 @@ export function ScoreTrend({
 }) {
   const [range, setRange] = useState<Range>('recent10');
   const [hover, setHover] = useState<number | null>(null);
-  const [plotRef, { width: W, height: H }] = useSize<HTMLDivElement>();
-
-  if (series.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-menu">
-        아직 점수 기록이 없습니다. 집계 기준(통산 16경기)을 채운 뒤부터 쌓입니다.
-      </p>
-    );
-  }
+  // 보이는 칸(스크롤 칸)의 크기. 그래프 자체는 이보다 넓을 수 있다(좁은 화면).
+  const [viewRef, { width: viewW, height: viewH }] = useSize<HTMLDivElement>(scrollRef);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const startedAtEnd = useRef<string | null>(null);
 
   const values = series.map((p) => p[window]);
   // 지난 내전 대비 — 전체 흐름에서 바로 앞 내전과 비교한다(보이는 범위와 무관).
@@ -138,6 +157,17 @@ export function ScoreTrend({
       : series.map((p) => p.date);
   const points = project(series, window, dates);
   const n = points.length;
+
+  // 그래프 폭. 칩에 맞출 땐 칩 줄과 같은 최소 폭(칩 n개 × CHIP_MIN_PX + 간격)을
+  // 지켜서, 화면이 좁으면 칩 줄처럼 옆으로 스크롤된다. 전체 보기는 점 사이를 최소
+  // MIN_POINT_GAP_PX 띄운다 — 54회를 휴대폰 폭에 욱여넣으면 날짜가 겹친다.
+  const minW = aligned
+    ? n * CHIP_MIN_PX + (n - 1) * CHIP_GAP_PX
+    : n <= 1
+      ? 0
+      : 32 + (n - 1) * MIN_POINT_GAP_PX;
+  const W = Math.max(viewW, minW);
+  const H = viewH - DATE_BAND_PX; // 아래 날짜 줄만큼 뺀 그래프 높이
 
   // 내 역대 점수(지금 값) — 가로줄로 그어 "요즘 점수가 역대보다 위냐 아래냐"를 본다.
   // 티어 평균(50)과 같이 늘 보이도록 세로 범위에 둘 다 넣는다.
@@ -177,7 +207,26 @@ export function ScoreTrend({
   // 날짜 글씨는 많아도 6개쯤만 — 칩과 맞춘 10칸은 칩에 날짜가 있어도 다 적는다.
   const labelEvery = aligned ? 1 : Math.max(1, Math.ceil(n / 6));
   const gradientId = `trend-${window}-${compact ? 'c' : 'f'}`;
-  const ready = W > 0 && H > 0;
+  const ready = viewW > 0 && H > 0;
+
+  // 처음엔 가장 최근 회차가 보이게 오른쪽 끝에서 시작한다(범위·창이 바뀔 때도).
+  // 칩 줄과 묶여 있으면 그쪽도 따라온다.
+  const layoutKey = `${effectiveRange}-${n}-${W}`;
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el || !ready || startedAtEnd.current === layoutKey) return;
+    startedAtEnd.current = layoutKey;
+    el.scrollLeft = el.scrollWidth;
+  });
+
+  // 손가락·마우스 위치에서 가장 가까운 점. 좌표는 그래프 안쪽(스크롤 포함) 기준.
+  const pick = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!ready || drawn.length === 0) return;
+    const px = e.clientX - e.currentTarget.getBoundingClientRect().left;
+    let best = drawn[0].i;
+    for (const p of drawn) if (Math.abs(x(p.i) - px) < Math.abs(x(best) - px)) best = p.i;
+    setHover(best);
+  };
 
   const hovered = hover === null ? null : points[hover];
   const hoveredStanding = hovered ? standingByDate?.get(hovered.date) : undefined;
@@ -232,8 +281,12 @@ export function ScoreTrend({
       </div>
 
       <div
-        className={`mt-5 grid ${compact ? 'h-52' : 'h-72'}`}
-        style={{ gridTemplateColumns: `${TREND_GUTTER_PX}px 1fr` }}
+        className="relative mt-5 grid"
+        // 그래프 높이(208/288) + 날짜 줄
+        style={{
+          gridTemplateColumns: `${TREND_GUTTER_PX}px minmax(0, 1fr)`,
+          height: (compact ? 208 : 288) + DATE_BAND_PX,
+        }}
       >
         {/* 세로 눈금 — 글씨는 눈금 칸 가운데 정렬(숫자와 괄호 이름이 한 줄로 서게). */}
         <div className="relative">
@@ -271,17 +324,25 @@ export function ScoreTrend({
             ))}
         </div>
 
+        {/* 스크롤 칸. 눈금(왼쪽)은 밖에 있어 스크롤해도 늘 보인다. 스크롤바는 숨기고
+            위 칩 줄의 스크롤바로 같이 민다(묶여 있다). */}
         <div
-          ref={plotRef}
-          className="relative"
-          onPointerMove={(e) => {
-            if (!ready) return;
-            const px = e.clientX - e.currentTarget.getBoundingClientRect().left;
-            let best = drawn[0]?.i ?? 0;
-            for (const p of drawn) if (Math.abs(x(p.i) - px) < Math.abs(x(best) - px)) best = p.i;
-            setHover(best);
+          ref={viewRef}
+          // 칩과 칸이 맞을 때(최근 10회)만 칩 줄과 스크롤을 묶는다 — 전체 보기는 칸
+          // 간격이 달라서 같이 밀면 오히려 어긋난다. MemberDashboard 가 이 값을 본다.
+          data-scroll-linked={aligned ? 'true' : 'false'}
+          className="overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}
+        >
+        <div
+          className="relative h-full"
+          style={{ width: W || '100%' }}
+          onPointerMove={(e) => pick(e)}
+          // 휴대폰은 마우스가 없다 — 탭한 곳의 점을 고르고, 손을 떼도 말풍선은 남긴다.
+          onPointerDown={(e) => pick(e)}
+          onPointerLeave={(e) => {
+            if (e.pointerType === 'mouse') setHover(null);
           }}
-          onPointerLeave={() => setHover(null)}
         >
           {ready && (
             <svg
@@ -351,19 +412,27 @@ export function ScoreTrend({
               i % labelEvery === 0 || i === n - 1 ? (
                 <span
                   key={p.date}
-                  className="absolute top-full mt-1.5 -translate-x-1/2 whitespace-nowrap text-[10px] tabular-nums text-subtext"
-                  style={{ left: x(i) }}
+                  className="absolute -translate-x-1/2 whitespace-nowrap text-[10px] tabular-nums text-subtext"
+                  style={{ left: x(i), top: H + 6 }}
                 >
                   {shortDate(p.date)}
                 </span>
               ) : null,
             )}
 
+        </div>
+        </div>
+
+          {/* 말풍선은 스크롤 칸 밖(그래프 전체 기준)에 띄운다 — 안에 두면 위로 솟는
+              말풍선이 스크롤 칸 경계에서 잘린다. 가로 위치는 스크롤한 만큼 뺀다. */}
           {ready && hovered && hover !== null && hovered.value !== null && (
             <div
               className="pointer-events-none absolute z-10 w-max rounded-lg border border-white/10 bg-[#1B1B23] px-3 py-2 text-left text-xs shadow-lg"
               style={{
-                left: Math.min(W - 70, Math.max(70, x(hover))),
+                left: Math.min(
+                  TREND_GUTTER_PX + viewW - 70,
+                  Math.max(70, TREND_GUTTER_PX + x(hover) - scrollLeft),
+                ),
                 top: y(hovered.value),
                 transform: 'translate(-50%, calc(-100% - 12px))',
               }}
@@ -392,11 +461,9 @@ export function ScoreTrend({
               </p>
             </div>
           )}
-        </div>
       </div>
-      {/* 날짜 글씨가 그래프 칸 아래로 삐져나오는 만큼 자리를 잡아 둔다. 기준선 두 개는
-          왼쪽 눈금에 이름을 적었고, 여기엔 속 빈 점 뜻만 남긴다. */}
-      <div className="mt-6 flex flex-wrap justify-end gap-x-4 gap-y-1 text-[10px] text-subtext">
+      {/* 기준선 두 개는 왼쪽 눈금에 이름을 적었고, 여기엔 속 빈 점 뜻만 남긴다. */}
+      <div className="mt-2 flex flex-wrap justify-end gap-x-4 gap-y-1 text-[10px] text-subtext">
         <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden="true"
