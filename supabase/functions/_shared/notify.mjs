@@ -186,6 +186,46 @@ export function formatTeamSheetMessages({ teams }) {
   ];
 }
 
+// 자동 확정 알림에 우승팀 말고 몇 위까지 적을지.
+const AUTO_CONFIRM_LISTED_TEAMS = 3;
+
+/**
+ * 목·일 자동 폴링(크론)이 4경기를 다 잡고 우승을 확정·저장한 결과.
+ *
+ * 사람이 버튼을 누르지 않았으므로 "언제 저장됐는지"와 "무엇이 저장됐는지"가
+ * 이 알림 하나로 다 전해져야 한다. 저장된 인원(savedMembers)을 같이 적는 건
+ * 미연결 참가자가 있으면 64명보다 적게 저장되기 때문이다 — 정리한 뒤 03 시트에서
+ * 우승 확정을 다시 누르면 덮어쓴다.
+ *
+ * teams 는 standing 순으로 정렬된 팀 목록이다.
+ */
+export function formatAutoConfirmMessage({
+  scrimDate,
+  confirmedAt,
+  lowTier,
+  teams,
+  savedTeams,
+  savedMembers,
+}) {
+  const medals = ['🥇', '🥈', '🥉'];
+  const lines = [
+    `**자동 저장 완료** ${scrimDate} ${lowTier ? '저티어 ' : ''}내전 — ${toKstTime(confirmedAt)} 확정`,
+    '',
+  ];
+  for (const [i, team] of teams.slice(0, AUTO_CONFIRM_LISTED_TEAMS).entries()) {
+    const label = medals[i] ?? `${team.standing}위`;
+    lines.push(
+      `${label} ${team.teamNumber}번팀 **${team.totalScore}점** (순위 ${team.totalPlacementPoints} + 킬 ${team.totalKills})`,
+    );
+    if (i === 0 && team.players?.length) lines.push(`   └ ${team.players.join(', ')}`);
+  }
+  lines.push('');
+  lines.push(`리더보드 저장: ${savedTeams}팀 · ${savedMembers}명`);
+  if (lowTier) lines.push('저티어 내전이라 우승팀은 꽃게들의 왕, 리더보드 집계에는 안 들어간다.');
+  lines.push('미연결 참가자를 정리했다면 03 시트에서 우승 확정을 다시 누르면 덮어쓴다.');
+  return lines.join('\n');
+}
+
 export async function sendDiscord(webhookUrl, content) {
   const res = await fetch(webhookUrl, {
     method: 'POST',

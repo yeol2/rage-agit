@@ -47,6 +47,23 @@ declare module '@/supabase/functions/_shared/notify.mjs' {
    */
   export function formatTeamSheetMessages(args: { teams: string[][] }): [string, string];
 
+  /** 목·일 자동 폴링 크론이 4경기를 잡고 확정·저장한 결과 알림. teams 는 standing 순. */
+  export function formatAutoConfirmMessage(args: {
+    scrimDate: string;
+    confirmedAt: string;
+    lowTier: boolean;
+    teams: {
+      standing: number;
+      teamNumber: number;
+      totalScore: number;
+      totalPlacementPoints: number;
+      totalKills: number;
+      players?: string[];
+    }[];
+    savedTeams: number;
+    savedMembers: number;
+  }): string;
+
   /** 디스코드 웹훅으로 메시지를 보낸다. 응답이 실패면 던진다. */
   export function sendDiscord(webhookUrl: string, content: string): Promise<void>;
 }

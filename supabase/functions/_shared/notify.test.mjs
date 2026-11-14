@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  formatAutoConfirmMessage,
   formatManualPollMessage,
   formatRosterUploadMessage,
   formatTeamSheetMessages,
@@ -198,5 +199,38 @@ describe('formatTeamSheetMessages', () => {
   it('빈 자리는 ? 로 채운다 — 디스코드가 메시지 앞뒤 탭을 잘라 줄이 밀리지 않게', () => {
     const [, table] = formatTeamSheetMessages({ teams: [['', 'B', 'C', '']] });
     expect(table).toBe('?\tB\tC\t?');
+  });
+});
+
+describe('formatAutoConfirmMessage', () => {
+  const team = (standing, teamNumber, totalScore, players = []) => ({
+    standing,
+    teamNumber,
+    totalScore,
+    totalPlacementPoints: totalScore - 10,
+    totalKills: 10,
+    players,
+  });
+  const args = {
+    scrimDate: '2026-11-12',
+    confirmedAt: '2026-11-12T12:47:00.000Z', // 21:47 KST
+    lowTier: false,
+    teams: [team(1, 3, 90, ['Ez_A', 'Ez_B']), team(2, 7, 80), team(3, 1, 70), team(4, 2, 60)],
+    savedTeams: 16,
+    savedMembers: 62,
+  };
+
+  it('확정 시각(KST)과 상위 3팀, 저장 인원을 적는다', () => {
+    const msg = formatAutoConfirmMessage(args);
+    expect(msg).toContain('2026-11-12 내전 — 21:47:00 확정');
+    expect(msg).toContain('🥇 3번팀 **90점** (순위 80 + 킬 10)');
+    expect(msg).toContain('Ez_A, Ez_B');
+    expect(msg).toContain('🥉 1번팀');
+    expect(msg).not.toContain('2번팀');
+    expect(msg).toContain('16팀 · 62명');
+  });
+
+  it('저티어 내전이면 표시한다', () => {
+    expect(formatAutoConfirmMessage({ ...args, lowTier: true })).toContain('저티어 내전 —');
   });
 });
