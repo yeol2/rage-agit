@@ -85,7 +85,35 @@ body {
   animation: partner-aura 6s ease-in-out infinite;
 }
 
+/* 페이지 전환 로딩 뼈대 — 탭을 누르는 즉시 그 페이지 모양의 회색 박스가 뜨고,
+   밝은 띠가 왼쪽에서 오른쪽으로 계속 흐른다. "눌렸고 불러오는 중"을 보여주는
+   게 목적이라 멈춰 있으면 안 된다(멈춘 회색 박스는 고장처럼 보인다). */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 25%,
+    rgba(255, 255, 255, 0.18) 37%,
+    rgba(255, 255, 255, 0.08) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* 움직임을 끈 사람에게는 흐르는 띠 대신 아주 느린 밝기 변화만. */
+  .skeleton {
+    animation: partner-aura 2s ease-in-out infinite;
+  }
+
   .vip-holographic {
     animation: none;
   }
