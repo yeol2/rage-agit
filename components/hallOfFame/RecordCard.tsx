@@ -28,8 +28,10 @@ export function RecordCard({ board }: { board: RecordBoard }) {
       className="rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-3 sm:p-5"
     >
       {/* 카드 머리(제목·설명·티어 탭)만 가운데 정렬 — 아래 1~10등 줄은 그대로(2026-11-15). */}
-      <h2 className="text-center text-base font-bold text-foreground">{board.title}</h2>
-      {/* 간격은 제목↔설명 : 설명↔등수(또는 탭) = 2 : 1 (20px : 10px, 2026-11-15 사용자 요청). */}
+      {/* 제목 강조 — 한 단계 크게(20px) + 아래 가운데 짧은 주황 밑줄(사이트 강조색). 2026-11-15. */}
+      <h2 className="text-center text-xl font-bold tracking-tight text-foreground">{board.title}</h2>
+      <span aria-hidden="true" className="mx-auto mt-2.5 block h-[3px] w-10 rounded-full bg-accent" />
+      {/* 간격은 제목(밑줄까지)↔설명 : 설명↔등수(또는 탭) = 2 : 1 (20px : 10px, 2026-11-15 사용자 요청). */}
       <p className="mt-5 whitespace-pre-line text-center text-xs leading-relaxed text-menu">{board.description}</p>
 
       {board.groups && (
