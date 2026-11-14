@@ -35,12 +35,13 @@ export interface ScrimParticipant {
   distance: number | null;
 }
 
-export async function fetchScrimSessions(limit = 10, since?: string): Promise<ScrimSessionSummary[]> {
+/** limit 을 안 주면 전부 가져온다 — 내전 기록 화면은 DB 에 있는 내전을 다 보여준다. */
+export async function fetchScrimSessions(limit?: number, since?: string): Promise<ScrimSessionSummary[]> {
   let query = getSupabase()
     .from('scrim_session_summary')
     .select('id, scrim_date, title, session_number, replay_url, match_count, participant_count')
-    .order('scrim_date', { ascending: false })
-    .limit(limit);
+    .order('scrim_date', { ascending: false });
+  if (limit !== undefined) query = query.limit(limit);
   // dak.gg 백필(~2026-07-25)은 등수·팀 번호가 실제 경기와 안 맞는 경우가 있어
   // "매치 기록" 화면에서만 가린다 — DB는 그대로 두고(랭킹 집계는 안 건드림),
   // 이 목록 조회에서만 잘라낸다.

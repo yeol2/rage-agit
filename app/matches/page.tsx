@@ -18,7 +18,8 @@ export const revalidate = 300;
 const VISIBLE_SINCE = '2026-07-26';
 
 export default async function MatchesPage() {
-  const sessions = await fetchScrimSessions(10, VISIBLE_SINCE);
+  // 개수 제한 없이 VISIBLE_SINCE 이후 전부 보여준다(2026-11-14 사용자 요청).
+  const sessions = await fetchScrimSessions(undefined, VISIBLE_SINCE);
 
   return (
     <main className="min-h-screen">

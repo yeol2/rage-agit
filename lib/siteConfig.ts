@@ -51,7 +51,7 @@ const FEATURE_ITEMS: FeatureItem[] = [
     ready: true,
   },
   {
-    title: '매치 기록',
+    title: '내전 기록',
     body: '내전 세션별로 각 경기의 팀 순위·킬·생존시간을 한눈에 들여다볼 수 있어요.',
     ready: true,
   },
@@ -100,7 +100,7 @@ export const siteConfig = {
     { label: '리더보드', href: '/dashboard', ready: true },
     { label: '내전', href: '/team-builder', ready: true },
     { label: '클랜원', href: '/members', ready: true },
-    { label: '매치 기록', href: '/matches', ready: true },
+    { label: '내전 기록', href: '/matches', ready: true },
   ],
 
   hero: {
@@ -140,7 +140,7 @@ export const siteConfig = {
       { label: '리더보드', href: '/dashboard', ready: true },
       { label: '클랜원', href: '/members', ready: true },
       { label: '내전', href: '/team-builder', ready: true },
-      { label: '매치 기록', href: '/matches', ready: true },
+      { label: '내전 기록', href: '/matches', ready: true },
       { label: '랭킹', href: '/rankings', ready: false },
     ],
     tagline: '배틀그라운드 클랜 RAGE의 내전 기록 보관소.',
@@ -153,8 +153,8 @@ export const siteConfig = {
       heading: '리더보드',
     },
     recentScrims: {
-      eyebrow: 'RECENT SCRIMS',
-      heading: '최근 내전',
+      eyebrow: 'SCRIM HISTORY',
+      heading: '내전 기록',
       participantSuffix: '명 참여',
       matchSuffix: '경기',
     },

@@ -33,10 +33,10 @@ import MatchesPage from './page';
 afterEach(cleanup);
 
 describe('MatchesPage', () => {
-  it('네비·최근 내전·푸터를 함께 그린다', async () => {
+  it('네비·내전 기록·푸터를 함께 그린다', async () => {
     render(await MatchesPage());
-    expect(within(screen.getByRole('banner')).getByRole('link', { name: '매치 기록' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '최근 내전' })).toBeInTheDocument();
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: '내전 기록' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: '내전 기록' })).toBeInTheDocument();
     expect(screen.getByText('2026-08-09 (일) 내전')).toBeInTheDocument();
     expect(screen.getByText('2026-08-02 (일) 내전')).toBeInTheDocument();
     expect(screen.getByText(/VERSION/)).toBeInTheDocument();

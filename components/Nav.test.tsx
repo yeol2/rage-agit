@@ -17,9 +17,9 @@ describe('Nav', () => {
     expect(link).toHaveAttribute('href', '/members');
   });
 
-  it('renders 매치 기록 as a real link now that the page exists', () => {
+  it('renders 내전 기록 as a real link now that the page exists', () => {
     render(<Nav />);
-    const link = screen.getByRole('link', { name: '매치 기록' });
+    const link = screen.getByRole('link', { name: '내전 기록' });
     expect(link).toHaveAttribute('href', '/matches');
   });
 });
