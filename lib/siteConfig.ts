@@ -101,6 +101,7 @@ export const siteConfig = {
     { label: '내전', href: '/team-builder', ready: true },
     { label: '클랜원', href: '/members', ready: true },
     { label: '내전 기록', href: '/matches', ready: true },
+    { label: '명예의 전당', href: '/hall-of-fame', ready: true },
   ],
 
   hero: {
@@ -141,6 +142,7 @@ export const siteConfig = {
       { label: '클랜원', href: '/members', ready: true },
       { label: '내전', href: '/team-builder', ready: true },
       { label: '내전 기록', href: '/matches', ready: true },
+      { label: '명예의 전당', href: '/hall-of-fame', ready: true },
       { label: '랭킹', href: '/rankings', ready: false },
     ],
     tagline: '배틀그라운드 클랜 RAGE의 내전 기록 보관소.',
@@ -162,6 +164,12 @@ export const siteConfig = {
 
   matches: {
     pageHeading: '내전 기록',
+  },
+
+  hallOfFame: {
+    eyebrow: 'HALL OF FAME',
+    heading: '명예의 전당',
+    description: '내전 역사에 남은 기록들. 한 사람이 여러 번 이름을 올릴 수 있고, 같은 기록은 같은 등수입니다.',
   },
 
   memberDirectory: {

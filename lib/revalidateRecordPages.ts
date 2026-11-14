@@ -18,4 +18,5 @@ export function revalidateRecordPages(): void {
   // 새로 그려지고 클랜원 한 명 한 명의 상세 페이지는 옛 값을 그대로 들고 있다.
   revalidatePath('/members/[memberId]', 'page');
   revalidatePath('/matches');
+  revalidatePath('/hall-of-fame');
 }
