@@ -1,10 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { mapLabel } from '@/lib/mapNames';
+import { TIER_GROUPS } from '@/lib/dashboardData';
 import { cleanDisplayName, stripTrailingKoreanTag } from '@/lib/memberStats';
 import {
   dayTotals,
   kstDate,
+  rankByTierGroup,
   rankTop,
   teamMatchScores,
   winningScores,
@@ -197,6 +199,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
   }));
   const wins = winningScores(winnerRows);
 
+  const dayKillTotals = dayTotals(killStats);
   const firstDate = (dates: string[]) => dates.reduce((a, b) => (a < b ? a : b), dates[0] ?? '');
 
   return [
@@ -207,7 +210,9 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       description: '하루 내전(4경기) 동안 혼자 올린 킬 합계',
       unit: '킬',
       since: firstDate(killStats.map((s) => s.date)),
-      entries: rankTop(dayTotals(killStats), 'desc'),
+      entries: rankTop(dayKillTotals, 'desc'),
+      // 티어 그룹별 탭(전체 · 0~1.5 · 2~2.5 · 3~3.5 · 4~5) — 리더보드와 같은 경계.
+      groups: rankByTierGroup(dayKillTotals, 'desc', TIER_GROUPS),
     },
     {
       id: 'dayDamage',

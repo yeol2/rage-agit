@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import { TierBadge } from '@/components/TierBadge';
 import type { RecordBoard, RecordPlayer } from '@/lib/hallOfFame';
 
@@ -15,6 +18,10 @@ function formatValue(value: number): string {
 }
 
 export function RecordCard({ board }: { board: RecordBoard }) {
+  // 티어 그룹 탭(내전 최다 킬). 첫 칸은 '전체'. 그룹이 없는 기록은 entries 그대로.
+  const [groupId, setGroupId] = useState(board.groups?.[0]?.id ?? null);
+  const entries = board.groups?.find((g) => g.id === groupId)?.entries ?? board.entries;
+
   return (
     <section
       data-testid={`record-${board.id}`}
@@ -23,11 +30,33 @@ export function RecordCard({ board }: { board: RecordBoard }) {
       <h2 className="text-base font-bold text-foreground">{board.title}</h2>
       <p className="mt-1 text-xs text-menu">{board.description}</p>
 
-      {board.entries.length === 0 ? (
+      {board.groups && (
+        // 리더보드 티어 탭과 같은 경계. 카드가 좁아 '티어' 글자는 빼고 숫자만 적는다.
+        <div role="tablist" aria-label="티어 그룹" className="mt-3 flex flex-wrap gap-1 sm:gap-1.5">
+          {board.groups.map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              role="tab"
+              aria-selected={group.id === groupId}
+              onClick={() => setGroupId(group.id)}
+              className={
+                group.id === groupId
+                  ? 'rounded-full bg-white/10 px-2 py-1 text-xs font-bold text-white sm:px-3'
+                  : 'rounded-full px-2 py-1 text-xs text-menu transition-colors hover:text-foreground sm:px-3'
+              }
+            >
+              {group.label.replace('티어', '')}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {entries.length === 0 ? (
         <p className="py-8 text-center text-sm text-menu">아직 기록이 없습니다.</p>
       ) : (
         <ol className="mt-4 space-y-1.5">
-          {board.entries.map((entry, i) => (
+          {entries.map((entry, i) => (
             <li
               key={`${entry.date}-${teamNames(entry.players)}-${i}`}
               className={`grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-2.5 py-2.5 sm:grid-cols-[2rem_minmax(0,1fr)_auto] sm:gap-3 sm:px-3 ${

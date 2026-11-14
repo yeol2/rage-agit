@@ -43,9 +43,42 @@ export interface RecordBoard {
   /** 데이터가 이 날짜부터 있다 — 카드 아래에 작게 적는다. */
   since: string;
   entries: RecordEntry[];
+  /**
+   * 티어 그룹별 순위(카드 안 탭). 첫 칸은 '전체'로 entries 와 같다. 없으면 탭 없이
+   * entries 만 보여준다 — 지금은 내전 최다 킬만 나눈다(2026-11-15 사용자 결정).
+   */
+  groups?: RecordGroup[];
+}
+
+export interface RecordGroup {
+  id: string;
+  label: string;
+  entries: RecordEntry[];
 }
 
 type Candidate = Omit<RecordEntry, 'rank'>;
+
+/**
+ * 티어 그룹마다 따로 1~10등을 매긴다. 그룹은 리더보드 탭과 같은 경계(TIER_GROUPS)고,
+ * 기록에 오른 사람의 **지금 티어**로 가른다. tiers 가 null 이면 전체.
+ * 개인 기록 전용 — 첫 사람의 티어를 본다.
+ */
+export function rankByTierGroup(
+  candidates: Candidate[],
+  order: 'desc' | 'asc',
+  groups: { id: string; label: string; tiers: number[] | null }[],
+): RecordGroup[] {
+  return groups.map((group) => ({
+    id: group.id,
+    label: group.label,
+    entries: rankTop(
+      group.tiers === null
+        ? candidates
+        : candidates.filter((c) => c.players[0]?.tier != null && group.tiers!.includes(c.players[0].tier)),
+      order,
+    ),
+  }));
+}
 
 export const RECORD_LIMIT = 10;
 

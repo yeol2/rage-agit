@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayTotals, rankTop, teamMatchScores, winningScores } from './hallOfFame';
+import { dayTotals, rankByTierGroup, rankTop, teamMatchScores, winningScores } from './hallOfFame';
 
 const c = (value: number, date = '2026-10-01') => ({ players: [{ name: 'A', tier: 2 }], value, date, map: null, detail: null });
 
@@ -86,6 +86,30 @@ describe('winningScores', () => {
           { name: 'Ez_A', tier: 4 },
         ],
         value: 60, date: '2026-10-01', map: null, detail: '순위 점수 30 + 킬 점수 30' },
+    ]);
+  });
+});
+
+describe('rankByTierGroup', () => {
+  const p = (name: string, tier: number | null, value: number) => ({
+    players: [{ name, tier }],
+    value,
+    date: '2026-10-01',
+    map: null,
+    detail: null,
+  });
+  const groups = [
+    { id: 'all', label: '전체', tiers: null },
+    { id: '0-1.5', label: '0~1.5티어', tiers: [0, 1, 1.5] },
+    { id: '3-3.5', label: '3~3.5티어', tiers: [3, 3.5] },
+  ];
+
+  it('지금 티어로 그룹을 갈라 그룹마다 1등부터 다시 매긴다(전체는 다 섞어서)', () => {
+    const result = rankByTierGroup([p('A', 0, 20), p('B', 3.5, 18), p('C', 1.5, 15), p('X', null, 30)], 'desc', groups);
+    expect(result.map((g) => [g.id, g.entries.map((e) => `${e.rank}.${e.players[0].name}`)])).toEqual([
+      ['all', ['1.X', '2.A', '3.B', '4.C']],
+      ['0-1.5', ['1.A', '2.C']],
+      ['3-3.5', ['1.B']],
     ]);
   });
 });
