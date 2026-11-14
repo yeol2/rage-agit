@@ -29,11 +29,12 @@ export function RecordCard({ board }: { board: RecordBoard }) {
     >
       {/* 카드 머리(제목·설명·티어 탭)만 가운데 정렬 — 아래 1~10등 줄은 그대로(2026-11-15). */}
       <h2 className="text-center text-base font-bold text-foreground">{board.title}</h2>
-      <p className="mt-1 whitespace-pre-line text-center text-xs leading-relaxed text-menu">{board.description}</p>
+      {/* 간격은 제목↔설명 : 설명↔등수(또는 탭) = 2 : 1 (20px : 10px, 2026-11-15 사용자 요청). */}
+      <p className="mt-5 whitespace-pre-line text-center text-xs leading-relaxed text-menu">{board.description}</p>
 
       {board.groups && (
         // 리더보드 티어 탭과 같은 경계. 카드가 좁아 '티어' 글자는 빼고 숫자만 적는다.
-        <div role="tablist" aria-label="티어 그룹" className="mt-3 flex flex-wrap justify-center gap-1 sm:gap-1.5">
+        <div role="tablist" aria-label="티어 그룹" className="mt-2.5 flex flex-wrap justify-center gap-1 sm:gap-1.5">
           {board.groups.map((group) => (
             <button
               key={group.id}
@@ -56,7 +57,7 @@ export function RecordCard({ board }: { board: RecordBoard }) {
       {entries.length === 0 ? (
         <p className="py-8 text-center text-sm text-menu">아직 기록이 없습니다.</p>
       ) : (
-        <ol className="mt-4 space-y-1.5">
+        <ol className="mt-2.5 space-y-1.5">
           {entries.map((entry, i) => (
             <li
               key={`${entry.date}-${teamNames(entry.players)}-${i}`}
