@@ -297,7 +297,8 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       id: 'dealer',
       kind: 'player',
       title: '딜딸러',
-      description: `단일 매치에서 킬에 비해 데미지가 높은 경기(1킬은 ${DAMAGE_PER_KILL}데미지로 계산)`,
+      // 두 줄 — 카드 설명은 줄바꿈 문자를 그대로 보여준다(whitespace-pre-line).
+      description: `단일 매치에서 킬에 비해 데미지가 높은 경기\n계산 방법은 "데미지 - 킬"이고 클랜 평균은 1킬 당 ${DAMAGE_PER_KILL}데미지 입니다`,
       unit: '딜',
       since: DAMAGE_SINCE,
       entries: rankTop(dealerCandidates(dealerRows), 'desc'),

@@ -29,7 +29,7 @@ export function RecordCard({ board }: { board: RecordBoard }) {
     >
       {/* 카드 머리(제목·설명·티어 탭)만 가운데 정렬 — 아래 1~10등 줄은 그대로(2026-11-15). */}
       <h2 className="text-center text-base font-bold text-foreground">{board.title}</h2>
-      <p className="mt-1 text-center text-xs text-menu">{board.description}</p>
+      <p className="mt-1 whitespace-pre-line text-center text-xs leading-relaxed text-menu">{board.description}</p>
 
       {board.groups && (
         // 리더보드 티어 탭과 같은 경계. 카드가 좁아 '티어' 글자는 빼고 숫자만 적는다.
