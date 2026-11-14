@@ -217,7 +217,12 @@ export function formatAutoConfirmMessage({
     lines.push(
       `${label} ${team.teamNumber}번팀 **${team.totalScore}점** (순위 ${team.totalPlacementPoints} + 킬 ${team.totalKills})`,
     );
-    if (i === 0 && team.players?.length) lines.push(`   └ ${team.players.join(', ')}`);
+    // 이름 속 _ * ~ ` | 를 그대로 두면 디스코드가 서식으로 먹는다 —
+    // Ez_ZiDe-_-v 가 EzZiDe--v 로 보였다(2026-11-14 테스트).
+    if (i === 0 && team.players?.length) {
+      const escaped = team.players.map((name) => name.replace(/([_*~`|\\])/g, '\\$1'));
+      lines.push(`   └ ${escaped.join(', ')}`);
+    }
   }
   lines.push('');
   lines.push(`리더보드 저장: ${savedTeams}팀 · ${savedMembers}명`);

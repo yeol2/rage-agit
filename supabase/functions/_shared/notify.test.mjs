@@ -224,7 +224,8 @@ describe('formatAutoConfirmMessage', () => {
     const msg = formatAutoConfirmMessage(args);
     expect(msg).toContain('2026-11-12 내전 — 21:47:00 확정');
     expect(msg).toContain('🥇 3번팀 **90점** (순위 80 + 킬 10)');
-    expect(msg).toContain('Ez_A, Ez_B');
+    // 이름 속 _ 는 디스코드 기울임으로 먹히지 않게 이스케이프한다.
+    expect(msg).toContain('Ez\\_A, Ez\\_B');
     expect(msg).toContain('🥉 1번팀');
     expect(msg).not.toContain('2번팀');
     expect(msg).toContain('16팀 · 62명');
