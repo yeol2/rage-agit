@@ -308,7 +308,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
       id: 'matchTeamScore',
       kind: 'team',
       title: '매치 당 최다 점수',
-      description: '한 경기에서 한 팀이 얻은 점수(순위점수 + 팀 킬)',
+      description: '단일 매치에서 한 팀이 얻은 점수(순위점수 + 팀 킬)',
       unit: '점',
       since: firstDate(teamRows.map((r) => r.date)),
       entries: rankTop(teamMatchScores(teamRows), 'desc'),
