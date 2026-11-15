@@ -474,7 +474,7 @@ function ScoreTrendChart({
               </p>
               {!hovered.played && (
                 <p className="mt-0.5 text-[11px] text-subtext">
-                  {hovered.carried ? '점수 미반영 내전 · 지난 점수 유지' : '불참 · 다른 사람 경기로 변동'}
+                  {hovered.carried ? '점수 미반영 내전 · 지난 점수 유지' : '불참 · 상대평가로 인한 변동'}
                 </p>
               )}
               <p className="mt-0.5 text-[11px]">
@@ -498,7 +498,7 @@ function ScoreTrendChart({
             className="h-2 w-2 rounded-full border-2"
             style={{ borderColor: ramp.from, background: '#141219' }}
           />
-          불참한 내전 (다른 사람 경기로 점수가 움직임)
+          불참 · 상대평가로 인한 변동
         </span>
       </div>
     </div>
