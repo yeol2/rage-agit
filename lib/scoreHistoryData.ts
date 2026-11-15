@@ -49,7 +49,8 @@ async function loadScoreHistory(): Promise<ScoreHistory> {
   return computeScoreHistory(games, members);
 }
 
-export const fetchScoreHistory = unstable_cache(loadScoreHistory, ['score-history-v1'], {
+// v2: 자격 있는 날은 안 뛰어도 점수를 남기도록 모양이 바뀌었다(played 추가) — 예전 캐시와 섞이지 않게.
+export const fetchScoreHistory = unstable_cache(loadScoreHistory, ['score-history-v2'], {
   tags: [SCORE_HISTORY_TAG],
   revalidate: 3600,
 });

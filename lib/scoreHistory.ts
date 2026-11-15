@@ -3,11 +3,13 @@
 // 리더보드 공식을 그대로 과거에 다시 돌린다(2026-11-14 결정, 방법 A). 내전 날짜마다
 // "그날 밤까지의 경기만" 남겨서 member_alltime_stats / member_recent_ranking_stats
 // 와 같은 평균을 내고, 리더보드와 같은 자격(eligibleForRanking)·같은 밴드 비교
-// (rageScores)로 점수를 매긴다. 그래서 마지막 점은 리더보드 숫자와 같다.
+// (rageScores)로 점수를 매긴다.
 //
-// 점수는 밴드 안 상대평가라 내가 쉬어도 남이 뛰면 바뀐다. 그래프는 그 흔들림을
-// 안 보여주기로 했다 — 내가 뛴 날의 점수만 찍고, 쉰 날은 지난 점수를 그대로
-// 잇는다(carrySeries). 쉬는 동안 남들 때문에 바뀐 몫은 다음에 뛴 날 변동에 섞인다.
+// 점수는 밴드 안 상대평가라 내가 쉬어도 남이 뛰면 바뀐다. 처음엔 쉰 날을 지난 점수로
+// 일자로 이었는데, 그러면 리더보드 숫자와 어긋났다(2026-11-15 Ez_Code: 그래프 52.8 /
+// 리더보드 48.5). 그래서 **자격이 있는 날은 뛰었든 안 뛰었든 그날의 실제 점수**를
+// 남기고(played 로 구분), 마지막 점은 화면이 쓰는 종합점수로 덮는다(ScoreTrend) —
+// 리더보드는 '지금' 날짜로 최근 N개월 자격을 따져서 내전이 없어도 조금씩 움직인다.
 //
 // 이 파일 앞부분은 순수 계산이라 Supabase 없이 테스트한다.
 
@@ -34,16 +36,18 @@ export interface ScoredMember {
 }
 
 /** 그 사람이 뛴 내전 하루의 점수. 두 창 모두 리더보드와 같은 값이다. */
+/** 내전 하루의 점수. 두 창 모두 리더보드와 같은 계산이다. played 가 false 면 그날 안 뛰었다. */
 export interface ScorePoint {
   date: string;
   alltime: number;
   recent16: number;
+  played: boolean;
 }
 
 export interface ScoreHistory {
   /** 점수에 센 내전 날짜(KST), 오래된 순. 저티어 내전은 점수에 안 들어가 여기 없다. */
   dates: string[];
-  /** 클랜원별로 자기가 뛰었고 자격이 있던 날의 점수만. */
+  /** 클랜원별로 자격이 있던 날의 점수(뛰지 않은 날 포함, 내전 날짜순). */
   byMember: Record<string, ScorePoint[]>;
 }
 
@@ -129,38 +133,16 @@ export function computeScoreHistory(games: RankedGame[], members: ScoredMember[]
       ),
     );
 
-    for (const id of playedToday) {
-      const a = alltime.get(id);
+    // 자격이 있는 사람은 그날 안 뛰었어도 점수를 남긴다 — 남이 뛰어서 바뀐 몫까지가 실제 점수다.
+    for (const [id, a] of alltime) {
       const r = recent16.get(id);
-      if (a === undefined || r === undefined) continue; // 아직 자격 미달
-      (byMember[id] ??= []).push({ date, alltime: a, recent16: r });
+      if (r === undefined) continue;
+      (byMember[id] ??= []).push({ date, alltime: a, recent16: r, played: playedToday.has(id) });
     }
   }
 
   return { dates, byMember };
 }
 
-/** 그래프 한 칸. played 가 false 면 그날 안 뛰어서 지난 점수를 이어 그린 칸이다. */
-export interface SeriesPoint {
-  date: string;
-  alltime: number;
-  recent16: number;
-  played: boolean;
-}
-
-/**
- * 내전 날짜 전체에 걸쳐 점수를 잇는다. 첫 점수가 생기기 전 날짜는 빼고, 그 뒤로
- * 안 뛴 날은 직전 점수를 그대로 둔다 — 그래프에서 일자로 이어진다.
- */
-export function carrySeries(dates: string[], points: ScorePoint[]): SeriesPoint[] {
-  const byDate = new Map(points.map((p) => [p.date, p]));
-  const out: SeriesPoint[] = [];
-  let last: ScorePoint | null = null;
-  for (const date of dates) {
-    const p = byDate.get(date);
-    if (p) last = p;
-    if (!last) continue;
-    out.push({ date, alltime: last.alltime, recent16: last.recent16, played: Boolean(p) });
-  }
-  return out;
-}
+/** 그래프 한 칸 — 점수 이력 한 칸과 같은 모양이다. */
+export type SeriesPoint = ScorePoint;

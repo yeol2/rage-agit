@@ -60,10 +60,12 @@ interface DisplayPoint {
   date: string;
   /** 아직 점수가 생기기 전이면 null — 그 칸은 비워 둔다. */
   value: number | null;
-  /** 그날 점수에 센 경기를 뛰었는지. 아니면 속 빈 점(지난 점수 유지). */
+  /** 그날 점수에 센 경기를 뛰었는지. 아니면 속 빈 점. */
   played: boolean;
-  /** 그날 바뀐 점수(점수 이력에서 바로 앞 내전 대비). 뛴 날만. */
+  /** 그날 바뀐 점수(점수 이력에서 바로 앞 내전 대비). 안 뛴 날도 남이 뛰면 바뀐다. */
   delta: number | null;
+  /** 그 칸 날짜에 점수 이력이 없어 직전 값을 이은 칸(저티어 내전처럼 점수에 안 든 날). */
+  carried: boolean;
 }
 
 /** 점수 이력(series)을 화면 칸(dates)에 옮긴다. 칸에 해당하는 점수가 없으면 직전 점수를 잇는다. */
@@ -71,12 +73,26 @@ function project(series: SeriesPoint[], window: ScoreWindow, dates: string[]): D
   return dates.map((date) => {
     let idx = -1;
     for (let i = 0; i < series.length && series[i].date <= date; i++) idx = i;
-    if (idx === -1) return { date, value: null, played: false, delta: null };
+    if (idx === -1) return { date, value: null, played: false, delta: null, carried: false };
     const point = series[idx];
-    const played = point.date === date && point.played;
-    const delta = played && idx > 0 ? point[window] - series[idx - 1][window] : null;
-    return { date, value: point[window], played, delta };
+    const carried = point.date !== date;
+    const played = !carried && point.played;
+    const delta = !carried && idx > 0 ? point[window] - series[idx - 1][window] : null;
+    return { date, value: point[window], played, delta, carried };
   });
+}
+
+/** 마지막 점을 화면의 지금 종합점수로 덮는다(값이 있는 창만). */
+function withLiveScores(
+  series: SeriesPoint[],
+  live?: { alltime: number | null; recent16: number | null },
+): SeriesPoint[] {
+  if (!live || series.length === 0) return series;
+  const last = series[series.length - 1];
+  return [
+    ...series.slice(0, -1),
+    { ...last, alltime: live.alltime ?? last.alltime, recent16: live.recent16 ?? last.recent16 },
+  ];
 }
 
 function useSize<T extends HTMLElement>(external?: React.RefObject<T>) {
@@ -109,7 +125,8 @@ export function ScoreTrend(props: ScoreTrendProps) {
 }
 
 function ScoreTrendChart({
-  series,
+  series: rawSeries,
+  liveScores,
   window,
   ramp,
   compact = false,
@@ -122,8 +139,14 @@ function ScoreTrendChart({
    * 넘긴다 — 좁은 화면에서 칩 줄이 옆으로 밀리면 그래프도 같이 밀려야 정렬이 산다.
    */
   scrollRef?: React.RefObject<HTMLDivElement>;
-  /** 내전 날짜순 전체 점수(쉰 날은 이어 그린 값). */
+  /** 내전 날짜순 점수(안 뛴 날도 그날 실제 점수). */
   series: SeriesPoint[];
+  /**
+   * 화면(링·리더보드 줄)에 보이는 지금 종합점수. 주면 마지막 점을 이 값으로 덮는다 —
+   * 리더보드는 '지금' 날짜로 최근 N개월 자격을 따져서 마지막 내전 뒤에도 조금씩
+   * 움직인다. 그래프 끝점과 화면 숫자가 어긋나면 안 된다(2026-11-15 Ez_Code 52.8/48.5).
+   */
+  liveScores?: { alltime: number | null; recent16: number | null };
   /** 지금 보고 있는 집계 기준 — 그래프 끝점이 화면의 종합점수와 같아진다. */
   window: ScoreWindow;
   ramp: TierColorRamp;
@@ -141,6 +164,7 @@ function ScoreTrendChart({
   const [scrollLeft, setScrollLeft] = useState(0);
   const startedAtEnd = useRef<string | null>(null);
 
+  const series = withLiveScores(rawSeries, liveScores);
   const values = series.map((p) => p[window]);
   // 지난 내전 대비 — 전체 흐름에서 바로 앞 내전과 비교한다(보이는 범위와 무관).
   const last = values[values.length - 1];
@@ -245,12 +269,14 @@ function ScoreTrendChart({
             {delta === null ? (
               <span className="font-bold text-foreground">첫 기록</span>
             ) : delta === 0 ? (
-              <span className="font-bold text-foreground">{lastPlayed ? '변동 없음' : '불참 · 유지'}</span>
+              <span className="font-bold text-foreground">변동 없음</span>
             ) : (
               <span className="text-sm font-bold" style={{ color: delta > 0 ? UP : DOWN }}>
                 {formatDelta(delta)}점
               </span>
             )}
+            {/* 안 뛰었는데 바뀌었으면 왜 바뀌었는지 — 상대평가라 남이 뛰면 움직인다. */}
+            {!lastPlayed && delta !== null && <span className="ml-1 text-subtext">(불참)</span>}
           </p>
           {!compact && (
             <div role="tablist" aria-label="점수 변동 범위" className="inline-flex rounded-xl bg-white/[0.03] p-0.5">
@@ -446,12 +472,13 @@ function ScoreTrendChart({
                   <span className="ml-1 font-normal text-menu">({hoveredStanding}등)</span>
                 )}
               </p>
+              {!hovered.played && (
+                <p className="mt-0.5 text-[11px] text-subtext">
+                  {hovered.carried ? '점수 미반영 내전 · 지난 점수 유지' : '불참 · 다른 사람 경기로 변동'}
+                </p>
+              )}
               <p className="mt-0.5 text-[11px]">
-                {!hovered.played ? (
-                  <span className="text-subtext">
-                    {hoveredStanding !== undefined ? '점수 미반영 내전 · 지난 점수 유지' : '불참 · 지난 점수 유지'}
-                  </span>
-                ) : hovered.delta === null ? (
+                {hovered.carried ? null : hovered.delta === null ? (
                   <span className="text-subtext">첫 기록</span>
                 ) : Math.abs(hovered.delta) < 0.05 ? (
                   <span className="text-subtext">변동 없음</span>
@@ -462,7 +489,8 @@ function ScoreTrendChart({
             </div>
           )}
       </div>
-      {/* 기준선 두 개는 왼쪽 눈금에 이름을 적었고, 여기엔 속 빈 점 뜻만 남긴다. */}
+      {/* 기준선 두 개는 왼쪽 눈금에 이름을 적었고, 여기엔 속 빈 점 뜻만 남긴다. 상대평가라 */}
+      {/* 안 뛴 날도 남이 뛰면 점수가 움직인다 — 그래서 일자로 잇지 않고 실제 점수를 찍는다. */}
       <div className="mt-2 flex flex-wrap justify-end gap-x-4 gap-y-1 text-[10px] text-subtext">
         <span className="inline-flex items-center gap-1.5">
           <span
@@ -470,7 +498,7 @@ function ScoreTrendChart({
             className="h-2 w-2 rounded-full border-2"
             style={{ borderColor: ramp.from, background: '#141219' }}
           />
-          불참 · 지난 점수 유지
+          불참한 내전 (다른 사람 경기로 점수가 움직임)
         </span>
       </div>
     </div>
