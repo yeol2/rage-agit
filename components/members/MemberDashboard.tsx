@@ -273,6 +273,8 @@ export function MemberDashboard({
         >
           <ScoreTrend
             series={scoreSeries}
+            // 링에 보이는 점수 그대로 — 그래프 끝점이 화면 숫자와 늘 같다.
+            liveScores={{ alltime: stats.alltime?.score ?? null, recent16: stats.recent16?.score ?? null }}
             window={activeWindow}
             ramp={ramp}
             compact={compact}

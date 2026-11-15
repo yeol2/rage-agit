@@ -38,7 +38,6 @@ import {
 } from '@/lib/partnerStats';
 import { fetchMemberMapStats } from '@/lib/mapStats';
 import { fetchPlaystyleBadges } from '@/lib/playstyleBadges';
-import { carrySeries } from '@/lib/scoreHistory';
 import { fetchScoreHistory } from '@/lib/scoreHistoryData';
 import { siteConfig } from '@/lib/siteConfig';
 
@@ -105,7 +104,7 @@ export default async function MemberDetailPage({
   // 실패해도 나머지 화면은 보여야 하므로 그래프만 뺀다.
   const scoreHistory = await fetchScoreHistory().catch(() => null);
   const scoreSeries = scoreHistory
-    ? carrySeries(scoreHistory.dates, scoreHistory.byMember[member.id] ?? [])
+    ? (scoreHistory.byMember[member.id] ?? [])
     : undefined;
 
   // 양 끝에 선 사람들만 이름이 필요하다 — 후보 전원을 조회하지 않는다.

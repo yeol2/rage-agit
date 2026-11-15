@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carrySeries, computeScoreHistory, type RankedGame } from './scoreHistory';
+import { computeScoreHistory, type RankedGame } from './scoreHistory';
 import { RAGE_SCORE_STEEPNESS, TIER_SCORE_BANDS, eligibleForRanking, rageScores } from './rankingStats';
 
 // 같은 밴드(2티어) 세 명이 내전 5회(경기 4개씩)를 치른다. 자격은 통산 16경기라
@@ -38,10 +38,17 @@ describe('computeScoreHistory', () => {
     expect(history.dates).toEqual(DATES);
   });
 
-  it('자격(통산 16경기)이 생긴 날부터, 자기가 뛴 날만 점수를 남긴다', () => {
-    expect(history.byMember.A.map((p) => p.date)).toEqual([DATES[3], DATES[4]]);
-    // C 는 5회차에 안 뛰었으므로 그날 점은 없다(그래프에서 이어 그린다).
-    expect(history.byMember.C.map((p) => p.date)).toEqual([DATES[3]]);
+  it('자격(통산 16경기)이 생긴 날부터 매 내전 점수를 남긴다 — 안 뛴 날도 그날 실제 점수로', () => {
+    expect(history.byMember.A.map((p) => [p.date, p.played])).toEqual([
+      [DATES[3], true],
+      [DATES[4], true],
+    ]);
+    // C 는 5회차에 안 뛰었지만 A·B 가 뛰어서 밴드 평균이 바뀌었다 — 점수가 움직인다.
+    expect(history.byMember.C.map((p) => [p.date, p.played])).toEqual([
+      [DATES[3], true],
+      [DATES[4], false],
+    ]);
+    expect(history.byMember.C[1].alltime).not.toBeCloseTo(history.byMember.C[0].alltime, 5);
   });
 
   it('그날 점수는 그날까지의 경기만으로 리더보드 공식을 돌린 값과 같다', () => {
@@ -89,22 +96,3 @@ describe('computeScoreHistory', () => {
   });
 });
 
-describe('carrySeries', () => {
-  const points = [
-    { date: '2026-10-04', alltime: 50, recent16: 55 },
-    { date: '2026-10-11', alltime: 60, recent16: 70 },
-  ];
-
-  it('첫 점수 전 날짜는 빼고, 안 뛴 날은 직전 점수를 그대로 잇는다', () => {
-    expect(carrySeries(DATES, points)).toEqual([
-      { date: '2026-10-04', alltime: 50, recent16: 55, played: true },
-      { date: '2026-10-08', alltime: 50, recent16: 55, played: false },
-      { date: '2026-10-11', alltime: 60, recent16: 70, played: true },
-      { date: '2026-10-15', alltime: 60, recent16: 70, played: false },
-    ]);
-  });
-
-  it('점수가 하나도 없으면 빈 배열', () => {
-    expect(carrySeries(DATES, [])).toEqual([]);
-  });
-});

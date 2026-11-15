@@ -7,7 +7,7 @@ import { fetchRankingStats } from '@/lib/rankingStats';
 import { fetchRankingSnapshots } from '@/lib/rankingSnapshot';
 import { fetchRecentSessions, fetchSessionStandings } from '@/lib/memberDashboard';
 import { fetchPlaystyleBadges } from '@/lib/playstyleBadges';
-import { carrySeries, type SeriesPoint } from '@/lib/scoreHistory';
+import type { SeriesPoint } from '@/lib/scoreHistory';
 import { fetchScoreHistory } from '@/lib/scoreHistoryData';
 import { siteConfig } from '@/lib/siteConfig';
 
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
   const scoreSeries: Record<string, SeriesPoint[]> = {};
   if (scoreHistory) {
     for (const [memberId, points] of Object.entries(scoreHistory.byMember)) {
-      scoreSeries[memberId] = carrySeries(scoreHistory.dates, points).slice(-11);
+      scoreSeries[memberId] = points.slice(-11);
     }
   }
 

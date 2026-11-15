@@ -51,10 +51,18 @@ describe('ScoreTrend', () => {
     expect(screen.getByText('최근 10회 점수 변동')).toBeInTheDocument();
   });
 
-  it('마지막 내전에 쉬었으면 변동 대신 유지라고 적는다', () => {
-    const rested = [...SERIES.slice(0, 11), { ...SERIES[10], date: '2026-10-12', played: false }];
-    render(<ScoreTrend series={rested} window="recent16" ramp={ramp} />);
-    expect(screen.getByText('불참 · 유지')).toBeInTheDocument();
+  it('마지막 내전에 쉬었어도 점수가 바뀌었으면 변동을 적고 (불참)을 붙인다', () => {
+    const rested = [...SERIES.slice(0, 11), { ...SERIES[10], date: '2026-10-12', alltime: 58.5, played: false }];
+    render(<ScoreTrend series={rested} window="alltime" ramp={ramp} />);
+    expect(screen.getByText('▼1.5점')).toBeInTheDocument();
+    expect(screen.getByText('(불참)')).toBeInTheDocument();
+  });
+
+  it('마지막 점은 화면의 지금 종합점수로 덮는다 — 그래프 끝과 링 숫자가 같아야 한다', () => {
+    // 이력의 마지막 값은 61(역대) 이지만 화면엔 48.5 가 보인다.
+    render(<ScoreTrend series={SERIES} window="alltime" ramp={ramp} liveScores={{ alltime: 48.5, recent16: null }} />);
+    expect(screen.getByText('▼11.5점')).toBeInTheDocument();
+    expect(screen.getByTestId('trend-ref-(역대 점수)')).toHaveTextContent('48.5점');
   });
 
   it('왼쪽 눈금에 티어 평균(50점)과 역대 점수 기준선을 적는다', () => {
