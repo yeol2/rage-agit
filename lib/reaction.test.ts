@@ -41,10 +41,11 @@ describe('normalizeComment', () => {
     expect(normalizeComment('  초록불\n\n  보고   눌렀다 ')).toBe('초록불 보고 눌렀다');
   });
 
-  it('allows exactly 20 characters, counting Korean and emoji as one each', () => {
-    expect(normalizeComment('가'.repeat(COMMENT_MAX_CHARS))).toBe('가'.repeat(20));
-    expect(normalizeComment('🔥'.repeat(20))).toBe('🔥'.repeat(20));
-    expect(normalizeComment('가'.repeat(21))).toBe('too-long');
+  it('allows exactly 30 characters, counting Korean and emoji as one each', () => {
+    expect(COMMENT_MAX_CHARS).toBe(30);
+    expect(normalizeComment('가'.repeat(30))).toBe('가'.repeat(30));
+    expect(normalizeComment('🔥'.repeat(30))).toBe('🔥'.repeat(30));
+    expect(normalizeComment('가'.repeat(31))).toBe('too-long');
   });
 });
 

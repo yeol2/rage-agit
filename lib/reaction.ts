@@ -93,8 +93,8 @@ export interface ReactionRankEntry {
   comment: string | null;
 }
 
-/** 한 줄 평 최대 글자 수 — 랭킹 한 줄(이름 아래)에 들어가는 길이(2026-11-16 사용자 결정). DB 제약(0050)과 같다. */
-export const COMMENT_MAX_CHARS = 20;
+/** 한 줄 평 최대 글자 수 — 랭킹 한 줄(이름 아래)에 들어가는 길이(2026-11-16 사용자 결정, 20→30). DB 제약(0051)과 같다. */
+export const COMMENT_MAX_CHARS = 30;
 
 /** 글자 수(이모지·한글 한 글자를 1로). */
 export function commentLength(text: string): number {
