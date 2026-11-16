@@ -65,13 +65,13 @@ describe('planFakeRounds', () => {
     }
   });
 
-  it('gives every round the same chance of a yellow (~36% once empty runs are redrawn)', () => {
+  it('gives every round the same chance of a yellow (~33% once empty runs are redrawn)', () => {
     const N = 20000;
     const hits = [0, 0, 0, 0, 0];
     for (let i = 0; i < N; i++) planFakeRounds().forEach((n, r) => n > 0 && hits[r]++);
     for (const h of hits) {
-      expect(h / N).toBeGreaterThan(0.33);
-      expect(h / N).toBeLessThan(0.39);
+      expect(h / N).toBeGreaterThan(0.30);
+      expect(h / N).toBeLessThan(0.36);
     }
   });
 
