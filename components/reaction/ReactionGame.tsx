@@ -27,6 +27,19 @@ import { BgmControl } from './BgmControl';
 type Phase = 'idle' | 'waiting' | 'fake' | 'go' | 'round' | 'early' | 'faked' | 'paused' | 'done';
 
 const NICKNAME_KEY = 'rage-reaction-nickname';
+/** 이 브라우저에서 시작한 판 수(1회차부터 새로 시작할 때마다 +1). 최고 기록이 몇 번째 판인지 랭킹에 보여준다. */
+const RUNS_KEY = 'rage-reaction-runs';
+
+/** 판 수를 하나 올리고 그 번호를 돌려준다. 브라우저 저장소를 못 쓰면 null(판 수 없이 등록). */
+function nextRunNumber(): number | null {
+  try {
+    const n = (Number(window.localStorage.getItem(RUNS_KEY)) || 0) + 1;
+    window.localStorage.setItem(RUNS_KEY, String(n));
+    return n;
+  } catch {
+    return null;
+  }
+}
 
 
 function randomBetween(min: number, max: number) {
@@ -76,6 +89,7 @@ export function ReactionGame({
   const [lastMs, setLastMs] = useState<number | null>(null);
   const [mistakes, setMistakes] = useState(0);
   const [runToken, setRunToken] = useState<string | null>(null);
+  const [runNumber, setRunNumber] = useState<number | null>(null);
 
   const timers = useRef<number[]>([]);
   const goAt = useRef(0);
@@ -144,6 +158,7 @@ export function ReactionGame({
   );
 
   const startGame = () => {
+    setRunNumber(nextRunNumber());
     // 시작하면 경기장이 화면 가운데 오게 스크롤한다.
     arenaWrap.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     // 서버의 시작 도장(①) — 등록할 때 같이 보낸다. 받는 동안에도 게임은 바로 시작한다.
@@ -176,6 +191,7 @@ export function ReactionGame({
     timesRef.current = [];
     setTimes([]);
     fakePlan.current = planFakeRounds();
+    setRunNumber(nextRunNumber()); // 처음부터 다시 = 새 판
     changePhase(phase);
   }, []);
 
@@ -400,7 +416,7 @@ export function ReactionGame({
           </>
         )}
 
-        {phase === 'done' && <Result times={times} mistakes={mistakes} runToken={runToken} onRetry={startGame} onRegistered={onRegistered} />}
+        {phase === 'done' && <Result times={times} mistakes={mistakes} runToken={runToken} runNumber={runNumber} onRetry={startGame} onRegistered={onRegistered} />}
       </div>
       </div>
     </div>
@@ -411,12 +427,14 @@ function Result({
   times,
   mistakes,
   runToken,
+  runNumber,
   onRetry,
   onRegistered,
 }: {
   times: number[];
   mistakes: number;
   runToken: string | null;
+  runNumber: number | null;
   onRetry: () => void;
   onRegistered: (ranking: ReactionRankEntry[], memberId: string) => void;
 }) {
@@ -448,7 +466,7 @@ function Result({
       const response = await fetch('/api/reaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, code, times, token: runToken, comment }),
+        body: JSON.stringify({ nickname, code, times, token: runToken, comment, tryNumber: runNumber }),
       });
       const data = await response.json();
       if (!response.ok) {

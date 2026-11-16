@@ -36,13 +36,14 @@ interface RecordRow {
   achieved_at: string;
   comment: string | null;
   best_times: number[] | null;
+  best_try: number | null;
   members: { discord_nickname: string; tier: number } | null;
 }
 
 export async function fetchReactionRanking(): Promise<ReactionRankEntry[]> {
   const { data, error } = await getReactionSupabase()
     .from('reaction_records')
-    .select('member_id, best_avg_ms, best_single_ms, attempts, achieved_at, comment, best_times, members(discord_nickname, tier)')
+    .select('member_id, best_avg_ms, best_single_ms, attempts, achieved_at, comment, best_times, best_try, members(discord_nickname, tier)')
     .order('best_avg_ms')
     .order('achieved_at')
     .limit(100);
@@ -61,6 +62,7 @@ export async function fetchReactionRanking(): Promise<ReactionRankEntry[]> {
         achievedAt: row.achieved_at,
         comment: row.comment,
         bestTimes: row.best_times,
+        bestTry: row.best_try,
       })),
   );
 }

@@ -74,7 +74,7 @@ export function ReactionRanking({
                   <span className="block text-[11px] tabular-nums text-subtext">최고 {entry.bestSingleMs}ms</span>
                 </span>
                 <span className="col-start-4 row-start-1 flex justify-end sm:col-start-5">
-                  <RoundTimesDropdown name={entry.name} times={entry.bestTimes} />
+                  <RoundTimesDropdown name={entry.name} times={entry.bestTimes} tryNumber={entry.bestTry} />
                 </span>
               </li>
             );
