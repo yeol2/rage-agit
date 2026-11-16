@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabaseServer';
-import { average, isValidRun } from '@/lib/reaction';
+import { average, isValidRun, suspiciousReason } from '@/lib/reaction';
+import { checkRunToken } from '@/lib/reactionToken';
 import { fetchReactionRanking } from '@/lib/reactionData';
 
 // 반응속도 랭킹 등록. 로그인이 없어서 "클랜원인지"는 두 가지로 거른다:
@@ -23,6 +24,10 @@ export async function POST(request: Request) {
   }
   if (!isValidRun(body?.times)) {
     return NextResponse.json({ error: '랭킹에 올릴 수 없는 기록입니다. 다시 도전해주세요.' }, { status: 400 });
+  }
+  const runProblem = checkRunToken(body.token, body.times) ?? suspiciousReason(body.times);
+  if (runProblem) {
+    return NextResponse.json({ error: runProblem }, { status: 400 });
   }
 
   const expected = process.env.REACTION_CLAN_CODE;

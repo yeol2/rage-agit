@@ -29,6 +29,13 @@ export default async function ReactionPage() {
           적이 보이는 순간 몇 ms 만에 반응하나요? 아무나 해볼 수 있고, 랭킹은 클랜원만 올라갑니다.
         </p>
 
+        {Date.now() < Date.parse(copy.prize.endsAt) && (
+          <p className="mt-6 flex items-center gap-3 rounded-xl border border-[rgba(255,224,77,0.5)] bg-[linear-gradient(90deg,rgba(255,224,77,0.16),rgba(255,224,77,0.03))] px-4 py-3 text-sm font-bold text-foreground">
+            <span aria-hidden="true" className="text-lg">🏆</span>
+            {copy.prize.text}
+          </p>
+        )}
+
         <div className="mt-10">
           <ReactionPlayground initialRanking={ranking} />
         </div>

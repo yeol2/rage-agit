@@ -124,6 +124,11 @@ export const siteConfig = {
     eyebrow: 'PLAYGROUND · REACTION',
     heading: '반응속도 테스트',
     rankingHeading: '반응속도 랭킹',
+    // 상금 이벤트. 마감(KST 11월 30일 끝) 지나면 배너가 저절로 사라진다. 금액은 안 적는다.
+    prize: {
+      endsAt: '2026-12-01T00:00:00+09:00',
+      text: '11월 30일까지 전체 1등에게는 상금이 있어요!',
+    },
   },
 
   hero: {
