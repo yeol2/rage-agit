@@ -14,17 +14,13 @@ export const WAIT_MIN_MS = 1500;
 export const WAIT_MAX_MS = 4500;
 
 /**
- * 노란불(페이크). 한 판(5회)에 최소 2개 — 1~3회차 중 하나, 4~5회차 중 하나는 반드시(2026-11-16
- * 사용자 결정). 앞에서 한 번 보면 "이제 안 나온다"고 예측하고 막 누르는 사람이 있어서다.
- * 거기에 3번 각각 이 확률로 1개씩 더(아무 회차에나). 0.15 면 2개 61%, 3개 33%, 4개 이상 6%.
+ * 노란불(페이크). 회차마다 따로 이 확률로 나오고, 나온 회차에선 같은 확률로 한 번 더 이어서(최대
+ * FAKE_MAX_PER_ROUND). 보장은 없다 — 한 판 내내 안 나올 수도 있다(2026-11-16 사용자 결정. 그전엔
+ * 1~3회·4~5회에 하나씩 보장했는데 초반에 너무 자주 뜬다는 후기가 있었다). 확률이 회차마다 같아서
+ * "앞에서 봤으니 이제 안 나온다" 같은 예측도 안 된다. 0.3 이면 한 판 평균 약 2.1개, 안 나오는 판 약 17%.
  */
-export const FAKE_CHANCE = 0.15;
-const FAKE_EXTRA_ROLLS = 3;
-/** 보장 노란불이 하나씩 들어가는 회차 묶음(0부터): 1~3회차, 4~5회차. */
-const FAKE_GUARANTEED_GROUPS: number[][] = [
-  [0, 1, 2],
-  [3, 4],
-];
+export const FAKE_CHANCE = 0.3;
+const FAKE_MAX_PER_ROUND = 3;
 
 /** 노란불이 켜져 있는 시간 — 1초 이상(2026-11-16 사용자 결정). 매번 이 사이 무작위. */
 export const FAKE_SHOW_MIN_MS = 1000;
@@ -39,17 +35,15 @@ export const AFTER_FAKE_GAP_MIN_MS = 1000;
 export const AFTER_FAKE_GAP_MAX_MS = 2000;
 
 /**
- * 회차별 노란불 개수(5칸). 보장 2개는 각 묶음 안의 무작위 회차에, 추가분은 아무 회차에나 떨어뜨린다 —
- * 같은 회차에 두 개가 떨어지면 그 회차는 노랑 → 빨강 → 노랑 → 빨강 → 초록으로 이어 나온다.
- * 그래서 앞에서 노란불을 봤어도 뒤에 또 나오고, 한 회차 안에서도 또 나올 수 있다.
+ * 회차별 노란불 개수(5칸). 회차마다 chance 로 1개, 나왔으면 다시 chance 로 하나 더(최대 3) —
+ * 두 개 이상이면 그 회차는 노랑 → 빨강 → 노랑 → 빨강 → 초록으로 이어 나온다.
  */
 export function planFakeRounds(chance = FAKE_CHANCE, random = Math.random): number[] {
-  const plan = new Array<number>(REACTION_ROUNDS).fill(0);
-  for (const group of FAKE_GUARANTEED_GROUPS) plan[group[Math.floor(random() * group.length)]]++;
-  for (let i = 0; i < FAKE_EXTRA_ROLLS; i++) {
-    if (random() < chance) plan[Math.floor(random() * REACTION_ROUNDS)]++;
-  }
-  return plan;
+  return Array.from({ length: REACTION_ROUNDS }, () => {
+    let count = 0;
+    while (count < FAKE_MAX_PER_ROUND && random() < chance) count++;
+    return count;
+  });
 }
 
 export interface FakeWindow {
