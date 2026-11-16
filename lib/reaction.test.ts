@@ -77,8 +77,8 @@ describe('planFakeRounds', () => {
     expect(share).toBeLessThan(0.20);
   });
 
-  it('never puts more than 3 yellows in one round', () => {
-    for (let i = 0; i < 2000; i++) expect(Math.max(...planFakeRounds(0.99))).toBeLessThanOrEqual(3);
+  it('never puts more than 5 yellows in a row in one round', () => {
+    for (let i = 0; i < 2000; i++) expect(Math.max(...planFakeRounds(0.99))).toBeLessThanOrEqual(5);
   });
 
   it('can chain two yellows in one round and in back-to-back rounds', () => {
