@@ -332,8 +332,14 @@ export function ReactionGame({
 
         {phase === 'faked' && (
           <>
-            <p className="text-4xl font-bold tracking-tight text-[#F5C518] sm:text-5xl lg:text-7xl">낚였다!</p>
-            <p className="mt-3 text-sm text-menu">노란불은 페이크예요. 기록이 날아갔어요 — 클릭해서 1회차부터 다시.</p>
+            {/* "또 낚였어" 짤을 배경에 흐리게(2026-11-16 사용자 요청). 경기장 전체를 채우게 가로로 늘린다
+                (object-fill — 비율 무시). 흰 바탕·검은 선이라 반전(invert)해 어두운 경기장에 녹아들게 한다. */}
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/reaction/faked.png" alt="" className="h-full w-full object-fill opacity-[0.18] invert" />
+            </span>
+            <p className="relative text-4xl font-bold tracking-tight text-[#F5C518] sm:text-5xl lg:text-7xl">낚였다!</p>
+            <p className="relative mt-3 text-sm text-menu">노란불은 페이크예요. 기록이 날아갔어요 — 클릭해서 1회차부터 다시.</p>
           </>
         )}
 
