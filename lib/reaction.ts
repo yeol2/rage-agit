@@ -14,22 +14,62 @@ export const WAIT_MIN_MS = 1500;
 export const WAIT_MAX_MS = 4500;
 
 /**
- * 노란불(페이크). 한 판(5회) 시작마다 무작위 1회차는 반드시 노란불, 나머지 4회차는 각각 이 확률.
+ * 노란불(페이크). 한 판(5회)의 노란불 개수 = 1(보장) + 4번 각각 이 확률로 1개씩 더.
  * 0.15 면 1~2번 89%, 3번 이상 11%, 4번 이상 약 1%(2026-11-16 사용자 결정).
  */
 export const FAKE_CHANCE = 0.15;
-export const FAKE_SHOW_MS = 450;
 
-/** 노란불이 들어가는 회차는 빨간불을 이만큼은 길게 — 노란불을 초록불보다 충분히 앞에 넣으려고. */
-export const FAKE_WAIT_MIN_MS = 2200;
+/** 노란불이 켜져 있는 시간 — 1초 이상(2026-11-16 사용자 결정). 매번 이 사이 무작위. */
+export const FAKE_SHOW_MIN_MS = 1000;
+export const FAKE_SHOW_MAX_MS = 1500;
 
 /**
- * 회차별 노란불 여부. 무작위 한 회차는 반드시 true(최소 1번 보장), 나머지는 chance 로 따로 굴린다
- * — 그래서 연속 회차로도 뜬다. 보장 회차를 "마지막까지 안 떴으면 5회차"로 두지 않는 건 예측을 막으려고.
+ * 노란불이 꺼지고 다음 불(초록 또는 또 노랑)이 켜질 때까지 — 1초 이상(2026-11-16 사용자 결정).
+ * 0.5초 만에 초록이 붙어 나오면 "참았는데 바로 초록" 억까라는 후기가 있어서 늘렸다.
+ * 딱 1초로 고정하면 "노랑 꺼지고 1초 뒤"에 미리 눌러 반응 없이 기록을 낼 수 있어서 1~2초 무작위다.
  */
-export function planFakeRounds(rounds = REACTION_ROUNDS, chance = FAKE_CHANCE, random = Math.random): boolean[] {
-  const guaranteed = Math.floor(random() * rounds);
-  return Array.from({ length: rounds }, (_, i) => i === guaranteed || random() < chance);
+export const AFTER_FAKE_GAP_MIN_MS = 1000;
+export const AFTER_FAKE_GAP_MAX_MS = 2000;
+
+/**
+ * 회차별 노란불 개수. 개수는 위 규칙대로 정하고, 노란불 하나하나를 무작위 회차에 떨어뜨린다 —
+ * 같은 회차에 두 개가 떨어지면 그 회차는 노랑 → 1초 → 노랑 → 1초 → 초록으로 이어 나온다.
+ * 보장 1개도 무작위 회차라 "마지막까지 안 떴으면 5회차" 같은 예측은 안 된다.
+ */
+export function planFakeRounds(rounds = REACTION_ROUNDS, chance = FAKE_CHANCE, random = Math.random): number[] {
+  let total = 1;
+  for (let i = 1; i < rounds; i++) if (random() < chance) total++;
+  const plan = new Array<number>(rounds).fill(0);
+  for (let i = 0; i < total; i++) plan[Math.floor(random() * rounds)]++;
+  return plan;
+}
+
+export interface FakeWindow {
+  /** 노란불 켜지는 시각 */
+  on: number;
+  /** 노란불 꺼지는 시각 */
+  off: number;
+}
+
+/**
+ * 한 회차의 불 켜지는 시각(빨간불 시작부터 ms). 첫 불(노랑이든 초록이든)은 firstWait 에 켜진다 —
+ * 노란불 회차와 그냥 회차의 첫 대기가 같은 분포라 대기 시간으로는 구분이 안 된다.
+ * 노랑은 1~1.5초 켜졌다 꺼지고, 꺼진 뒤 1~2초 빨강을 거쳐 다음 불.
+ */
+export function roundTimeline(
+  firstWait: number,
+  fakes: number,
+  random = Math.random,
+): { fakes: FakeWindow[]; goAt: number } {
+  const between = (min: number, max: number) => min + random() * (max - min);
+  const windows: FakeWindow[] = [];
+  let t = firstWait;
+  for (let i = 0; i < fakes; i++) {
+    const off = t + between(FAKE_SHOW_MIN_MS, FAKE_SHOW_MAX_MS);
+    windows.push({ on: t, off });
+    t = off + between(AFTER_FAKE_GAP_MIN_MS, AFTER_FAKE_GAP_MAX_MS);
+  }
+  return { fakes: windows, goAt: t };
 }
 
 export interface ReactionRankEntry {
@@ -77,7 +117,7 @@ export function isValidRun(times: unknown): times is number[] {
   );
 }
 
-/** 평균이 빠른 순, 같으면 먼저 세운 사람이 위(명예의 전당과 같은 규칙). 같은 평균은 같은 등수. */
+/** 평균이 빠른 순, 같으면 먼저 세운 사람이 위(명예의 전당과 같은 규칙) — 등수는 겹치지 않고 1, 2, 3… */
 export function rankEntries(rows: Omit<ReactionRankEntry, 'rank'>[]): ReactionRankEntry[] {
   const sorted = [...rows].sort(
     (a, b) => a.bestAvgMs - b.bestAvgMs || a.achievedAt.localeCompare(b.achievedAt),

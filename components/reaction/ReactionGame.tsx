@@ -1,9 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  FAKE_WAIT_MIN_MS,
-  FAKE_SHOW_MS,
   MAX_RECORD_MS,
   MIN_HUMAN_MS,
   REACTION_ROUNDS,
@@ -11,16 +9,18 @@ import {
   WAIT_MIN_MS,
   average,
   planFakeRounds,
+  roundTimeline,
   suspiciousReason,
   type ReactionRankEntry,
 } from '@/lib/reaction';
 
 // 반응속도 테스트 한 판.
-//   idle → (START) → waiting(빨강) ─(가끔 fake 노랑 잠깐)→ go(초록) → round(이번 기록) → … → done
+//   idle → (START) → waiting(빨강) ─(가끔 fake 노랑 0.45초 → 빨강 1초, 이어서 반복 가능)→ go(초록) → round(이번 기록) → … → done
 //   빨강에서 누르면 early(그 회차만 다시), 노랑에서 누르면 faked(쌓은 기록 버리고 1회차부터).
 // 모든 상태는 이 컴포넌트 안에만 있다(서버·다른 사용자와 공유 안 함).
 
-type Phase = 'idle' | 'waiting' | 'fake' | 'go' | 'round' | 'early' | 'faked' | 'done';
+// paused — 진행 중 다른 탭·창으로 나갔다 온 상태(그 회차만 다시, 실수로 안 센다).
+type Phase = 'idle' | 'waiting' | 'fake' | 'go' | 'round' | 'early' | 'faked' | 'paused' | 'done';
 
 const NICKNAME_KEY = 'rage-reaction-nickname';
 
@@ -45,6 +45,7 @@ const ARENA_STYLE: Record<Phase, string> = {
   round: 'bg-[#1B1B23] border-white/[0.06]',
   early: 'bg-[#1B1B23] border-[#E0484F]/50',
   faked: 'bg-[#1B1B23] border-[#F5C518]/50',
+  paused: 'bg-[#1B1B23] border-white/[0.06]',
   done: 'bg-[#1B1B23] border-white/[0.06]',
 };
 
@@ -87,8 +88,9 @@ export function ReactionGame({
     setPhase(next);
   };
   const timesRef = useRef<number[]>([]);
-  const fakePlan = useRef<boolean[]>([]);
+  const fakePlan = useRef<number[]>([]);
   const arenaWrap = useRef<HTMLDivElement>(null);
+  const tokenRequest = useRef(0);
 
   const clearTimers = () => {
     timers.current.forEach((id) => window.clearTimeout(id));
@@ -99,22 +101,22 @@ export function ReactionGame({
   const startRound = useCallback(() => {
     clearTimers();
     changePhase('waiting');
-    // 이번 회차가 노란불 회차인지는 판 시작 때 정해둔 계획대로(빨간불에서 미리 눌러 다시 해도 그대로).
-    const fake = fakePlan.current[timesRef.current.length] ?? false;
-    const wait = randomBetween(fake ? FAKE_WAIT_MIN_MS : WAIT_MIN_MS, WAIT_MAX_MS);
-
-    // 페이크 노란불 — 초록불보다 충분히 앞에, 잠깐만 켠다.
-    if (fake) {
-      const fakeAt = randomBetween(700, wait - FAKE_SHOW_MS - 500);
-      timers.current.push(window.setTimeout(() => changePhase('fake'), fakeAt));
-      timers.current.push(window.setTimeout(() => changePhase('waiting'), fakeAt + FAKE_SHOW_MS));
+    // 이번 회차의 노란불 개수는 판 시작 때 정해둔 계획대로(빨간불에서 미리 눌러 다시 해도 그대로).
+    // 노랑 1~1.5초, 꺼지고 1~2초 뒤 다음 불(초록 또는 또 노랑) — lib/reaction 의 roundTimeline.
+    const count = fakePlan.current[timesRef.current.length] ?? 0;
+    const { fakes, goAt: greenAt } = roundTimeline(randomBetween(WAIT_MIN_MS, WAIT_MAX_MS), count);
+    for (const { on, off } of fakes) {
+      timers.current.push(window.setTimeout(() => changePhase('fake'), on));
+      timers.current.push(window.setTimeout(() => changePhase('waiting'), off));
     }
 
     timers.current.push(
       window.setTimeout(() => {
-        goAt.current = performance.now();
+        // 시계는 여기서가 아니라 초록이 실제로 그려지는 프레임에서 켠다(아래 useLayoutEffect).
+        // 그 전에 들어온 클릭은 초록을 볼 수 없었으니 early 로 친다.
+        goAt.current = 0;
         changePhase('go');
-      }, wait),
+      }, greenAt),
     );
   }, []);
 
@@ -122,11 +124,17 @@ export function ReactionGame({
     // 시작하면 경기장이 화면 가운데 오게 스크롤한다.
     arenaWrap.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     // 서버의 시작 도장(①) — 등록할 때 같이 보낸다. 받는 동안에도 게임은 바로 시작한다.
+    // 다시 하기를 빠르게 연달아 누르면 앞 판의 응답이 늦게 와서 새 토큰을 덮을 수 있다 — 마지막 요청만 받는다.
     setRunToken(null);
+    const request = ++tokenRequest.current;
     fetch('/api/reaction/start', { method: 'POST' })
       .then((response) => response.json())
-      .then((data) => setRunToken(typeof data.token === 'string' ? data.token : null))
-      .catch(() => setRunToken(null));
+      .then((data) => {
+        if (request === tokenRequest.current) setRunToken(typeof data.token === 'string' ? data.token : null);
+      })
+      .catch(() => {
+        if (request === tokenRequest.current) setRunToken(null);
+      });
     fakePlan.current = planFakeRounds();
     timesRef.current = [];
     setTimes([]);
@@ -152,7 +160,7 @@ export function ReactionGame({
       return;
     }
     if (current === 'go') {
-      const ms = Math.round(performance.now() - goAt.current);
+      const ms = goAt.current === 0 ? 0 : Math.round(performance.now() - goAt.current);
       if (ms < MIN_HUMAN_MS) {
         // 초록불 0.1초 안의 클릭은 본 게 아니라 찍은 것.
         setMistakes((n) => n + 1);
@@ -166,10 +174,36 @@ export function ReactionGame({
       changePhase(next.length >= REACTION_ROUNDS ? 'done' : 'round');
       return;
     }
-    if (current === 'round' || current === 'early' || current === 'faked') startRound();
+    if (current === 'round' || current === 'early' || current === 'faked' || current === 'paused') startRound();
   }, [startRound]);
 
   const playing = phase !== 'idle' && phase !== 'done';
+
+  // 초록이 화면에 실제로 그려지는 프레임에 시계를 켠다. 레이아웃 효과는 칠하기 전에 돌고,
+  // 여기서 건 rAF 는 바로 그 초록 프레임을 칠하기 직전에 돈다 — 렌더링에 걸린 시간을
+  // 사람 반응 시간에 얹지 않으려는 것.
+  useLayoutEffect(() => {
+    if (phase !== 'go') return;
+    const id = requestAnimationFrame(() => {
+      goAt.current = performance.now();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [phase]);
+
+  // 진행 중에 다른 탭·창으로 가면 브라우저가 타이머를 늦춰서 초록이 늦게 뜨거나, 돌아와서 누른
+  // 클릭이 "너무 빨라요"로 잘못 잡힌다. 그래서 화면을 벗어나면 그 회차를 멈추고 돌아와서 다시 한다.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (!document.hidden) return;
+      const current = phaseRef.current;
+      if (current === 'waiting' || current === 'fake' || current === 'go') {
+        clearTimers();
+        changePhase('paused');
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   useEffect(() => {
     if (!playing) return;
@@ -228,7 +262,10 @@ export function ReactionGame({
               }
             : undefined
         }
-        className={`relative flex min-h-[380px] select-none flex-col items-center justify-center rounded-2xl border px-6 py-10 text-center transition-colors duration-75 sm:min-h-[440px] lg:min-h-[600px] ${ARENA_STYLE[phase]} ${
+        // 진행 중 우클릭 메뉴가 경기장을 가리지 않게.
+        onContextMenu={playing ? (event) => event.preventDefault() : undefined}
+        // 색 전환 애니메이션은 넣지 않는다 — 초록이 서서히 차오르면 그만큼 늦게 보인다.
+        className={`relative flex min-h-[380px] select-none flex-col items-center justify-center rounded-2xl border px-6 py-10 text-center sm:min-h-[440px] lg:min-h-[600px] ${ARENA_STYLE[phase]} ${
           playing ? 'cursor-pointer touch-manipulation' : ''
         }`}
       >
@@ -292,6 +329,13 @@ export function ReactionGame({
           <>
             <p className="text-4xl font-bold tracking-tight text-[#F5C518] sm:text-5xl lg:text-7xl">낚였다!</p>
             <p className="mt-3 text-sm text-menu">노란불은 페이크예요. 기록이 날아갔어요 — 클릭해서 1회차부터 다시.</p>
+          </>
+        )}
+
+        {phase === 'paused' && (
+          <>
+            <p className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-7xl">잠깐 멈췄어요</p>
+            <p className="mt-3 text-sm text-menu">다른 화면으로 나가서 이 회차는 무효예요. 클릭해서 이 회차 다시.</p>
           </>
         )}
 
