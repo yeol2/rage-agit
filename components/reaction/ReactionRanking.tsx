@@ -43,14 +43,15 @@ export function ReactionRanking({
                 <span className="flex justify-center text-sm font-bold tabular-nums text-menu" aria-label={`${entry.rank}등`}>
                   {medal ? <TrophySquare rank={medal} size="sm" /> : entry.rank}
                 </span>
-                <span className="min-w-0">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-sm font-bold text-foreground">{entry.name}</span>
-                    <TierBadge tier={entry.tier} className="shrink-0" />
-                  </span>
-                  {/* 한 줄 평 — 30자까지. 넓은 화면은 한 줄에 다 들어가고, 좁은 폰에서는 끝을 말줄임(마우스 올리면 전체). */}
+                {/* 닉네임 · 티어 · 한 줄 평을 한 줄에 나란히(2026-11-16 사용자 요청 — 아래 줄 말고).
+                    한 줄 평은 이름·티어를 다 놓고 남은 폭만 쓴다(flex-1 basis-0) — 좁으면 한 줄 평 끝만 말줄임,
+                    한 줄 평이 없는데도 모자랄 만큼 긴 이름만 말줄임된다. 한 줄 평은 마우스 올리면 전체가 보인다. */}
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate text-sm font-bold text-foreground">{entry.name}</span>
+                  <TierBadge tier={entry.tier} className="shrink-0" />
                   {entry.comment && (
-                    <span className="mt-0.5 block truncate text-xs text-menu" title={entry.comment}>
+                    // ml-3 — 티어 뱃지와 붙어 보이지 않게 이름↔티어(gap-2)보다 넓게 띄운다(2026-11-16 사용자 요청).
+                    <span className="ml-3 min-w-0 flex-1 basis-0 truncate text-xs text-menu" title={entry.comment}>
                       “{entry.comment}”
                     </span>
                   )}
