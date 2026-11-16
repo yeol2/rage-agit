@@ -55,8 +55,9 @@ export function ReactionRanking({
                 </span>
                 {entry.comment && (
                   // 마우스 올리면 전체. 칸보다 길면 끝만 말줄임.
+                  // text-sm 흰색 — 회색 작은 글씨는 안 보인다는 요청(2026-11-16).
                   <span
-                    className="col-span-2 col-start-2 row-start-2 min-w-0 truncate text-xs text-menu sm:col-span-1 sm:col-start-3 sm:row-start-1"
+                    className="col-span-2 col-start-2 row-start-2 min-w-0 truncate text-sm text-foreground sm:col-span-1 sm:col-start-3 sm:row-start-1"
                     title={entry.comment}
                   >
                     “{entry.comment}”
