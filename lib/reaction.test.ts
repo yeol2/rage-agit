@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   AFTER_FAKE_GAP_MAX_MS,
+  COMMENT_MAX_CHARS,
   AFTER_FAKE_GAP_MIN_MS,
   FAKE_SHOW_MAX_MS,
   FAKE_SHOW_MIN_MS,
   REACTION_ROUNDS,
+  normalizeComment,
   planFakeRounds,
   roundTimeline,
   spread,
@@ -25,6 +27,24 @@ describe('suspiciousReason', () => {
 
   it('flags averages under 130ms', () => {
     expect(suspiciousReason([110, 125, 140, 118, 132])).toMatch(/130ms/);
+  });
+});
+
+describe('normalizeComment', () => {
+  it('treats empty or non-string input as no comment', () => {
+    expect(normalizeComment(undefined)).toBeNull();
+    expect(normalizeComment('')).toBeNull();
+    expect(normalizeComment('   \n ')).toBeNull();
+  });
+
+  it('collapses line breaks and extra spaces into one line', () => {
+    expect(normalizeComment('  초록불\n\n  보고   눌렀다 ')).toBe('초록불 보고 눌렀다');
+  });
+
+  it('allows exactly 20 characters, counting Korean and emoji as one each', () => {
+    expect(normalizeComment('가'.repeat(COMMENT_MAX_CHARS))).toBe('가'.repeat(20));
+    expect(normalizeComment('🔥'.repeat(20))).toBe('🔥'.repeat(20));
+    expect(normalizeComment('가'.repeat(21))).toBe('too-long');
   });
 });
 

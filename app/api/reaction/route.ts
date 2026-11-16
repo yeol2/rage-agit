@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { fetchReactionRanking, getReactionSupabase } from '@/lib/reactionData';
-import { average, isValidRun, suspiciousReason } from '@/lib/reaction';
+import { COMMENT_MAX_CHARS, average, isValidRun, normalizeComment, suspiciousReason } from '@/lib/reaction';
 import { checkRunToken } from '@/lib/reactionToken';
 
-
 // 반응속도 랭킹 등록. 로그인이 없어서 "클랜원인지"는 두 가지로 거른다:
-//   1) PUBG 닉네임이 클랜 명단(member_pubg_accounts)에 있어야 하고
-//   2) 클랜 코드(REACTION_CLAN_CODE, 클랜 국룰 비번)를 알아야 한다.
-// 코드는 공개 저장소에 안 남도록 서버 환경변수로만 둔다.
+//   1) PUBG 닉네임이 클랜 명단(member_pubg_accounts)에 있어야 하고(본계정·부계정 모두 그 사람으로)
+//   2) 내전 비밀번호(REACTION_CLAN_CODE, 클랜 국룰)를 알아야 한다.
+// 비밀번호는 공개 저장소에 안 남도록 서버 환경변수로만 둔다.
 // 같은 사람이 여러 번 올리면 더 빠른 평균일 때만 기록을 바꾼다(도전 횟수는 매번 센다).
+// 한 줄 평은 최고 기록과 함께 남는다 — 기록을 깨면 새 한 줄 평(빈칸이면 지움), 못 깨면 그대로.
 
 export async function GET() {
   return NextResponse.json({ ranking: await fetchReactionRanking() });
@@ -24,6 +24,10 @@ export async function POST(request: Request) {
   }
   if (!isValidRun(body?.times)) {
     return NextResponse.json({ error: '랭킹에 올릴 수 없는 기록입니다. 다시 도전해주세요.' }, { status: 400 });
+  }
+  const comment = normalizeComment(body?.comment);
+  if (comment === 'too-long') {
+    return NextResponse.json({ error: `한 줄 평은 ${COMMENT_MAX_CHARS}자까지 쓸 수 있어요.` }, { status: 400 });
   }
   const runProblem = checkRunToken(body.token, body.times) ?? suspiciousReason(body.times);
   if (runProblem) {
@@ -82,6 +86,7 @@ export async function POST(request: Request) {
         attempts: (existing?.attempts ?? 0) + 1,
         achieved_at: now,
         updated_at: now,
+        comment,
       })
     : await supabase
         .from('reaction_records')
