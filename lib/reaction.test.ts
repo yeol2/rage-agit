@@ -19,10 +19,12 @@ describe('suspiciousReason', () => {
     expect(suspiciousReason([241, 268, 225, 290, 252])).toBeNull();
     // 아주 꾸준한 사람(편차 약 6ms)도 통과.
     expect(suspiciousReason([230, 238, 226, 233, 241])).toBeNull();
+    // 실제로 사람이 낸 기록(편차 약 4.3ms) — 5ms 기준일 땐 매크로로 걸렸다.
+    expect(suspiciousReason([151, 147, 157, 154, 157])).toBeNull();
   });
 
   it('flags near-identical runs as a macro', () => {
-    expect(spread([230, 230, 231, 228, 234])).toBeLessThan(5);
+    expect(spread([230, 230, 231, 228, 234])).toBeLessThan(4);
     expect(suspiciousReason([230, 230, 231, 228, 234])).toMatch(/매크로/);
   });
 

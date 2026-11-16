@@ -149,11 +149,11 @@ export function average(times: number[]): number {
 
 /**
  * 매크로 거르기(③). 억울한 사람이 안 나오게 빡빡하게만 잡는다(2026-11-16 사용자 결정).
- *   - 5회 표준편차 5ms 미만 = 거의 복사한 기록. 꾸준한 사람(±15ms)도 우연히 걸릴 확률 약 2%, 보통 사람은 1% 미만.
+ *   - 5회 표준편차 4ms 미만 = 거의 복사한 기록(5→4ms, 2026-11-16 — 151·147·157·154·157 처럼 사람이 낸 4.3ms 가 걸려서). 꾸준한 사람(±15ms)도 우연히 걸릴 확률 약 0.9%.
  *   - 5회 평균 130ms 미만 = 브라우저 지연까지 낀 상태에서 사람이 내기 어려운 속도.
  */
 export const MIN_AVG_MS = 130;
-export const MIN_SPREAD_MS = 5;
+export const MIN_SPREAD_MS = 4;
 
 /** 표본 표준편차(n-1). */
 export function spread(times: number[]): number {
