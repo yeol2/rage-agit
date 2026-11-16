@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { REACTION_ROUNDS, planFakeRounds, spread, suspiciousReason } from './reaction';
+import {
+  AFTER_FAKE_GAP_MAX_MS,
+  AFTER_FAKE_GAP_MIN_MS,
+  FAKE_SHOW_MAX_MS,
+  FAKE_SHOW_MIN_MS,
+  REACTION_ROUNDS,
+  planFakeRounds,
+  roundTimeline,
+  spread,
+  suspiciousReason,
+} from './reaction';
 
 describe('suspiciousReason', () => {
   it('lets ordinary human runs through', () => {
@@ -18,23 +28,62 @@ describe('suspiciousReason', () => {
   });
 });
 
+const sum = (plan: number[]) => plan.reduce((a, b) => a + b, 0);
+
 describe('planFakeRounds', () => {
-  it('always puts at least one fake in a run, even when the chance is 0', () => {
+  it('always puts at least one yellow in a run, even when the chance is 0', () => {
     for (let i = 0; i < 200; i++) {
       const plan = planFakeRounds(REACTION_ROUNDS, 0);
       expect(plan).toHaveLength(REACTION_ROUNDS);
-      expect(plan.filter(Boolean)).toHaveLength(1);
+      expect(sum(plan)).toBe(1);
     }
   });
 
-  it('spreads the guaranteed fake across every round', () => {
+  it('spreads the guaranteed yellow across every round', () => {
     const seen = new Set<number>();
-    for (let i = 0; i < 500; i++) seen.add(planFakeRounds(REACTION_ROUNDS, 0).indexOf(true));
+    for (let i = 0; i < 500; i++) seen.add(planFakeRounds(REACTION_ROUNDS, 0).indexOf(1));
     expect([...seen].sort()).toEqual([0, 1, 2, 3, 4]);
   });
 
-  it('can put fakes in back-to-back rounds', () => {
-    const plans = Array.from({ length: 500 }, () => planFakeRounds());
-    expect(plans.some((plan) => plan.some((fake, i) => fake && plan[i + 1]))).toBe(true);
+  it('keeps about 89% of runs at one or two yellows', () => {
+    const runs = Array.from({ length: 5000 }, () => sum(planFakeRounds()));
+    const share = runs.filter((n) => n <= 2).length / runs.length;
+    expect(share).toBeGreaterThan(0.85);
+    expect(share).toBeLessThan(0.93);
+  });
+
+  it('can chain two yellows in one round and in back-to-back rounds', () => {
+    const plans = Array.from({ length: 2000 }, () => planFakeRounds());
+    expect(plans.some((plan) => plan.some((n) => n >= 2))).toBe(true);
+    expect(plans.some((plan) => plan.some((n, i) => n > 0 && plan[i + 1] > 0))).toBe(true);
+  });
+});
+
+describe('roundTimeline', () => {
+  it('shows green at the first wait when there is no yellow', () => {
+    expect(roundTimeline(2000, 0)).toEqual({ fakes: [], goAt: 2000 });
+  });
+
+  it('keeps every yellow on for at least 1s and waits at least 1s before the next light', () => {
+    for (let i = 0; i < 500; i++) {
+      const { fakes, goAt } = roundTimeline(2000, 3);
+      expect(fakes[0].on).toBe(2000);
+      fakes.forEach((fake, k) => {
+        const shown = fake.off - fake.on;
+        expect(shown).toBeGreaterThanOrEqual(FAKE_SHOW_MIN_MS);
+        expect(shown).toBeLessThanOrEqual(FAKE_SHOW_MAX_MS);
+        const next = k + 1 < fakes.length ? fakes[k + 1].on : goAt;
+        expect(next - fake.off).toBeGreaterThanOrEqual(AFTER_FAKE_GAP_MIN_MS);
+        expect(next - fake.off).toBeLessThanOrEqual(AFTER_FAKE_GAP_MAX_MS);
+      });
+    }
+  });
+
+  it('does not put the next light at a fixed time after a yellow (no pre-timing)', () => {
+    const gaps = new Set(Array.from({ length: 50 }, () => {
+      const { fakes, goAt } = roundTimeline(2000, 1);
+      return Math.round(goAt - fakes[0].off);
+    }));
+    expect(gaps.size).toBeGreaterThan(10);
   });
 });

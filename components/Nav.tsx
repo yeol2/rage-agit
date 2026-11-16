@@ -12,6 +12,8 @@ const MENU_ITEM = 'rounded-lg px-5 py-2.5 text-base font-bold tracking-tight tra
 
 // 놀이터 — 마우스를 올리면 펼쳐지고 그 안에서 골라야 이동한다. 휴대폰(호버 없음)은
 // 눌러서 펼친다. 펼침은 CSS(group-hover / focus-within)와 open 상태 둘 중 하나만 맞아도 된다.
+// 호버 펼침은 진짜 마우스가 있는 기기에서만([@media(hover:hover)]) — 폰은 탭하면 :hover 가 붙은 채
+// 남아서, 바깥을 눌러 open 을 꺼도 메뉴가 안 닫힐 수 있다.
 // 메뉴 패널은 늘 DOM 에 두고 invisible 로 숨긴다 — 숨긴 동안엔 탭 포커스도 안 간다.
 function PlaygroundMenu({ pathname }: { pathname: string }) {
   const { label, items } = siteConfig.playground;
@@ -52,7 +54,7 @@ function PlaygroundMenu({ pathname }: { pathname: string }) {
         <svg
           aria-hidden="true"
           viewBox="0 0 12 12"
-          className={`h-3 w-3 transition-transform duration-200 group-hover:rotate-180 ${open ? 'rotate-180' : ''}`}
+          className={`h-3 w-3 transition-transform duration-200 [@media(hover:hover)]:group-hover:rotate-180 ${open ? 'rotate-180' : ''}`}
         >
           <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -63,7 +65,7 @@ function PlaygroundMenu({ pathname }: { pathname: string }) {
         className={`absolute right-0 top-full z-10 pt-2 transition-all duration-150 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 ${
           open
             ? 'visible translate-y-0 opacity-100'
-            : 'invisible -translate-y-1 opacity-0 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100'
+            : 'invisible -translate-y-1 opacity-0 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:visible [@media(hover:hover)]:group-hover:translate-y-0 [@media(hover:hover)]:group-hover:opacity-100'
         }`}
       >
         <ul className="w-56 rounded-xl border border-white/[0.08] bg-[#1B1B23] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
