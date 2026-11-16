@@ -16,6 +16,7 @@ import {
   commentLength,
   type ReactionRankEntry,
 } from '@/lib/reaction';
+import { BgmControl } from './BgmControl';
 
 // 반응속도 테스트 한 판.
 //   idle → (START) → waiting(빨강) ─(가끔 fake 노랑 1~1.5초 → 빨강 1~4.3초, 이어서 반복 가능)→ go(초록) → round(이번 기록) → … → done
@@ -26,6 +27,7 @@ import {
 type Phase = 'idle' | 'waiting' | 'fake' | 'go' | 'round' | 'early' | 'faked' | 'paused' | 'done';
 
 const NICKNAME_KEY = 'rage-reaction-nickname';
+
 
 function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
@@ -115,6 +117,31 @@ export function ReactionGame({
       }, greenAt),
     );
   }, []);
+
+  // 실수 화면(너무 빨라요·낚였다)에서 START 화면으로 — 진행 중이던 판은 버린다(2026-11-16 사용자 요청).
+  const goHome = () => {
+    clearTimers();
+    timesRef.current = [];
+    setTimes([]);
+    setLastMs(null);
+    changePhase('idle');
+  };
+
+  // 경기장 클릭은 "이 회차 다시"라서, 버튼을 누른 건 그쪽으로 안 올린다(onPointerDown stopPropagation).
+  const homeButton = (
+    <button
+      type="button"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        goHome();
+      }}
+      // 경기장 아래쪽 가장자리 가까이(2026-11-16 사용자 요청 — 문구 바로 밑보다 더 낮게).
+      className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-bold text-foreground transition-colors hover:bg-white/20 sm:bottom-8"
+    >
+      메인 페이지로
+    </button>
+  );
 
   const startGame = () => {
     // 시작하면 경기장이 화면 가운데 오게 스크롤한다.
@@ -267,8 +294,11 @@ export function ReactionGame({
           playing ? 'cursor-pointer touch-manipulation' : ''
         }`}
       >
+        {/* 왼쪽 위 BGM 음량(START 화면부터 결과까지 계속). 늘 첫 자식이라 단계가 바뀌어도 다시 안 붙는다. */}
+        <BgmControl />
         {playing && (
-          <div className="absolute left-0 right-0 top-5 flex lg:top-8 justify-center gap-2" aria-label={`${roundNo} / ${REACTION_ROUNDS} 회차`}>
+          // 폰에선 왼쪽 위 음량 게이지와 겹치지 않게 진행 막대를 조금 내린다(top-14).
+          <div className="absolute left-0 right-0 top-14 flex justify-center gap-2 sm:top-5 lg:top-8" aria-label={`${roundNo} / ${REACTION_ROUNDS} 회차`}>
             {Array.from({ length: REACTION_ROUNDS }, (_, i) => (
               <span
                 key={i}
@@ -282,13 +312,38 @@ export function ReactionGame({
 
         {phase === 'idle' && (
           <>
-            <p className="hud text-xs text-accent">{REACTION_ROUNDS} ROUNDS</p>
-            <p className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl lg:text-5xl">초록불이 켜지면 클릭</p>
-            <p className="mt-2 text-sm text-menu">빨간불에서 기다리고, 노란불에는 속지 마세요.</p>
+            {/* 시작 화면 배경(2026-11-16 사용자 요청). 사진은 늘리지 않고 원래 비율로 가운데 높이 꽉,
+                남는 좌우는 같은 사진을 크게 흐려 깔아 색이 이어지게 채운다. 위에 어둡게 덮어 글씨를 살린다. */}
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/reaction/idle-bg.webp" alt="" className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/reaction/idle-bg.webp"
+                alt=""
+                className="absolute inset-0 m-auto h-full w-auto object-contain"
+                // 좌우 끝을 서서히 투명하게 — 흐린 배경과 경계선 없이 이어지게.
+                style={{
+                  maskImage: 'linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)',
+                  WebkitMaskImage: 'linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)',
+                }}
+              />
+              <span className="absolute inset-0 bg-black/45" />
+            </span>
+            {/* "화내기 금지" — 운영자가 그림판에서 마우스로 직접 쓴 글씨(2026-11-16). 흰 바탕은
+                multiply 로 그림에 섞여 사라지고 검은 획만 남아, 배경 그림 위에 쓴 것처럼 보인다. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/reaction/no-anger.png"
+              alt="화내기 금지"
+              className="pointer-events-none absolute right-1 top-3 w-28 mix-blend-multiply sm:right-2 sm:top-4 sm:w-40"
+            />
+            <p className="relative mt-3 text-2xl font-bold tracking-tight [text-shadow:0_2px_8px_rgba(0,0,0,0.8)] sm:text-3xl lg:text-5xl">초록불이 켜지면 클릭</p>
+            <p className="relative mt-2 text-sm text-white/85 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">빨간불에서 기다리고, 노란불에는 속지 마세요.</p>
             <button
               type="button"
               onClick={startGame}
-              className="mt-8 rounded-xl bg-accent px-12 py-4 text-lg font-bold lg:px-20 lg:py-6 lg:text-2xl tracking-wide text-[#1A1206] transition-transform hover:scale-[1.03] active:scale-95"
+              className="relative mt-14 rounded-xl bg-accent px-10 py-3 text-base font-bold lg:mt-20 lg:px-14 lg:py-4 lg:text-xl tracking-wide text-[#1A1206] transition-transform hover:scale-[1.03] active:scale-95"
             >
               START
             </button>
@@ -320,6 +375,7 @@ export function ReactionGame({
           <>
             <p className="text-4xl font-bold tracking-tight text-[#FF6B70] sm:text-5xl lg:text-7xl">너무 빨라요!</p>
             <p className="mt-3 text-sm text-menu">초록불이 켜진 다음에 눌러야 해요. 기록이 날아갔어요 — 클릭해서 1회차부터 다시.</p>
+            {homeButton}
           </>
         )}
 
@@ -333,6 +389,7 @@ export function ReactionGame({
             </span>
             <p className="relative text-4xl font-bold tracking-tight text-[#F5C518] sm:text-5xl lg:text-7xl">낚였다!</p>
             <p className="relative mt-3 text-sm text-menu">노란불은 페이크예요. 기록이 날아갔어요 — 클릭해서 1회차부터 다시.</p>
+            {homeButton}
           </>
         )}
 
