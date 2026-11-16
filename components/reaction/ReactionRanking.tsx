@@ -15,7 +15,7 @@ export function ReactionRanking({
   return (
     <section
       aria-label={siteConfig.reaction.rankingHeading}
-      className="rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-3 sm:p-5 lg:sticky lg:top-6"
+      className="rounded-2xl border border-white/[0.06] bg-[#1B1B23] p-3 sm:p-5"
     >
       <h2 className="text-center text-xl font-bold tracking-tight text-foreground">
         {siteConfig.reaction.rankingHeading}
@@ -28,7 +28,7 @@ export function ReactionRanking({
       {ranking.length === 0 ? (
         <p className="py-10 text-center text-sm text-menu">아직 아무도 없어요. 1등 자리 비어있습니다.</p>
       ) : (
-        <ol className="mt-2.5 max-h-[640px] space-y-1.5 overflow-y-auto pr-0.5">
+        <ol className="mt-2.5 space-y-1.5">
           {ranking.map((entry) => {
             const medal = medalOf(entry.rank);
             const mine = entry.memberId === highlightMemberId;

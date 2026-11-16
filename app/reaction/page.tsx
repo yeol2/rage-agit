@@ -19,7 +19,9 @@ export default async function ReactionPage() {
   return (
     <main className="min-h-screen">
       <Nav />
-      <section className="mx-auto max-w-shell px-5 py-16 sm:px-8">
+      {/* 모든 칸(제목·배너·설명·경기장·랭킹)을 사이트 폭(max-w-shell, 메뉴바와 같은 좌우선)에 맞춘다(2026-11-16 사용자 요청). */}
+      <div className="mx-auto max-w-shell px-5 pb-16 pt-16 sm:px-8">
+      <section>
         <div className="flex items-center gap-4">
           <p className="hud shrink-0 text-[11px] text-accent sm:text-xs">{copy.eyebrow}</p>
           <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
@@ -36,10 +38,12 @@ export default async function ReactionPage() {
           </p>
         )}
 
-        <div className="mt-10">
-          <ReactionPlayground initialRanking={ranking} />
-        </div>
       </section>
+
+      <div className="mt-10">
+        <ReactionPlayground initialRanking={ranking} />
+      </div>
+      </div>
       <Footer />
     </main>
   );

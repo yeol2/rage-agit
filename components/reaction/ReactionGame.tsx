@@ -88,6 +88,7 @@ export function ReactionGame({
   };
   const timesRef = useRef<number[]>([]);
   const fakePlan = useRef<boolean[]>([]);
+  const arenaWrap = useRef<HTMLDivElement>(null);
 
   const clearTimers = () => {
     timers.current.forEach((id) => window.clearTimeout(id));
@@ -118,6 +119,8 @@ export function ReactionGame({
   }, []);
 
   const startGame = () => {
+    // 시작하면 경기장이 화면 가운데 오게 스크롤한다.
+    arenaWrap.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     // 서버의 시작 도장(①) — 등록할 때 같이 보낸다. 받는 동안에도 게임은 바로 시작한다.
     setRunToken(null);
     fetch('/api/reaction/start', { method: 'POST' })
@@ -183,7 +186,9 @@ export function ReactionGame({
   const roundNo = Math.min(times.length + 1, REACTION_ROUNDS);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* 폭은 페이지(app/reaction/page.tsx)가 정한다 — 여기서는 좌우 여백을 따로 주지 않는다. */}
+      <div className="space-y-4">
       {/* 설명 — 무엇을 하면 되는지 */}
       <ol className="grid gap-2 sm:grid-cols-3">
         {HOW_TO.map((step) => (
@@ -206,7 +211,10 @@ export function ReactionGame({
           </li>
         ))}
       </ul>
+      </div>
 
+      {/* 경기장 — 가로는 사이트 폭, 큰 화면에서 세로 600px(내용이 길면 늘어남). 전체화면은 너무 높아서 줄였다(2026-11-16). */}
+      <div ref={arenaWrap} className="scroll-mt-5">
       <div
         role={playing ? 'button' : undefined}
         aria-label={playing ? '반응속도 테스트 화면 — 초록불에 누르세요' : undefined}
@@ -220,16 +228,16 @@ export function ReactionGame({
               }
             : undefined
         }
-        className={`relative flex min-h-[380px] select-none flex-col items-center justify-center rounded-2xl border px-6 py-10 text-center transition-colors duration-75 sm:min-h-[440px] ${ARENA_STYLE[phase]} ${
+        className={`relative flex min-h-[380px] select-none flex-col items-center justify-center rounded-2xl border px-6 py-10 text-center transition-colors duration-75 sm:min-h-[440px] lg:min-h-[600px] ${ARENA_STYLE[phase]} ${
           playing ? 'cursor-pointer touch-manipulation' : ''
         }`}
       >
         {playing && (
-          <div className="absolute left-0 right-0 top-5 flex justify-center gap-2" aria-label={`${roundNo} / ${REACTION_ROUNDS} 회차`}>
+          <div className="absolute left-0 right-0 top-5 flex lg:top-8 justify-center gap-2" aria-label={`${roundNo} / ${REACTION_ROUNDS} 회차`}>
             {Array.from({ length: REACTION_ROUNDS }, (_, i) => (
               <span
                 key={i}
-                className={`h-2 w-8 rounded-full ${
+                className={`h-2 w-8 rounded-full lg:h-3 lg:w-14 ${
                   i < times.length ? 'bg-white' : i === times.length ? 'bg-white/50' : 'bg-white/15'
                 }`}
               />
@@ -240,12 +248,12 @@ export function ReactionGame({
         {phase === 'idle' && (
           <>
             <p className="hud text-xs text-accent">{REACTION_ROUNDS} ROUNDS</p>
-            <p className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">초록불이 켜지면 클릭</p>
+            <p className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl lg:text-5xl">초록불이 켜지면 클릭</p>
             <p className="mt-2 text-sm text-menu">빨간불에서 기다리고, 노란불에는 속지 마세요.</p>
             <button
               type="button"
               onClick={startGame}
-              className="mt-8 rounded-xl bg-accent px-12 py-4 text-lg font-bold tracking-wide text-[#1A1206] transition-transform hover:scale-[1.03] active:scale-95"
+              className="mt-8 rounded-xl bg-accent px-12 py-4 text-lg font-bold lg:px-20 lg:py-6 lg:text-2xl tracking-wide text-[#1A1206] transition-transform hover:scale-[1.03] active:scale-95"
             >
               START
             </button>
@@ -254,18 +262,18 @@ export function ReactionGame({
 
         {phase === 'waiting' && (
           <>
-            <p className="text-4xl font-bold tracking-tight sm:text-5xl">기다리세요…</p>
+            <p className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-7xl">기다리세요…</p>
             <p className="mt-3 text-sm text-white/70">초록불이 켜지면 클릭</p>
           </>
         )}
 
         {(phase === 'fake' || phase === 'go') && (
-          <p className="text-5xl font-black tracking-tight text-[#0E0B13] sm:text-6xl">지금!</p>
+          <p className="text-5xl font-black tracking-tight text-[#0E0B13] sm:text-6xl lg:text-9xl">지금!</p>
         )}
 
         {phase === 'round' && lastMs !== null && (
           <>
-            <p className="text-6xl font-black tabular-nums tracking-tight sm:text-7xl">
+            <p className="text-6xl font-black tabular-nums tracking-tight sm:text-7xl lg:text-9xl">
               {lastMs}
               <span className="ml-1 text-2xl font-bold text-menu">ms</span>
             </p>
@@ -275,19 +283,20 @@ export function ReactionGame({
 
         {phase === 'early' && (
           <>
-            <p className="text-4xl font-bold tracking-tight text-[#FF6B70] sm:text-5xl">너무 빨라요!</p>
+            <p className="text-4xl font-bold tracking-tight text-[#FF6B70] sm:text-5xl lg:text-7xl">너무 빨라요!</p>
             <p className="mt-3 text-sm text-menu">초록불이 켜진 다음에 눌러야 해요. 클릭해서 이 회차 다시.</p>
           </>
         )}
 
         {phase === 'faked' && (
           <>
-            <p className="text-4xl font-bold tracking-tight text-[#F5C518] sm:text-5xl">낚였다!</p>
+            <p className="text-4xl font-bold tracking-tight text-[#F5C518] sm:text-5xl lg:text-7xl">낚였다!</p>
             <p className="mt-3 text-sm text-menu">노란불은 페이크예요. 기록이 날아갔어요 — 클릭해서 1회차부터 다시.</p>
           </>
         )}
 
         {phase === 'done' && <Result times={times} mistakes={mistakes} runToken={runToken} onRetry={startGame} onRegistered={onRegistered} />}
+      </div>
       </div>
     </div>
   );
@@ -353,9 +362,9 @@ function Result({
   };
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-md lg:max-w-xl">
       <p className="hud text-xs text-accent">RESULT · {REACTION_ROUNDS}회 평균</p>
-      <p className="mt-2 text-7xl font-black tabular-nums tracking-tight">
+      <p className="mt-2 text-7xl font-black tabular-nums lg:text-9xl tracking-tight">
         {avg}
         <span className="ml-1 text-2xl font-bold text-menu">ms</span>
       </p>
@@ -393,19 +402,20 @@ function Result({
           )}
         </div>
       ) : formOpen ? (
-        <form onSubmit={submit} className="mt-6 space-y-2 text-left">
+        // 입력칸은 좁고 낮게 — 결과 숫자보다 눈에 띄지 않게(2026-11-16 사용자 요청).
+        <form onSubmit={submit} className="mx-auto mt-5 max-w-xs space-y-2 text-left">
           <label className="block">
-            <span className="text-xs text-menu">PUBG 닉네임 (내전에 쓰는 본캐)</span>
+            <span className="text-[11px] text-menu">PUBG 닉네임 (내전에 쓰는 본캐)</span>
             <input
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               autoComplete="off"
               required
-              className="mt-1 w-full rounded-lg border border-white/10 bg-[#0E0B13] px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent"
+              className="mt-1 w-full rounded-md border border-white/10 bg-[#0E0B13] px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-accent"
             />
           </label>
           <label className="block">
-            <span className="text-xs text-menu">클랜 코드 (클랜 국룰 비번)</span>
+            <span className="text-[11px] text-menu">클랜 코드 (레이지 국룰)</span>
             <input
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -413,7 +423,7 @@ function Result({
               inputMode="numeric"
               autoComplete="off"
               required
-              className="mt-1 w-full rounded-lg border border-white/10 bg-[#0E0B13] px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent"
+              className="mt-1 w-full rounded-md border border-white/10 bg-[#0E0B13] px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-accent"
             />
           </label>
           {error && <p className="text-xs text-[#FF6B70]">{error}</p>}
@@ -421,11 +431,11 @@ function Result({
             <button
               type="submit"
               disabled={busy}
-              className="flex-1 rounded-lg bg-accent py-2.5 text-sm font-bold text-[#1A1206] disabled:opacity-50"
+              className="flex-1 rounded-md bg-accent py-2 text-sm font-bold text-[#1A1206] disabled:opacity-50"
             >
               {busy ? '확인 중…' : '등록하기'}
             </button>
-            <button type="button" onClick={onRetry} className="rounded-lg bg-white/[0.06] px-4 py-2.5 text-sm text-menu hover:text-foreground">
+            <button type="button" onClick={onRetry} className="rounded-md bg-white/[0.06] px-3 py-2 text-sm text-menu hover:text-foreground">
               다시 하기
             </button>
           </div>
