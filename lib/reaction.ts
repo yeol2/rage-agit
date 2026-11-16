@@ -9,9 +9,13 @@ export const MIN_HUMAN_MS = 100;
 /** 이보다 느리면 딴짓한 것 — 기록은 보여주되 랭킹에는 못 올린다. */
 export const MAX_RECORD_MS = 2000;
 
-/** 빨간불(대기)이 이어지는 시간. 매번 이 사이에서 무작위. */
-export const WAIT_MIN_MS = 1500;
-export const WAIT_MAX_MS = 4500;
+/**
+ * 빨간불(대기)에서 다음 불(노랑 또는 초록)이 켜질 때까지. 회차 시작이든 노란불이 꺼진 뒤든 똑같이
+ * 이 사이에서 무작위(2026-11-16 사용자 결정 — 둘을 1~6.5초로 통일). 범위가 넓어서 "몇 초쯤 뒤에
+ * 바뀐다"는 감으로 미리 찍기 어렵다.
+ */
+export const WAIT_MIN_MS = 1000;
+export const WAIT_MAX_MS = 6500;
 
 /**
  * 노란불(페이크). 불이 하나 켜질 때마다 노랑 25% / 초록 75% 로 따로 뽑는다(30%→25%, 한 판 평균 약 2.2개) — 빨간불 다음에도,
@@ -31,12 +35,11 @@ export const FAKE_SHOW_MIN_MS = 1000;
 export const FAKE_SHOW_MAX_MS = 1500;
 
 /**
- * 노란불이 꺼지고 다음 불(초록 또는 또 노랑)이 켜질 때까지 — 1초 이상(2026-11-16 사용자 결정).
- * 0.5초 만에 초록이 붙어 나오면 "참았는데 바로 초록" 억까라는 후기가 있어서 늘렸다.
- * 딱 1초로 고정하면 "노랑 꺼지고 1초 뒤"에 미리 눌러 반응 없이 기록을 낼 수 있어서 1~2초 무작위다.
+ * 노란불이 꺼지고 다음 불(초록 또는 또 노랑)이 켜질 때까지 — 회차 시작 대기와 같은 1~6.5초(위 WAIT_*).
+ * 최소 1초는 "참았는데 바로 초록" 억까 후기 때문, 무작위는 "노랑 꺼지고 몇 초 뒤"에 미리 찍지 못하게.
  */
-export const AFTER_FAKE_GAP_MIN_MS = 1000;
-export const AFTER_FAKE_GAP_MAX_MS = 2000;
+export const AFTER_FAKE_GAP_MIN_MS = WAIT_MIN_MS;
+export const AFTER_FAKE_GAP_MAX_MS = WAIT_MAX_MS;
 
 /**
  * 회차별 노란불 개수(5칸). 불마다 chance 로 노랑, 아니면 초록에서 끝(최대 FAKE_MAX_PER_ROUND 연속) —
@@ -69,7 +72,7 @@ export interface FakeWindow {
 /**
  * 한 회차의 불 켜지는 시각(빨간불 시작부터 ms). 첫 불(노랑이든 초록이든)은 firstWait 에 켜진다 —
  * 노란불 회차와 그냥 회차의 첫 대기가 같은 분포라 대기 시간으로는 구분이 안 된다.
- * 노랑은 1~1.5초 켜졌다 꺼지고, 꺼진 뒤 1~2초 빨강을 거쳐 다음 불.
+ * 노랑은 1~1.5초 켜졌다 꺼지고, 꺼진 뒤 1~6.5초 빨강을 거쳐 다음 불.
  */
 export function roundTimeline(
   firstWait: number,

@@ -18,7 +18,7 @@ import {
 } from '@/lib/reaction';
 
 // 반응속도 테스트 한 판.
-//   idle → (START) → waiting(빨강) ─(가끔 fake 노랑 1~1.5초 → 빨강 1~2초, 이어서 반복 가능)→ go(초록) → round(이번 기록) → … → done
+//   idle → (START) → waiting(빨강) ─(가끔 fake 노랑 1~1.5초 → 빨강 1~6.5초, 이어서 반복 가능)→ go(초록) → round(이번 기록) → … → done
 //   빨강에서 누르면 early, 노랑에서 누르면 faked — 둘 다 쌓은 기록 버리고 1회차부터(failRun).
 // 모든 상태는 이 컴포넌트 안에만 있다(서버·다른 사용자와 공유 안 함).
 
@@ -98,7 +98,7 @@ export function ReactionGame({
     changePhase('waiting');
     // 이번 회차의 노란불 개수는 판 시작 때 정해둔 계획대로(다른 화면에 나갔다 와서 다시 해도 그대로).
     // 노란불이 몇 번 나오는지는 화면 설명에 일부러 안 적는다 — 개수를 알면 다시 예측한다(2026-11-16).
-    // 노랑 1~1.5초, 꺼지고 1~2초 뒤 다음 불(초록 또는 또 노랑) — lib/reaction 의 roundTimeline.
+    // 노랑 1~1.5초, 꺼지고 1~6.5초 뒤 다음 불(초록 또는 또 노랑) — lib/reaction 의 roundTimeline.
     const count = fakePlan.current[timesRef.current.length] ?? 0;
     const { fakes, goAt: greenAt } = roundTimeline(randomBetween(WAIT_MIN_MS, WAIT_MAX_MS), count);
     for (const { on, off } of fakes) {
