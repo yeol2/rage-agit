@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   const code = typeof body?.code === 'string' ? body.code.trim() : '';
 
   if (!nickname || !code) {
-    return NextResponse.json({ error: 'PUBG 닉네임과 클랜 코드를 입력해주세요.' }, { status: 400 });
+    return NextResponse.json({ error: 'PUBG 닉네임과 내전 비밀번호를 입력해주세요.' }, { status: 400 });
   }
   if (!isValidRun(body?.times)) {
     return NextResponse.json({ error: '랭킹에 올릴 수 없는 기록입니다. 다시 도전해주세요.' }, { status: 400 });
@@ -32,10 +32,10 @@ export async function POST(request: Request) {
 
   const expected = process.env.REACTION_CLAN_CODE;
   if (!expected) {
-    return NextResponse.json({ error: '서버에 클랜 코드가 설정되지 않았습니다. 관리자에게 알려주세요.' }, { status: 500 });
+    return NextResponse.json({ error: '서버에 내전 비밀번호가 설정되지 않았습니다. 관리자에게 알려주세요.' }, { status: 500 });
   }
   if (code !== expected) {
-    return NextResponse.json({ error: '클랜 코드가 틀렸습니다.' }, { status: 403 });
+    return NextResponse.json({ error: '내전 비밀번호가 틀렸습니다.' }, { status: 403 });
   }
 
   const supabase = getReactionSupabase();
