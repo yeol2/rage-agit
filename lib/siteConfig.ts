@@ -14,6 +14,13 @@ interface HowStep {
   note?: string;
 }
 
+interface NavLinkItem {
+  label: string;
+  href: string;
+  ready: boolean;
+  hint?: string;
+}
+
 // 관리자가 명단 옮기던 그 밤을 기억하며.
 const HOW_STEPS: HowStep[] = [
   {
@@ -99,10 +106,25 @@ export const siteConfig = {
     { label: '소개', href: '/about', ready: true },
     { label: '리더보드', href: '/dashboard', ready: true },
     { label: '내전', href: '/team-builder', ready: true },
-    { label: '클랜원', href: '/members', ready: true },
-    { label: '내전 기록', href: '/matches', ready: true },
     { label: '명예의 전당', href: '/hall-of-fame', ready: true },
-  ],
+  ] as NavLinkItem[],
+
+  // 메뉴바 맨 끝의 드롭다운. 눌러서 바로 가는 게 아니라 올리면(휴대폰은 누르면) 펼쳐지고
+  // 그 안에서 고른다. 내전 기록·클랜원은 원래 메뉴바에 있던 걸 옮긴 것(2026-11-16).
+  playground: {
+    label: '놀이터',
+    items: [
+      { label: '내전 기록', href: '/matches', ready: true, hint: '세션별 경기 결과' },
+      { label: '클랜원', href: '/members', ready: true, hint: '개인 전적·6각형' },
+      { label: '반응속도 테스트', href: '/reaction', ready: true, hint: '초록불에 클릭!' },
+    ] as NavLinkItem[],
+  },
+
+  reaction: {
+    eyebrow: 'PLAYGROUND · REACTION',
+    heading: '반응속도 테스트',
+    rankingHeading: '반응속도 랭킹',
+  },
 
   hero: {
     eyebrow: 'VICTORY ANALYTICS',
