@@ -48,7 +48,7 @@ export function ReactionRanking({
                     <span className="truncate text-sm font-bold text-foreground">{entry.name}</span>
                     <TierBadge tier={entry.tier} className="shrink-0" />
                   </span>
-                  {/* 한 줄 평 — 20자까지라 보통 한 줄에 들어가고, 좁은 폰에서만 말줄임. */}
+                  {/* 한 줄 평 — 30자까지. 넓은 화면은 한 줄에 다 들어가고, 좁은 폰에서는 끝을 말줄임(마우스 올리면 전체). */}
                   {entry.comment && (
                     <span className="mt-0.5 block truncate text-xs text-menu" title={entry.comment}>
                       “{entry.comment}”
