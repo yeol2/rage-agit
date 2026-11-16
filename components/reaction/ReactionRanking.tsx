@@ -29,7 +29,8 @@ export function ReactionRanking({
         <p className="py-10 text-center text-sm text-menu">아직 아무도 없어요. 1등 자리 비어있습니다.</p>
       ) : (
         <ol className="mt-2.5 space-y-1.5">
-          {ranking.map((entry) => {
+          {/* 상위 20명만. 서버는 전체 순위를 주고(등록 후 "지금 N등" 안내에 쓴다) 화면에서만 자른다. */}
+          {ranking.slice(0, siteConfig.reaction.rankingLimit).map((entry) => {
             const medal = medalOf(entry.rank);
             const mine = entry.memberId === highlightMemberId;
             return (

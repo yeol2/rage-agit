@@ -123,7 +123,9 @@ export const siteConfig = {
   reaction: {
     eyebrow: 'PLAYGROUND · REACTION',
     heading: '반응속도 테스트',
-    rankingHeading: '반응속도 랭킹',
+    // 랭킹표는 상위 rankingLimit 명만 보여준다(2026-11-16 사용자 요청) — 제목 숫자와 같이 바꿀 것.
+    rankingHeading: '반응속도 랭킹 TOP 20',
+    rankingLimit: 20,
     // 상금 이벤트. 마감(KST 11월 30일 끝) 지나면 배너가 저절로 사라진다. 금액은 안 적는다.
     prize: {
       endsAt: '2026-12-01T00:00:00+09:00',
