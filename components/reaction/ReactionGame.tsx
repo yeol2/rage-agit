@@ -11,6 +11,7 @@ import {
   planFakeRounds,
   roundTimeline,
   suspiciousReason,
+  verdict,
   COMMENT_MAX_CHARS,
   commentLength,
   type ReactionRankEntry,
@@ -30,14 +31,6 @@ function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
 }
 
-function verdict(avg: number): string {
-  if (avg < 200) return '에임봇 의심됨. 관리자 호출할까요?';
-  if (avg < 240) return '총소리 나기 전에 쏘는 사람';
-  if (avg < 280) return '평균 이상. 교전에서 먼저 쏩니다';
-  if (avg < 330) return '평범한 사람의 반응속도예요';
-  if (avg < 400) return '맞고 나서 돌아보는 타입';
-  return '혹시 지금 밥 먹으면서 하세요?';
-}
 
 const ARENA_STYLE: Record<Phase, string> = {
   idle: 'bg-[#1B1B23] border-white/[0.06]',
