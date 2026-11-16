@@ -50,8 +50,9 @@ export function ReactionRanking({
                   <span className="min-w-0 truncate text-sm font-bold text-foreground">{entry.name}</span>
                   <TierBadge tier={entry.tier} className="shrink-0" />
                   {entry.comment && (
-                    // ml-3 — 티어 뱃지와 붙어 보이지 않게 이름↔티어(gap-2)보다 넓게 띄운다(2026-11-16 사용자 요청).
-                    <span className="ml-3 min-w-0 flex-1 basis-0 truncate text-xs text-menu" title={entry.comment}>
+                    // 티어 뱃지와 오른쪽 반응속도(ms) 사이 남은 칸의 한가운데(text-center, 2026-11-16 사용자 요청).
+                    // px-3 — 칸이 좁아 말줄임될 때도 뱃지·숫자에 붙어 보이지 않게.
+                    <span className="min-w-0 flex-1 basis-0 truncate px-3 text-center text-xs text-menu" title={entry.comment}>
                       “{entry.comment}”
                     </span>
                   )}
