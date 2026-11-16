@@ -36,28 +36,33 @@ export function ReactionRanking({
               <li
                 key={entry.memberId}
                 data-mine={mine || undefined}
-                className={`grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2.5 ${
+                // 칸: 등수 | 닉네임·티어 | 한 줄 평 | 반응속도(2026-11-16 사용자 요청).
+                // 닉네임·티어 칸을 12rem 으로 고정(지금 가장 긴 Ez_MANDUUUUU+티어가 172px)하고 반응속도 칸도
+                // 고정(5.5rem)해서, 모든 줄의 한 줄 평이 티어 바로 옆 같은 x 에서 왼쪽 정렬로 시작한다.
+                // 그보다 긴 이름만 말줄임. 반응속도 칸을 auto 로 두면 줄마다
+                // 숫자 폭이 달라 시작점이 흔들린다. 폰(sm 미만)은 칸을 나누면 이름이 너무 잘려서 이름 아래 줄로 —
+                // 거기선 시작점을 맞출 일이 없으니 반응속도 칸도 내용 폭(auto)으로 둬서 이름 자리를 남긴다.
+                className={`grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-xl px-3 py-2.5 sm:grid-cols-[2rem_12rem_minmax(0,1fr)_5.5rem] ${
                   medal ? `border ${MEDAL_BORDER[medal]} ${MEDAL_GRADIENT[medal]}` : 'border border-transparent'
                 } ${mine ? 'ring-2 ring-accent' : ''}`}
               >
-                <span className="flex justify-center text-sm font-bold tabular-nums text-menu" aria-label={`${entry.rank}등`}>
+                <span className="col-start-1 row-start-1 flex justify-center text-sm font-bold tabular-nums text-menu" aria-label={`${entry.rank}등`}>
                   {medal ? <TrophySquare rank={medal} size="sm" /> : entry.rank}
                 </span>
-                {/* 닉네임 · 티어 · 한 줄 평을 한 줄에 나란히(2026-11-16 사용자 요청 — 아래 줄 말고).
-                    한 줄 평은 이름·티어를 다 놓고 남은 폭만 쓴다(flex-1 basis-0) — 좁으면 한 줄 평 끝만 말줄임,
-                    한 줄 평이 없는데도 모자랄 만큼 긴 이름만 말줄임된다. 한 줄 평은 마우스 올리면 전체가 보인다. */}
-                <span className="flex min-w-0 items-center gap-2">
+                <span className="col-start-2 row-start-1 flex min-w-0 items-center gap-2">
                   <span className="min-w-0 truncate text-sm font-bold text-foreground">{entry.name}</span>
                   <TierBadge tier={entry.tier} className="shrink-0" />
-                  {entry.comment && (
-                    // 티어 뱃지와 오른쪽 반응속도(ms) 사이 남은 칸의 한가운데(text-center, 2026-11-16 사용자 요청).
-                    // px-3 — 칸이 좁아 말줄임될 때도 뱃지·숫자에 붙어 보이지 않게.
-                    <span className="min-w-0 flex-1 basis-0 truncate px-3 text-center text-xs text-menu" title={entry.comment}>
-                      “{entry.comment}”
-                    </span>
-                  )}
                 </span>
-                <span className="text-right">
+                {entry.comment && (
+                  // 마우스 올리면 전체. 칸보다 길면 끝만 말줄임.
+                  <span
+                    className="col-span-2 col-start-2 row-start-2 min-w-0 truncate text-xs text-menu sm:col-span-1 sm:col-start-3 sm:row-start-1"
+                    title={entry.comment}
+                  >
+                    “{entry.comment}”
+                  </span>
+                )}
+                <span className="col-start-3 row-start-1 text-right sm:col-start-4">
                   <span className="block text-sm font-bold tabular-nums text-foreground">
                     {entry.bestAvgMs}
                     <span className="ml-0.5 text-xs font-normal text-menu">ms</span>
