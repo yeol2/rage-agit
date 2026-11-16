@@ -58,8 +58,8 @@ const HOW_TO = [
 const RULES = [
   `${REACTION_ROUNDS}회 성공하면 끝! 순위는 ${REACTION_ROUNDS}회 평균이 빠른 순이에요.`,
   '빨간불에서 미리 누르면 그 회차만 다시, 노란불을 누르면 1회차부터 다시 해요.',
-  '노란불은 한 판에 적어도 한 번은 나와요. 연속으로 나올 수도 있어요.',
-  '랭킹 등록은 클랜원만 — PUBG 닉네임과 클랜 코드가 필요해요. 한 사람당 최고 기록 하나만 남아요.',
+  '노란불은 한 판에 적어도 두 번은 나와요. 한 번 봤다고 방심하면 안 돼요!',
+  '랭킹 등록은 클랜원만 — PUBG 닉네임과 내전 비밀번호(국룰)가 필요해요. 한 사람당 최고 기록 하나만 남아요.',
   'AI·매크로를 이용한 부정을 막는 툴이 적용돼 있어요.',
 ];
 
@@ -459,7 +459,7 @@ function Result({
             />
           </label>
           <label className="block">
-            <span className="text-[11px] text-menu">클랜 코드 (레이지 국룰)</span>
+            <span className="text-[11px] text-menu">내전 비밀번호(국룰)</span>
             <input
               value={code}
               onChange={(e) => setCode(e.target.value)}

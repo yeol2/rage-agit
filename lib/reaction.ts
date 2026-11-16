@@ -14,10 +14,17 @@ export const WAIT_MIN_MS = 1500;
 export const WAIT_MAX_MS = 4500;
 
 /**
- * 노란불(페이크). 한 판(5회)의 노란불 개수 = 1(보장) + 4번 각각 이 확률로 1개씩 더.
- * 0.15 면 1~2번 89%, 3번 이상 11%, 4번 이상 약 1%(2026-11-16 사용자 결정).
+ * 노란불(페이크). 한 판(5회)에 최소 2개 — 1~3회차 중 하나, 4~5회차 중 하나는 반드시(2026-11-16
+ * 사용자 결정). 앞에서 한 번 보면 "이제 안 나온다"고 예측하고 막 누르는 사람이 있어서다.
+ * 거기에 3번 각각 이 확률로 1개씩 더(아무 회차에나). 0.15 면 2개 61%, 3개 33%, 4개 이상 6%.
  */
 export const FAKE_CHANCE = 0.15;
+const FAKE_EXTRA_ROLLS = 3;
+/** 보장 노란불이 하나씩 들어가는 회차 묶음(0부터): 1~3회차, 4~5회차. */
+const FAKE_GUARANTEED_GROUPS: number[][] = [
+  [0, 1, 2],
+  [3, 4],
+];
 
 /** 노란불이 켜져 있는 시간 — 1초 이상(2026-11-16 사용자 결정). 매번 이 사이 무작위. */
 export const FAKE_SHOW_MIN_MS = 1000;
@@ -32,15 +39,16 @@ export const AFTER_FAKE_GAP_MIN_MS = 1000;
 export const AFTER_FAKE_GAP_MAX_MS = 2000;
 
 /**
- * 회차별 노란불 개수. 개수는 위 규칙대로 정하고, 노란불 하나하나를 무작위 회차에 떨어뜨린다 —
- * 같은 회차에 두 개가 떨어지면 그 회차는 노랑 → 1초 → 노랑 → 1초 → 초록으로 이어 나온다.
- * 보장 1개도 무작위 회차라 "마지막까지 안 떴으면 5회차" 같은 예측은 안 된다.
+ * 회차별 노란불 개수(5칸). 보장 2개는 각 묶음 안의 무작위 회차에, 추가분은 아무 회차에나 떨어뜨린다 —
+ * 같은 회차에 두 개가 떨어지면 그 회차는 노랑 → 빨강 → 노랑 → 빨강 → 초록으로 이어 나온다.
+ * 그래서 앞에서 노란불을 봤어도 뒤에 또 나오고, 한 회차 안에서도 또 나올 수 있다.
  */
-export function planFakeRounds(rounds = REACTION_ROUNDS, chance = FAKE_CHANCE, random = Math.random): number[] {
-  let total = 1;
-  for (let i = 1; i < rounds; i++) if (random() < chance) total++;
-  const plan = new Array<number>(rounds).fill(0);
-  for (let i = 0; i < total; i++) plan[Math.floor(random() * rounds)]++;
+export function planFakeRounds(chance = FAKE_CHANCE, random = Math.random): number[] {
+  const plan = new Array<number>(REACTION_ROUNDS).fill(0);
+  for (const group of FAKE_GUARANTEED_GROUPS) plan[group[Math.floor(random() * group.length)]]++;
+  for (let i = 0; i < FAKE_EXTRA_ROLLS; i++) {
+    if (random() < chance) plan[Math.floor(random() * REACTION_ROUNDS)]++;
+  }
   return plan;
 }
 
