@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabaseServer';
+import { fetchReactionRanking, getReactionSupabase } from '@/lib/reactionData';
 import { average, isValidRun, suspiciousReason } from '@/lib/reaction';
 import { checkRunToken } from '@/lib/reactionToken';
-import { fetchReactionRanking } from '@/lib/reactionData';
+
 
 // 반응속도 랭킹 등록. 로그인이 없어서 "클랜원인지"는 두 가지로 거른다:
 //   1) PUBG 닉네임이 클랜 명단(member_pubg_accounts)에 있어야 하고
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '클랜 코드가 틀렸습니다.' }, { status: 403 });
   }
 
-  const supabase = getSupabaseServer();
+  const supabase = getReactionSupabase();
   // 닉네임은 대소문자 구분 없이 정확히 같은 것만. ilike 의 _ % 는 글자 그대로 보게 이스케이프.
   const pattern = nickname.replace(/[\\%_]/g, (c: string) => `\\${c}`);
   const { data: accounts, error: accountError } = await supabase
