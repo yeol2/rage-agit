@@ -101,6 +101,8 @@ export interface ReactionRankEntry {
   achievedAt: string;
   /** 한 줄 평. 안 썼으면 null. */
   comment: string | null;
+  /** 최고 기록 판의 5회 회차 기록. 이 칸이 생기기 전(0052) 기록은 null. */
+  bestTimes: number[] | null;
 }
 
 /** 한 줄 평 최대 글자 수 — 랭킹 한 줄(이름 아래)에 들어가는 길이(2026-11-16 사용자 결정, 20→30). DB 제약(0051)과 같다. */

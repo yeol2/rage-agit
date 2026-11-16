@@ -87,6 +87,7 @@ export async function POST(request: Request) {
         achieved_at: now,
         updated_at: now,
         comment,
+        best_times: times,
       })
     : await supabase
         .from('reaction_records')
