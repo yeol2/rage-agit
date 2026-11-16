@@ -16,7 +16,7 @@ import {
 
 // 반응속도 테스트 한 판.
 //   idle → (START) → waiting(빨강) ─(가끔 fake 노랑 0.45초 → 빨강 1초, 이어서 반복 가능)→ go(초록) → round(이번 기록) → … → done
-//   빨강에서 누르면 early(그 회차만 다시), 노랑에서 누르면 faked(쌓은 기록 버리고 1회차부터).
+//   빨강에서 누르면 early, 노랑에서 누르면 faked — 둘 다 쌓은 기록 버리고 1회차부터(failRun).
 // 모든 상태는 이 컴포넌트 안에만 있다(서버·다른 사용자와 공유 안 함).
 
 // paused — 진행 중 다른 탭·창으로 나갔다 온 상태(그 회차만 다시, 실수로 안 센다).
@@ -50,15 +50,15 @@ const ARENA_STYLE: Record<Phase, string> = {
 };
 
 const HOW_TO = [
-  { color: 'bg-[#B4232A]', title: '빨간불', body: '기다리세요. 언제 바뀔지는 매번 달라요.' },
+  { color: 'bg-[#B4232A]', title: '빨간불', body: '기다리세요. 미리 누르면 처음부터 다시!' },
   { color: 'bg-[#2FBF63]', title: '초록불', body: '바로 클릭! (스페이스바도 됩니다)' },
   { color: 'bg-[#F5C518]', title: '노란불', body: '함정이에요. 누르면 처음부터 다시!' },
 ];
 
 const RULES = [
   `${REACTION_ROUNDS}회 성공하면 끝! 순위는 ${REACTION_ROUNDS}회 평균이 빠른 순이에요.`,
-  '빨간불에서 미리 누르면 그 회차만 다시, 노란불을 누르면 1회차부터 다시 해요.',
-  '노란불은 한 판에 적어도 두 번은 나와요. 한 번 봤다고 방심하면 안 돼요!',
+  '빨간불·노란불에서 누르거나 초록불을 미리 찍으면(0.1초 안) 기록이 날아가고 1회차부터 다시 해요.',
+  '빨간불은 매번 기다리는 시간이 달라요. 감으로 찍지 말고 초록불을 보고 누르세요.',
   '랭킹 등록은 클랜원만 — PUBG 닉네임과 내전 비밀번호(국룰)가 필요해요. 한 사람당 최고 기록 하나만 남아요.',
   'AI·매크로를 이용한 부정을 막는 툴이 적용돼 있어요.',
 ];
@@ -101,7 +101,8 @@ export function ReactionGame({
   const startRound = useCallback(() => {
     clearTimers();
     changePhase('waiting');
-    // 이번 회차의 노란불 개수는 판 시작 때 정해둔 계획대로(빨간불에서 미리 눌러 다시 해도 그대로).
+    // 이번 회차의 노란불 개수는 판 시작 때 정해둔 계획대로(다른 화면에 나갔다 와서 다시 해도 그대로).
+    // 노란불이 몇 번 나오는지는 화면 설명에 일부러 안 적는다 — 개수를 알면 다시 예측한다(2026-11-16).
     // 노랑 1~1.5초, 꺼지고 1~2초 뒤 다음 불(초록 또는 또 노랑) — lib/reaction 의 roundTimeline.
     const count = fakePlan.current[timesRef.current.length] ?? 0;
     const { fakes, goAt: greenAt } = roundTimeline(randomBetween(WAIT_MIN_MS, WAIT_MAX_MS), count);
@@ -144,27 +145,29 @@ export function ReactionGame({
   };
 
   // 경기장 클릭(또는 스페이스). 마우스를 "뗄 때"가 아니라 "누를 때" 잰다.
+  // 실수(빨강·노랑에서 누름, 초록 0.1초 안에 누름)는 전부 쌓은 회차를 버리고 1회차부터 —
+  // 노란불은 처음부터 그랬고, 빨간불도 같이(2026-11-16 사용자 요청). 그 회차만 다시 하게 두면
+  // 초록이 뜰 법한 때 계속 찍어 보다가 운 좋게 걸린 기록을 낼 수 있었다. 새 판이니 노란불 계획도 새로.
+  const failRun = useCallback((phase: 'early' | 'faked') => {
+    clearTimers();
+    setMistakes((n) => n + 1);
+    timesRef.current = [];
+    setTimes([]);
+    fakePlan.current = planFakeRounds();
+    changePhase(phase);
+  }, []);
+
   const hit = useCallback(() => {
     const current = phaseRef.current;
     if (current === 'waiting' || current === 'fake') {
-      clearTimers();
-      setMistakes((n) => n + 1);
-      if (current === 'fake') {
-        // 노란불에 낚이면 지금까지 쌓은 회차를 전부 버린다(2026-11-16 사용자 요청).
-        // 새 판이니 노란불 계획도 새로 짠다.
-        timesRef.current = [];
-        setTimes([]);
-        fakePlan.current = planFakeRounds();
-      }
-      changePhase(current === 'fake' ? 'faked' : 'early');
+      failRun(current === 'fake' ? 'faked' : 'early');
       return;
     }
     if (current === 'go') {
       const ms = goAt.current === 0 ? 0 : Math.round(performance.now() - goAt.current);
       if (ms < MIN_HUMAN_MS) {
         // 초록불 0.1초 안의 클릭은 본 게 아니라 찍은 것.
-        setMistakes((n) => n + 1);
-        changePhase('early');
+        failRun('early');
         return;
       }
       const next = [...timesRef.current, ms];
@@ -175,7 +178,7 @@ export function ReactionGame({
       return;
     }
     if (current === 'round' || current === 'early' || current === 'faked' || current === 'paused') startRound();
-  }, [startRound]);
+  }, [startRound, failRun]);
 
   const playing = phase !== 'idle' && phase !== 'done';
 
@@ -321,7 +324,7 @@ export function ReactionGame({
         {phase === 'early' && (
           <>
             <p className="text-4xl font-bold tracking-tight text-[#FF6B70] sm:text-5xl lg:text-7xl">너무 빨라요!</p>
-            <p className="mt-3 text-sm text-menu">초록불이 켜진 다음에 눌러야 해요. 클릭해서 이 회차 다시.</p>
+            <p className="mt-3 text-sm text-menu">초록불이 켜진 다음에 눌러야 해요. 기록이 날아갔어요 — 클릭해서 1회차부터 다시.</p>
           </>
         )}
 
