@@ -52,33 +52,35 @@ describe('normalizeComment', () => {
 const sum = (plan: number[]) => plan.reduce((a, b) => a + b, 0);
 
 describe('planFakeRounds', () => {
-  it('has no guaranteed yellow — chance 0 gives none', () => {
-    for (let i = 0; i < 200; i++) {
+  it('always puts a yellow in rounds 1-3 and another in rounds 4-5, even when the chance is 0', () => {
+    for (let i = 0; i < 500; i++) {
       const plan = planFakeRounds(0);
       expect(plan).toHaveLength(REACTION_ROUNDS);
-      expect(sum(plan)).toBe(0);
+      expect(sum(plan)).toBe(2);
+      expect(sum(plan.slice(0, 3))).toBe(1);
+      expect(sum(plan.slice(3))).toBe(1);
     }
   });
 
-  it('gives every round the same ~15% chance of a yellow', () => {
-    const N = 20000;
-    const hits = [0, 0, 0, 0, 0];
-    for (let i = 0; i < N; i++) planFakeRounds().forEach((n, r) => n > 0 && hits[r]++);
-    for (const h of hits) {
-      expect(h / N).toBeGreaterThan(0.13);
-      expect(h / N).toBeLessThan(0.17);
+  it('keeps both guarantees with extra yellows on top', () => {
+    for (let i = 0; i < 2000; i++) {
+      const plan = planFakeRounds();
+      expect(sum(plan.slice(0, 3))).toBeGreaterThanOrEqual(1);
+      expect(sum(plan.slice(3))).toBeGreaterThanOrEqual(1);
     }
   });
 
-  it('can give a run with no yellow at all (about 44%)', () => {
+  it('spreads the guaranteed yellows across every round', () => {
+    const seen = new Set<number>();
+    for (let i = 0; i < 500; i++) planFakeRounds(0).forEach((n, round) => n > 0 && seen.add(round));
+    expect([...seen].sort()).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it('gives exactly two yellows in about 61% of runs', () => {
     const runs = Array.from({ length: 5000 }, () => sum(planFakeRounds()));
-    const share = runs.filter((n) => n === 0).length / runs.length;
-    expect(share).toBeGreaterThan(0.40);
-    expect(share).toBeLessThan(0.48);
-  });
-
-  it('never puts more than 3 yellows in one round', () => {
-    for (let i = 0; i < 2000; i++) expect(Math.max(...planFakeRounds(0.99))).toBeLessThanOrEqual(3);
+    const share = runs.filter((n) => n === 2).length / runs.length;
+    expect(share).toBeGreaterThan(0.57);
+    expect(share).toBeLessThan(0.65);
   });
 
   it('can chain two yellows in one round and in back-to-back rounds', () => {
