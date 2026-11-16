@@ -3,6 +3,7 @@ import { TrophySquare } from '@/components/TrophySquare';
 import { MEDAL_BORDER, MEDAL_GRADIENT, medalOf } from '@/lib/medalStyles';
 import type { ReactionRankEntry } from '@/lib/reaction';
 import { siteConfig } from '@/lib/siteConfig';
+import { RoundTimesDropdown } from './RoundTimesDropdown';
 
 // 오른쪽 랭킹표. 명예의 전당 카드와 같은 양식(금·은·동 줄 + 트로피 등수 칸).
 export function ReactionRanking({
@@ -43,7 +44,8 @@ export function ReactionRanking({
                 // 그보다 긴 이름만 말줄임. 반응속도 칸을 auto 로 두면 줄마다
                 // 숫자 폭이 달라 시작점이 흔들린다. 폰(sm 미만)은 칸을 나누면 이름이 너무 잘려서 이름 아래 줄로 —
                 // 거기선 시작점을 맞출 일이 없으니 반응속도 칸도 내용 폭(auto)으로 둬서 이름 자리를 남긴다.
-                className={`grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-xl px-3 py-2.5 sm:grid-cols-[2rem_12rem_minmax(0,1fr)_5.5rem] ${
+                // 맨 끝 칸은 5회 기록 드롭다운(RoundTimesDropdown). 폰에선 이름 자리를 남기려고 등수·간격·드롭다운 칸을 좁힌다.
+                className={`grid grid-cols-[1.5rem_minmax(0,1fr)_auto_1.25rem] items-center gap-x-2 gap-y-0.5 rounded-xl px-2.5 py-2.5 sm:grid-cols-[2rem_12rem_minmax(0,1fr)_5.5rem_1.75rem] sm:gap-x-3 sm:px-3 ${
                   medal ? `border ${MEDAL_BORDER[medal]} ${MEDAL_GRADIENT[medal]}` : 'border border-transparent'
                 } ${mine ? 'ring-2 ring-accent' : ''}`}
               >
@@ -58,7 +60,7 @@ export function ReactionRanking({
                   // 마우스 올리면 전체. 칸보다 길면 끝만 말줄임.
                   // text-sm 흰색 — 회색 작은 글씨는 안 보인다는 요청(2026-11-16).
                   <span
-                    className="col-span-2 col-start-2 row-start-2 min-w-0 truncate text-sm text-foreground sm:col-span-1 sm:col-start-3 sm:row-start-1"
+                    className="col-span-3 col-start-2 row-start-2 min-w-0 truncate text-sm text-foreground sm:col-span-1 sm:col-start-3 sm:row-start-1"
                     title={entry.comment}
                   >
                     “{entry.comment}”
@@ -70,6 +72,9 @@ export function ReactionRanking({
                     <span className="ml-0.5 text-xs font-normal text-menu">ms</span>
                   </span>
                   <span className="block text-[11px] tabular-nums text-subtext">최고 {entry.bestSingleMs}ms</span>
+                </span>
+                <span className="col-start-4 row-start-1 flex justify-end sm:col-start-5">
+                  <RoundTimesDropdown name={entry.name} times={entry.bestTimes} />
                 </span>
               </li>
             );
