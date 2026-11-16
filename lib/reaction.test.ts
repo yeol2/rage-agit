@@ -11,6 +11,7 @@ import {
   roundTimeline,
   spread,
   suspiciousReason,
+  verdict,
 } from './reaction';
 
 describe('suspiciousReason', () => {
@@ -111,5 +112,22 @@ describe('roundTimeline', () => {
       return Math.round(goAt - fakes[0].off);
     }));
     expect(gaps.size).toBeGreaterThan(10);
+  });
+});
+
+describe('verdict', () => {
+  it('splits averages into 30ms bands with the agreed lines', () => {
+    expect(verdict(149)).toBe('WOW.. 매크로시죠? 의심할께요');
+    expect(verdict(150)).toBe('에임봇 의심됨. 핵 검사 받으러 가실게요');
+    expect(verdict(179)).toBe('에임봇 의심됨. 핵 검사 받으러 가실게요');
+    expect(verdict(180)).toBe('발자국 소리 듣기도 전에 쏘는 사람');
+    expect(verdict(270)).toBe('딱 평균. 이제부터는 에임 싸움');
+    expect(verdict(389)).toBe('자기장 맞으면서도 여유로운 타입');
+    expect(verdict(390)).toBe('혹시 지금 밥 먹으면서 하세요? 🍚');
+  });
+
+  it('gives each 30ms band its own line (10 lines in all)', () => {
+    const lines = new Set([140, 160, 190, 220, 250, 280, 310, 340, 370, 400].map(verdict));
+    expect(lines.size).toBe(10);
   });
 });

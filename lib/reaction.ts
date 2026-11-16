@@ -119,6 +119,27 @@ export function normalizeComment(input: unknown): string | null | 'too-long' {
   return commentLength(text) > COMMENT_MAX_CHARS ? 'too-long' : text;
 }
 
+/**
+ * 결과 화면 한마디 — 5회 평균을 30ms 단위로 10구간(2026-11-16 사용자 결정). 사람 평균(250~300ms)
+ * 근처를 "평균"으로 잡았다. [이 값 미만, 멘트] 순서로, 마지막 줄은 그 이상 전부.
+ */
+const VERDICTS: [number, string][] = [
+  [150, 'WOW.. 매크로시죠? 의심할께요'],
+  [180, '에임봇 의심됨. 핵 검사 받으러 가실게요'],
+  [210, '발자국 소리 듣기도 전에 쏘는 사람'],
+  [240, '먼저 보면 먼저 쏜다. 교전 승률 보장'],
+  [270, '평균 이상! 1:1은 자신 있는 편'],
+  [300, '딱 평균. 이제부터는 에임 싸움'],
+  [330, '한 박자 늦게 돌아보는 타입'],
+  [360, '맞고 나서 "어디서 쏨?" 하는 타입'],
+  [390, '자기장 맞으면서도 여유로운 타입'],
+];
+const SLOWEST_VERDICT = '혹시 지금 밥 먹으면서 하세요? 🍚';
+
+export function verdict(avg: number): string {
+  return VERDICTS.find(([below]) => avg < below)?.[1] ?? SLOWEST_VERDICT;
+}
+
 export function average(times: number[]): number {
   return Math.round(times.reduce((sum, t) => sum + t, 0) / times.length);
 }
