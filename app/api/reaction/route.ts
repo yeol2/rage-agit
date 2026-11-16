@@ -25,6 +25,9 @@ export async function POST(request: Request) {
   if (!isValidRun(body?.times)) {
     return NextResponse.json({ error: '랭킹에 올릴 수 없는 기록입니다. 다시 도전해주세요.' }, { status: 400 });
   }
+  // 몇 번째 판인지(브라우저가 센 값, 참고용). 이상한 값이면 그냥 비운다 — 이것 때문에 등록을 막진 않는다.
+  const tryNumber =
+    Number.isInteger(body?.tryNumber) && body.tryNumber >= 1 && body.tryNumber <= 1_000_000 ? (body.tryNumber as number) : null;
   const comment = normalizeComment(body?.comment);
   if (comment === 'too-long') {
     return NextResponse.json({ error: `한 줄 평은 ${COMMENT_MAX_CHARS}자까지 쓸 수 있어요.` }, { status: 400 });
@@ -88,6 +91,7 @@ export async function POST(request: Request) {
         updated_at: now,
         comment,
         best_times: times,
+        best_try: tryNumber,
       })
     : await supabase
         .from('reaction_records')

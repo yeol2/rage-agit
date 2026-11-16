@@ -5,7 +5,16 @@ import { useEffect, useRef, useState } from 'react';
 // 랭킹 줄 맨 오른쪽 드롭다운 — 그 사람 최고 기록 판의 5회 회차 기록(2026-11-16 사용자 요청).
 // 마우스가 있는 기기는 올리면 펼쳐지고([@media(hover:hover)]), 폰은 눌러서 펼친다. 바깥을 누르면 접힌다.
 // 패널은 늘 DOM 에 두고 invisible 로 숨긴다(메뉴바 놀이터 드롭다운과 같은 방식).
-export function RoundTimesDropdown({ name, times }: { name: string; times: number[] | null }) {
+export function RoundTimesDropdown({
+  name,
+  times,
+  tryNumber,
+}: {
+  name: string;
+  times: number[] | null;
+  /** 최고 기록이 몇 번째 판이었는지(브라우저 기준). 모르면 null. */
+  tryNumber: number | null;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -47,7 +56,14 @@ export function RoundTimesDropdown({ name, times }: { name: string; times: numbe
         }`}
       >
         <div className="rounded-xl border border-white/[0.08] bg-[#1B1B23] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
-          <p className="mb-2 whitespace-nowrap text-[11px] text-menu">{name} · 5회 기록</p>
+          <p className="mb-2 flex items-baseline justify-between gap-4 whitespace-nowrap text-[11px] text-menu">
+            <span>{name} · 5회 기록</span>
+            {tryNumber !== null && (
+              <span>
+                <span className="font-bold tabular-nums text-foreground">{tryNumber.toLocaleString('ko-KR')}번째</span> 판에서 달성
+              </span>
+            )}
+          </p>
           {times ? (
             <ul className="flex gap-1.5">
               {times.map((t, i) => (
