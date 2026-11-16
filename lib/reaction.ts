@@ -89,6 +89,27 @@ export interface ReactionRankEntry {
   bestSingleMs: number;
   attempts: number;
   achievedAt: string;
+  /** 한 줄 평. 안 썼으면 null. */
+  comment: string | null;
+}
+
+/** 한 줄 평 최대 글자 수 — 랭킹 한 줄(이름 아래)에 들어가는 길이(2026-11-16 사용자 결정). DB 제약(0050)과 같다. */
+export const COMMENT_MAX_CHARS = 20;
+
+/** 글자 수(이모지·한글 한 글자를 1로). */
+export function commentLength(text: string): number {
+  return Array.from(text).length;
+}
+
+/**
+ * 한 줄 평 정리. 줄바꿈·연속 공백은 공백 하나로, 앞뒤 공백은 지운다. 비면 null.
+ * 문자열이 아니면 null, 정리 후 COMMENT_MAX_CHARS 를 넘으면 'too-long'.
+ */
+export function normalizeComment(input: unknown): string | null | 'too-long' {
+  if (typeof input !== 'string') return null;
+  const text = input.replace(/\s+/g, ' ').trim();
+  if (text === '') return null;
+  return commentLength(text) > COMMENT_MAX_CHARS ? 'too-long' : text;
 }
 
 export function average(times: number[]): number {

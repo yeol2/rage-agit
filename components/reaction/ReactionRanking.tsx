@@ -43,9 +43,17 @@ export function ReactionRanking({
                 <span className="flex justify-center text-sm font-bold tabular-nums text-menu" aria-label={`${entry.rank}등`}>
                   {medal ? <TrophySquare rank={medal} size="sm" /> : entry.rank}
                 </span>
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-sm font-bold text-foreground">{entry.name}</span>
-                  <TierBadge tier={entry.tier} className="shrink-0" />
+                <span className="min-w-0">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-bold text-foreground">{entry.name}</span>
+                    <TierBadge tier={entry.tier} className="shrink-0" />
+                  </span>
+                  {/* 한 줄 평 — 20자까지라 보통 한 줄에 들어가고, 좁은 폰에서만 말줄임. */}
+                  {entry.comment && (
+                    <span className="mt-0.5 block truncate text-xs text-menu" title={entry.comment}>
+                      “{entry.comment}”
+                    </span>
+                  )}
                 </span>
                 <span className="text-right">
                   <span className="block text-sm font-bold tabular-nums text-foreground">

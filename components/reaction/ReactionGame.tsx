@@ -11,11 +11,13 @@ import {
   planFakeRounds,
   roundTimeline,
   suspiciousReason,
+  COMMENT_MAX_CHARS,
+  commentLength,
   type ReactionRankEntry,
 } from '@/lib/reaction';
 
 // 반응속도 테스트 한 판.
-//   idle → (START) → waiting(빨강) ─(가끔 fake 노랑 0.45초 → 빨강 1초, 이어서 반복 가능)→ go(초록) → round(이번 기록) → … → done
+//   idle → (START) → waiting(빨강) ─(가끔 fake 노랑 1~1.5초 → 빨강 1~2초, 이어서 반복 가능)→ go(초록) → round(이번 기록) → … → done
 //   빨강에서 누르면 early, 노랑에서 누르면 faked — 둘 다 쌓은 기록 버리고 1회차부터(failRun).
 // 모든 상태는 이 컴포넌트 안에만 있다(서버·다른 사용자와 공유 안 함).
 
@@ -371,6 +373,7 @@ function Result({
   const [formOpen, setFormOpen] = useState(false);
   const [nickname, setNickname] = useState('');
   const [code, setCode] = useState('');
+  const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RegisterResult | null>(null);
@@ -389,7 +392,7 @@ function Result({
       const response = await fetch('/api/reaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, code, times, token: runToken }),
+        body: JSON.stringify({ nickname, code, times, token: runToken, comment }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -444,7 +447,7 @@ function Result({
             </p>
           ) : (
             <p className="text-foreground">
-              최고 기록 {result.previousBestMs}ms 보다 느려서 랭킹은 그대로예요. (지금 {result.rank}등)
+              최고 기록 {result.previousBestMs}ms 보다 느려서 랭킹과 한 줄 평은 그대로예요. (지금 {result.rank}등)
             </p>
           )}
         </div>
@@ -471,6 +474,22 @@ function Result({
               autoComplete="off"
               required
               className="mt-1 w-full rounded-md border border-white/10 bg-[#0E0B13] px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-accent"
+            />
+          </label>
+          <label className="block">
+            <span className="flex justify-between text-[11px] text-menu">
+              <span>한 줄 평 (선택)</span>
+              <span className="tabular-nums">
+                {commentLength(comment)}/{COMMENT_MAX_CHARS}
+              </span>
+            </span>
+            <input
+              value={comment}
+              // 글자 수는 이모지·한글 한 글자를 1로 센다(maxLength 는 이모지를 2로 세서 직접 자른다).
+              onChange={(e) => setComment(Array.from(e.target.value.replace(/\n/g, ' ')).slice(0, COMMENT_MAX_CHARS).join(''))}
+              placeholder="랭킹에 같이 올라가요"
+              autoComplete="off"
+              className="mt-1 w-full rounded-md border border-white/10 bg-[#0E0B13] px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-subtext focus:border-accent"
             />
           </label>
           {error && <p className="text-xs text-[#FF6B70]">{error}</p>}
