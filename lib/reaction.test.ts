@@ -52,29 +52,26 @@ describe('normalizeComment', () => {
 const sum = (plan: number[]) => plan.reduce((a, b) => a + b, 0);
 
 describe('planFakeRounds', () => {
-  it('has no guaranteed yellow — chance 0 gives none', () => {
+  it('never gives a run without a yellow', () => {
+    for (let i = 0; i < 5000; i++) expect(sum(planFakeRounds())).toBeGreaterThanOrEqual(1);
+  });
+
+  it('still guarantees exactly one yellow even when the chance is 0', () => {
     for (let i = 0; i < 200; i++) {
       const plan = planFakeRounds(0);
       expect(plan).toHaveLength(REACTION_ROUNDS);
-      expect(sum(plan)).toBe(0);
+      expect(sum(plan)).toBe(1);
     }
   });
 
-  it('gives every round the same ~30% chance of a yellow', () => {
+  it('gives every round the same chance of a yellow (~36% once empty runs are redrawn)', () => {
     const N = 20000;
     const hits = [0, 0, 0, 0, 0];
     for (let i = 0; i < N; i++) planFakeRounds().forEach((n, r) => n > 0 && hits[r]++);
     for (const h of hits) {
-      expect(h / N).toBeGreaterThan(0.28);
-      expect(h / N).toBeLessThan(0.32);
+      expect(h / N).toBeGreaterThan(0.33);
+      expect(h / N).toBeLessThan(0.39);
     }
-  });
-
-  it('can give a run with no yellow at all (about 17%)', () => {
-    const runs = Array.from({ length: 5000 }, () => sum(planFakeRounds()));
-    const share = runs.filter((n) => n === 0).length / runs.length;
-    expect(share).toBeGreaterThan(0.14);
-    expect(share).toBeLessThan(0.20);
   });
 
   it('never puts more than 5 yellows in a row in one round', () => {

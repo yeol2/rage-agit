@@ -15,9 +15,12 @@ export const WAIT_MAX_MS = 4500;
 
 /**
  * 노란불(페이크). 불이 하나 켜질 때마다 노랑 30% / 초록 70% 로 따로 뽑는다 — 빨간불 다음에도,
- * 노란불이 꺼진 다음에도 똑같이, 앞 결과와 상관없이(2026-11-16 사용자 결정). 보장은 없어서 한 판 내내
- * 안 나올 수도 있다(약 17%). 그전엔 1~3회·4~5회에 하나씩 보장했는데 초반에 너무 자주 뜬다는 후기가 있었다.
- * 확률이 언제나 같아서 "앞에서 봤으니 이제 안 나온다" 같은 예측도 안 된다.
+ * 노란불이 꺼진 다음에도 똑같이, 앞 결과와 상관없이(2026-11-16 사용자 결정). 확률이 언제나 같아서
+ * "앞에서 봤으니 이제 안 나온다" 같은 예측이 안 된다.
+ *
+ * 다만 노란불이 하나도 없는 판(그냥 뽑으면 약 17%)은 버리고 다시 뽑는다 — 최소 1번 보장(2026-11-16).
+ * 노란불 없는 판에선 "색이 바뀌면 무조건 누르기"가 안 걸려서, 노란불에 낚일 때마다 다시 시작해
+ * 노란불 없는 판이 걸릴 때까지 무한 리트하는 꼼수가 있었다.
  */
 export const FAKE_CHANCE = 0.3;
 /** 한 회차에 노란불이 연속으로 나올 수 있는 최대 횟수(2026-11-16 사용자 결정). 5연속 확률 약 0.24%. */
@@ -38,13 +41,22 @@ export const AFTER_FAKE_GAP_MAX_MS = 2000;
 /**
  * 회차별 노란불 개수(5칸). 불마다 chance 로 노랑, 아니면 초록에서 끝(최대 FAKE_MAX_PER_ROUND 연속) —
  * 두 개 이상이면 그 회차는 노랑 → 빨강 → 노랑 → 빨강 → 초록으로 이어 나온다.
+ * 노란불이 0개면 다시 뽑는다(최소 1번). chance 가 아주 작아 계속 0개면 100번째에 무작위 회차에 1개를 넣는다.
  */
 export function planFakeRounds(chance = FAKE_CHANCE, random = Math.random): number[] {
-  return Array.from({ length: REACTION_ROUNDS }, () => {
-    let count = 0;
-    while (count < FAKE_MAX_PER_ROUND && random() < chance) count++;
-    return count;
-  });
+  const draw = () =>
+    Array.from({ length: REACTION_ROUNDS }, () => {
+      let count = 0;
+      while (count < FAKE_MAX_PER_ROUND && random() < chance) count++;
+      return count;
+    });
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const plan = draw();
+    if (plan.some((n) => n > 0)) return plan;
+  }
+  const plan = new Array<number>(REACTION_ROUNDS).fill(0);
+  plan[Math.floor(random() * REACTION_ROUNDS)] = 1;
+  return plan;
 }
 
 export interface FakeWindow {
