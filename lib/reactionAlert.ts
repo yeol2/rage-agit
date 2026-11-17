@@ -40,7 +40,7 @@ export function runAlertReasons(times: number[], topAvgMs: number | null, suspic
   const avg = average(times);
   if (topAvgMs !== null && avg < topAvgMs) reasons.push(`현재 1등(${topAvgMs}ms)보다 빠름`);
   if (topAvgMs === null) reasons.push('랭킹이 비어 있어 1등감');
-  if (suspicious) reasons.push(avg < MIN_AVG_MS ? `평균 ${MIN_AVG_MS}ms 미만(등록 막힘)` : '매크로 의심 — 편차 4ms 미만(등록 막힘)');
+  if (suspicious) reasons.push(avg < MIN_AVG_MS ? '평균 130ms 미만(등록 막힘)' : '매크로 의심 — 편차 4ms 미만(등록 막힘)');
   return reasons;
 }
 
@@ -61,18 +61,12 @@ export function formatRunAlert(args: {
   ].join('\n');
 }
 
-export function formatRegisterFailAlert(args: {
-  nickname: string;
-  error: string;
-  times: unknown;
-  /** 부정 의심(숫자 지어내기·평균 125ms 미만·편차 4ms 미만)이면 제목을 따로 단다. */
-  suspected?: boolean;
-}): string {
+export function formatRegisterFailAlert(args: { nickname: string; error: string; times: unknown }): string {
   const times = Array.isArray(args.times) && args.times.length === 5 && args.times.every((t) => typeof t === 'number')
     ? describeTimes(args.times as number[])
     : `기록 형식 이상: ${esc(JSON.stringify(args.times ?? null).slice(0, 80))}`;
   return [
-    args.suspected ? '🚨 **반응속도 부정 의심 — 등록 시도**' : '⚠️ **반응속도 등록 실패**',
+    '⚠️ **반응속도 등록 실패**',
     `• 입력한 닉네임: ${args.nickname ? esc(args.nickname) : '(빈칸)'}`,
     `• 언제: ${kstNow()}`,
     `• ${times}`,
