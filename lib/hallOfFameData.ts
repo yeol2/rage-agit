@@ -267,7 +267,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     {
       id: 'dayKills',
       kind: 'player',
-      title: '내전 최다 킬',
+      title: '최다 킬',
       description: '하루 내전(4경기) 동안 혼자 올린 킬 합계',
       unit: '킬',
       since: firstDate(killStats.map((s) => s.date)),
@@ -288,7 +288,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     {
       id: 'dayDamage',
       kind: 'player',
-      title: '내전 최다 딜',
+      title: '최다 딜',
       description: '하루 내전(4경기) 동안 혼자 넣은 딜량 합계',
       unit: '딜',
       since: DAMAGE_SINCE,
@@ -307,7 +307,7 @@ export async function fetchHallOfFame(): Promise<RecordBoard[]> {
     {
       id: 'matchTeamScore',
       kind: 'team',
-      title: '매치 당 최다 점수',
+      title: '단일 매치 최고 점수',
       description: '단일 매치에서 한 팀이 얻은 점수(순위점수 + 팀 킬)',
       unit: '점',
       since: firstDate(teamRows.map((r) => r.date)),
