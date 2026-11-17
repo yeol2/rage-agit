@@ -690,7 +690,7 @@ check(
   rankingDef.includes('ranked_matches') && !rankingDef.includes('countable_matches'),
   'member_ranking_games(리더보드 점수)는 확정된 일반 내전(ranked_matches)만 본다',
 );
-for (const view of ['member_partner_stats', 'member_hexagon_stats', 'member_map_stats', 'member_playstyle_stats']) {
+for (const view of ['member_partner_stats', 'member_hexagon_stats', 'member_map_stats']) {
   const def = await viewDef(view);
   check(
     def.includes('confirmed_matches') && !def.includes('countable_matches') && !def.includes('ranked_matches'),

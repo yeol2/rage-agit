@@ -1,5 +1,3 @@
-import type { BadgeMedal, PlaystyleBadgeKind } from '@/lib/playstyleBadges';
-
 /**
  * 뱃지 도감 — 이름·멘트·설명·그림을 한 곳에 모은다.
  *
@@ -11,7 +9,7 @@ import type { BadgeMedal, PlaystyleBadgeKind } from '@/lib/playstyleBadges';
  * components/WinBadge.tsx 가 따로 들고 있다.
  */
 export type TrophyKind = 'scrimWin' | 'crabKing';
-export type BadgeKey = TrophyKind | PlaystyleBadgeKind;
+export type BadgeKey = TrophyKind;
 
 export interface BadgeCopy {
   name: string;
@@ -32,26 +30,5 @@ export const BADGE_COPY: Record<BadgeKey, BadgeCopy> = {
     quip: '내가 "킹" 크랩이다',
     description: '저티어 내전 종합 1등',
   },
-  damageFarmer: {
-    name: '딜딸의 신',
-    quip: '나 탄좀 줄래? 구상이랑 드링크도 주면 좋고',
-    description: '같은 티어에서 킬 대비 딜이 가장 많은 사람',
-  },
-  killFarmer: {
-    name: '킬딸의 신',
-    quip: '어~ 눕히느라 고생했고 확킬은 내가 먹을게',
-    description: '같은 티어에서 딜 대비 킬이 가장 많은 사람',
-  },
 };
 
-/**
- * 그림은 메달마다 한 벌씩이다 — 테두리만 금은동이면 작은 크기(표에서 34px)에서
- * 그 선이 거의 안 보여 셋이 같은 뱃지로 읽힌다. 에나멜 색까지 바꾸면 멀리서도
- * 갈린다.
- */
-const MEDAL_FILE: Record<BadgeMedal, string> = { 1: 'gold', 2: 'silver', 3: 'bronze' };
-
-export function badgeImage(kind: PlaystyleBadgeKind, medal: BadgeMedal): string {
-  const file = kind === 'damageFarmer' ? 'damage-farmer' : 'kill-farmer';
-  return `/badges/${file}-${MEDAL_FILE[medal]}.png`;
-}

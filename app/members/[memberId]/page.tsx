@@ -8,7 +8,6 @@ import { MemberDashboard } from '@/components/members/MemberDashboard';
 import { MapRecords } from '@/components/members/MapRecords';
 import { PartnerChemistry } from '@/components/members/PartnerChemistry';
 import { WinBadge } from '@/components/WinBadge';
-import { PlaystyleBadges } from '@/components/badges/PlaystyleBadges';
 import { BADGE_SIZE_LARGE } from '@/components/badges/HexFrame';
 import {
   buildWindowStats,
@@ -37,7 +36,6 @@ import {
   type PartnerStat,
 } from '@/lib/partnerStats';
 import { fetchMemberMapStats } from '@/lib/mapStats';
-import { fetchPlaystyleBadges } from '@/lib/playstyleBadges';
 import { fetchScoreHistory } from '@/lib/scoreHistoryData';
 import { siteConfig } from '@/lib/siteConfig';
 
@@ -85,7 +83,6 @@ export default async function MemberDetailPage({
     standings,
     partnerRows,
     mapStats,
-    playstyleBadges,
   ] = await Promise.all([
     fetchMemberHexagonStats(member.id),
     fetchMemberWinCounts(member.id),
@@ -95,9 +92,6 @@ export default async function MemberDetailPage({
     fetchMemberStandings(member.id),
     fetchPartnerStats(member.id),
     fetchMemberMapStats(member.id),
-    // 뱃지 주인은 클랜 전체를 놓고 봐야 정해진다("최강"은 한 명뿐이다).
-    // 그래서 이 사람 것만 받아올 수가 없고, 전원 집계를 받아 여기서 꺼내 쓴다.
-    fetchPlaystyleBadges(),
   ]);
 
   // 점수 변동 그래프. 클랜 전체를 한 번 계산해 캐시한 것에서 이 사람 것만 꺼낸다.
@@ -176,7 +170,6 @@ export default async function MemberDetailPage({
               chipColor="#231F2B"
               className="text-[24px]"
             />
-            <PlaystyleBadges holders={playstyleBadges.get(member.id) ?? []} size={BADGE_SIZE_LARGE} />
           </div>
 
           {/* 숫자를 먼저 보고 6각형으로 넘어가는 흐름 — 대시보드가 6각형 위에 온다. */}
