@@ -453,9 +453,20 @@ function Result({
   const [result, setResult] = useState<RegisterResult | null>(null);
 
   useEffect(() => {
+    let saved: string | null = null;
     try {
-      setNickname(window.localStorage.getItem(NICKNAME_KEY) ?? '');
+      saved = window.localStorage.getItem(NICKNAME_KEY);
+      setNickname(saved ?? '');
     } catch {}
+    // 판이 끝나면 등록 여부와 상관없이 결과를 서버에 알린다 — 1등보다 빠르거나 부정 규칙에 걸린 판이면
+    // 운영자에게 디스코드 알림이 간다(app/api/reaction/report). 실패해도 화면엔 영향 없다.
+    fetch('/api/reaction/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ times, token: runToken, nickname: saved, tryNumber: runNumber, mistakes }),
+    }).catch(() => {});
+    // 이 결과 화면이 처음 뜰 때 한 번만.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const submit = async (event: React.FormEvent) => {
