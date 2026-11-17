@@ -12,6 +12,9 @@ import { formatRegisterFailAlert, notifyAdmin } from '@/lib/reactionAlert';
 // 같은 사람이 여러 번 올리면 더 빠른 평균일 때만 기록을 바꾼다(도전 횟수는 매번 센다).
 // 한 줄 평은 최고 기록과 함께 남는다 — 기록을 깨면 새 한 줄 평(빈칸이면 지움), 못 깨면 그대로.
 
+/** 부정이 의심되는 기록으로 등록을 시도했을 때 화면에 보여주는 경고(2026-11-17 사용자 결정 — (나) 문구). */
+const CHEAT_WARNING = '부정 사용이 의심되는 기록이라 등록할 수 없어요. 이 시도는 관리자에게 전달됐어요.';
+
 export async function GET() {
   return NextResponse.json({ ranking: await fetchReactionRanking() });
 }
@@ -23,8 +26,17 @@ export async function POST(request: Request) {
 
   // 등록이 막힌 경우(기록 이상·부정 검사·비밀번호·명단)는 운영자 디스코드로도 알린다(2026-11-16 사용자 요청) —
   // 게임 없이 숫자만 보내는 시도도 여기서 잡힌다. 빈칸·한 줄 평 길이·서버 오류는 알리지 않는다.
-  const reject = async (status: number, error: string) => {
-    await notifyAdmin(formatRegisterFailAlert({ nickname: nickname.slice(0, 40), error, times: body?.times }));
+  // 부정이 의심되는 경우(숫자 지어내기·평균 125ms 미만·편차 4ms 미만)는 화면엔 CHEAT_WARNING 만 보이고,
+  // 알림엔 진짜 이유와 입력한 닉네임이 간다(2026-11-17 — 등록 칸까지 보여주고 누가 시도했는지 잡기).
+  const reject = async (status: number, error: string, suspectedReason?: string) => {
+    await notifyAdmin(
+      formatRegisterFailAlert({
+        nickname: nickname.slice(0, 40),
+        error: suspectedReason ?? error,
+        times: body?.times,
+        suspected: Boolean(suspectedReason),
+      }),
+    );
     return NextResponse.json({ error }, { status });
   };
 
@@ -32,7 +44,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'PUBG 닉네임과 내전 비밀번호를 입력해주세요.' }, { status: 400 });
   }
   if (!isValidRun(body?.times)) {
-    return reject(400, '랭킹에 올릴 수 없는 기록입니다. 다시 도전해주세요.');
+    return reject(400, CHEAT_WARNING, '기록 형식이 이상함(5회 · 회차마다 100~2000ms 아님)');
   }
   // 몇 번째 판인지(브라우저가 센 값, 참고용). 이상한 값이면 그냥 비운다 — 이것 때문에 등록을 막진 않는다.
   const tryNumber =
@@ -41,9 +53,15 @@ export async function POST(request: Request) {
   if (comment === 'too-long') {
     return NextResponse.json({ error: `한 줄 평은 ${COMMENT_MAX_CHARS}자까지 쓸 수 있어요.` }, { status: 400 });
   }
-  const runProblem = checkRunToken(body.token, body.times) ?? suspiciousReason(body.times);
-  if (runProblem) {
-    return reject(400, runProblem);
+  const tokenProblem = checkRunToken(body.token, body.times);
+  if (tokenProblem) {
+    // 30분 넘게 결과 화면에 둔 건 정상 사용자일 수 있어서 그대로 안내만.
+    if (tokenProblem.startsWith('너무 오래된')) return reject(400, tokenProblem);
+    return reject(400, CHEAT_WARNING, `시작 도장 이상 — ${tokenProblem}`);
+  }
+  const suspicious = suspiciousReason(body.times);
+  if (suspicious) {
+    return reject(400, CHEAT_WARNING, suspicious);
   }
 
   // 회차마다 서버 확인(lib/reactionRounds) — 회차 신호가 실제로 왔고, 보고한 반응 시간이 서버가 잰
@@ -59,7 +77,7 @@ export async function POST(request: Request) {
   }
   const roundProblem = checkRoundPings(runId, body.times, body?.nonces, (pings ?? []) as RoundPing[]);
   if (roundProblem) {
-    return reject(400, roundProblem);
+    return reject(400, CHEAT_WARNING, `회차 확인 실패 — ${roundProblem}`);
   }
   // 하루 지난 회차 신호는 정리한다(실패해도 상관없다).
   await pingSupabase

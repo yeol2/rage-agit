@@ -10,7 +10,6 @@ import {
   average,
   planFakeRounds,
   roundTimeline,
-  suspiciousReason,
   verdict,
   COMMENT_MAX_CHARS,
   commentLength,
@@ -490,8 +489,9 @@ function Result({
   const avg = average(times);
   const best = Math.min(...times);
   const tooSlow = times.some((t) => t > MAX_RECORD_MS);
-  const suspicious = tooSlow ? null : suspiciousReason(times);
-  const rankable = !tooSlow && !suspicious;
+  // 의심 기록(평균 125ms 미만·편차 4ms 미만)이어도 등록 칸은 그대로 보여준다(2026-11-17 사용자 요청) —
+  // 닉네임을 입력하고 등록을 누르는 순간 서버가 거절하면서 그 닉네임을 운영자에게 알린다.
+  const rankable = !tooSlow;
 
   const [formOpen, setFormOpen] = useState(false);
   const [nickname, setNickname] = useState('');
@@ -659,7 +659,6 @@ function Result({
         </div>
       )}
       {tooSlow && <p className="mt-3 text-xs text-subtext">2초 넘게 걸린 회차가 있어서 랭킹에는 못 올려요.</p>}
-      {suspicious && <p className="mt-3 text-xs text-[#FF6B70]">{suspicious}</p>}
       {result && (
         <button type="button" onClick={onRetry} className="mt-4 rounded-lg bg-white/[0.06] px-6 py-2.5 text-sm text-menu hover:text-foreground">
           다시 하기

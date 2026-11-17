@@ -28,8 +28,9 @@ describe('suspiciousReason', () => {
     expect(suspiciousReason([230, 230, 231, 228, 234])).toMatch(/매크로/);
   });
 
-  it('flags averages under 130ms', () => {
-    expect(suspiciousReason([110, 125, 140, 118, 132])).toMatch(/130ms/);
+  it('flags averages under 125ms', () => {
+    expect(suspiciousReason([105, 120, 135, 113, 127])).toMatch(/125ms/);
+    expect(suspiciousReason([121, 133, 128, 140, 119])).toBeNull(); // 평균 128ms — 125ms 기준이면 통과
   });
 });
 
