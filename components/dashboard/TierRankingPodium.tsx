@@ -4,8 +4,6 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { TrophySquare } from '@/components/TrophySquare';
 import { WinBadge } from '@/components/WinBadge';
-import { PlaystyleBadges } from '@/components/badges/PlaystyleBadges';
-import type { PlaystyleBadgeHolder } from '@/lib/playstyleBadges';
 import { TIER_GROUPS, type TierGroup } from '@/lib/dashboardData';
 import { formatCountdown, nextScrimDate } from '@/lib/nextScrim';
 import {
@@ -338,11 +336,6 @@ export interface TierRankingPodiumProps {
    */
   sessions?: RecentSession[];
   standings?: SessionStanding[];
-  /**
-   * memberId → 그 사람이 단 플레이 스타일 뱃지. 주인이 클랜 전체 비교로
-   * 정해지는 값이라 줄마다 따로 조회할 수 없어, 페이지가 한 번 받아 넘겨준다.
-   */
-  playstyleBadges?: Map<string, PlaystyleBadgeHolder[]>;
   /** memberId → 최근 내전별 점수(펼침 칸의 점수 변동 그래프). 없으면 그래프를 안 그린다. */
   scoreSeries?: Record<string, SeriesPoint[]>;
 }
@@ -467,7 +460,6 @@ export function TierRankingPodium({
   snapshots,
   sessions = [],
   standings = [],
-  playstyleBadges,
   scoreSeries,
 }: TierRankingPodiumProps) {
   const { isAdmin } = useAdmin();
@@ -843,9 +835,6 @@ export function TierRankingPodium({
                             count={member.crabKingCount}
                             className="text-[13px] sm:text-sm"
                           />
-                          <PlaystyleBadges
-                            holders={playstyleBadges?.get(member.memberId) ?? []}
-                          />
                         </div>
                       </>
                     )}
@@ -1025,8 +1014,7 @@ export function TierRankingPodium({
                             none={
                               // 우승도 뱃지도 없을 때만 빈 칸을 '-' 로 채운다.
                               // 뱃지가 있는데 '-' 가 앞에 붙으면 없는 것처럼 읽힌다.
-                              member.crabKingCount === 0 &&
-                              (playstyleBadges?.get(member.memberId)?.length ?? 0) === 0 ? (
+                              member.crabKingCount === 0 ? (
                                 <span className="text-sm text-menu">-</span>
                               ) : null
                             }
@@ -1035,9 +1023,6 @@ export function TierRankingPodium({
                             kind="crabKing"
                             count={member.crabKingCount}
                             className="text-[13px] sm:text-[15px]"
-                          />
-                          <PlaystyleBadges
-                            holders={playstyleBadges?.get(member.memberId) ?? []}
                           />
                         </span>
                         <span className="text-right tabular-nums">
