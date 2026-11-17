@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { fetchReactionRanking, getReactionSupabase } from '@/lib/reactionData';
 import { COMMENT_MAX_CHARS, average, isValidRun, normalizeComment, suspiciousReason } from '@/lib/reaction';
-import { checkRunToken } from '@/lib/reactionToken';
+import { checkRunToken, readRunTokenId } from '@/lib/reactionToken';
+import { checkRoundPings, isValidNonce, type RoundPing } from '@/lib/reactionRounds';
 import { formatRegisterFailAlert, notifyAdmin } from '@/lib/reactionAlert';
 
 // 반응속도 랭킹 등록. 로그인이 없어서 "클랜원인지"는 두 가지로 거른다:
@@ -44,6 +45,27 @@ export async function POST(request: Request) {
   if (runProblem) {
     return reject(400, runProblem);
   }
+
+  // 회차마다 서버 확인(lib/reactionRounds) — 회차 신호가 실제로 왔고, 보고한 반응 시간이 서버가 잰
+  // 간격과 맞아야 한다. 게임 없이 숫자만 보내면 여기서 막힌다.
+  const pingSupabase = getReactionSupabase();
+  const runId = readRunTokenId(body.token) as string; // checkRunToken 을 통과했으니 서명이 맞다.
+  const nonceList = Array.isArray(body?.nonces) ? body.nonces.filter(isValidNonce).slice(0, 10) : [];
+  const { data: pings, error: pingError } = nonceList.length
+    ? await pingSupabase.from('reaction_round_pings').select('nonce, run_id, green_at, click_at').in('nonce', nonceList)
+    : { data: [], error: null };
+  if (pingError) {
+    return NextResponse.json({ error: '회차 확인 기록을 읽지 못했습니다.' }, { status: 500 });
+  }
+  const roundProblem = checkRoundPings(runId, body.times, body?.nonces, (pings ?? []) as RoundPing[]);
+  if (roundProblem) {
+    return reject(400, roundProblem);
+  }
+  // 하루 지난 회차 신호는 정리한다(실패해도 상관없다).
+  await pingSupabase
+    .from('reaction_round_pings')
+    .delete()
+    .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
   const expected = process.env.REACTION_CLAN_CODE;
   if (!expected) {
