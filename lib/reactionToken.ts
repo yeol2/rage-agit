@@ -25,6 +25,21 @@ export function issueRunToken(now = Date.now()): string {
   return `${payload}.${sign(payload)}`;
 }
 
+/** 서명이 맞는 토큰이면 그 판의 id, 아니면 null. 회차 신호(ping)를 판에 묶을 때 쓴다. */
+export function readRunTokenId(token: unknown): string | null {
+  if (typeof token !== 'string' || !token.includes('.')) return null;
+  const [payload, signature] = token.split('.');
+  const expected = Buffer.from(sign(payload));
+  const given = Buffer.from(signature ?? '');
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+  try {
+    const id = JSON.parse(Buffer.from(payload, 'base64url').toString()).id;
+    return typeof id === 'string' ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 /** 통과면 null, 아니면 사용자에게 보여줄 이유. */
 export function checkRunToken(token: unknown, times: number[], now = Date.now()): string | null {
   if (typeof token !== 'string' || !token.includes('.')) return '게임을 처음부터 다시 진행해주세요.';
