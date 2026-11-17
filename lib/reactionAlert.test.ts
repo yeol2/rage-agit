@@ -11,7 +11,7 @@ describe('runAlertReasons', () => {
   });
 
   it('alerts for runs blocked by the anti-cheat rules', () => {
-    expect(runAlertReasons([118, 116, 119, 108, 111], 141, '평균...')).toContain('평균 130ms 미만(등록 막힘)');
+    expect(runAlertReasons([118, 116, 119, 108, 111], 141, '평균...')).toContain('평균 125ms 미만(등록 막힘)');
     expect(runAlertReasons([230, 230, 231, 228, 234], 141, '매크로...')).toContain('매크로 의심 — 편차 4ms 미만(등록 막힘)');
   });
 });
@@ -41,5 +41,19 @@ describe('alert messages', () => {
     expect(msg).toContain('등록 실패');
     expect(msg).toContain('Ez\\_Code');
     expect(msg).toContain('내전 비밀번호가 틀렸습니다.');
+  });
+});
+
+describe('suspected registration alert', () => {
+  it('flags a suspected cheat attempt with the typed nickname and the real reason', () => {
+    const msg = formatRegisterFailAlert({
+      nickname: 'Ez_Code',
+      error: '평균 125ms 미만은 사람이 내기 어려운 기록이라 랭킹에 올릴 수 없어요.',
+      times: [105, 120, 135, 113, 127],
+      suspected: true,
+    });
+    expect(msg).toContain('부정 의심');
+    expect(msg).toContain('Ez\\_Code');
+    expect(msg).toContain('125ms');
   });
 });
