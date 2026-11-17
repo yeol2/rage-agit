@@ -10,6 +10,7 @@ import {
   average,
   planFakeRounds,
   roundTimeline,
+  suspiciousReason,
   verdict,
   COMMENT_MAX_CHARS,
   commentLength,
@@ -102,41 +103,6 @@ export function ReactionGame({
   const arenaWrap = useRef<HTMLDivElement>(null);
   const tokenRequest = useRef(0);
 
-  // 회차마다 서버 확인(2026-11-17, "게임 없이 숫자만 보내기" 막기) — 초록이 켜질 때 'green', 클릭할 때
-  // 'click' 신호를 회차 번호(nonce)와 보내 서버가 도착 시각을 적는다(app/api/reaction/ping). 등록 때
-  // 서버가 잰 간격과 비교한다. 시작 도장(토큰)이 아직 안 왔으면 신호를 모아뒀다가 도착하면 보낸다.
-  const tokenRef = useRef<string | null>(null);
-  const pendingPings = useRef<{ kind: 'green' | 'click'; nonce: string }[]>([]);
-  const roundNonce = useRef<string | null>(null);
-  const noncesRef = useRef<string[]>([]);
-  const [nonces, setNonces] = useState<string[]>([]);
-
-  const postPing = (kind: 'green' | 'click', nonce: string, token: string) => {
-    fetch('/api/reaction/ping', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind, nonce, token }),
-      keepalive: true,
-    }).catch(() => {});
-  };
-  const sendPing = (kind: 'green' | 'click', nonce: string) => {
-    const token = tokenRef.current;
-    if (token) postPing(kind, nonce, token);
-    else pendingPings.current.push({ kind, nonce });
-  };
-  const applyToken = (token: string | null) => {
-    setRunToken(token);
-    tokenRef.current = token;
-    if (!token) return;
-    const queued = pendingPings.current;
-    pendingPings.current = [];
-    queued.forEach((p) => postPing(p.kind, p.nonce, token));
-  };
-  const resetNonces = () => {
-    noncesRef.current = [];
-    setNonces([]);
-  };
-
   const clearTimers = () => {
     timers.current.forEach((id) => window.clearTimeout(id));
     timers.current = [];
@@ -161,9 +127,6 @@ export function ReactionGame({
         // 시계는 여기서가 아니라 초록이 실제로 그려지는 프레임에서 켠다(아래 useLayoutEffect).
         // 그 전에 들어온 클릭은 초록을 볼 수 없었으니 early 로 친다.
         goAt.current = 0;
-        const nonce = crypto.randomUUID();
-        roundNonce.current = nonce;
-        sendPing('green', nonce);
         changePhase('go');
       }, greenAt),
     );
@@ -172,7 +135,6 @@ export function ReactionGame({
   // 실수 화면(너무 빨라요·낚였다)에서 START 화면으로 — 진행 중이던 판은 버린다(2026-11-16 사용자 요청).
   const goHome = () => {
     clearTimers();
-    resetNonces();
     timesRef.current = [];
     setTimes([]);
     setLastMs(null);
@@ -201,19 +163,17 @@ export function ReactionGame({
     arenaWrap.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     // 서버의 시작 도장(①) — 등록할 때 같이 보낸다. 받는 동안에도 게임은 바로 시작한다.
     // 다시 하기를 빠르게 연달아 누르면 앞 판의 응답이 늦게 와서 새 토큰을 덮을 수 있다 — 마지막 요청만 받는다.
-    applyToken(null);
-    pendingPings.current = [];
+    setRunToken(null);
     const request = ++tokenRequest.current;
     fetch('/api/reaction/start', { method: 'POST' })
       .then((response) => response.json())
       .then((data) => {
-        if (request === tokenRequest.current) applyToken(typeof data.token === 'string' ? data.token : null);
+        if (request === tokenRequest.current) setRunToken(typeof data.token === 'string' ? data.token : null);
       })
       .catch(() => {
-        if (request === tokenRequest.current) applyToken(null);
+        if (request === tokenRequest.current) setRunToken(null);
       });
     fakePlan.current = planFakeRounds();
-    resetNonces();
     timesRef.current = [];
     setTimes([]);
     setLastMs(null);
@@ -228,7 +188,6 @@ export function ReactionGame({
   const failRun = useCallback((phase: 'early' | 'faked') => {
     clearTimers();
     setMistakes((n) => n + 1);
-    resetNonces();
     timesRef.current = [];
     setTimes([]);
     fakePlan.current = planFakeRounds();
@@ -249,11 +208,6 @@ export function ReactionGame({
         failRun('early');
         return;
       }
-      // 이 회차의 클릭 신호 + 회차 번호를 기록과 같은 순서로 쌓는다(등록 때 같이 보낸다).
-      if (roundNonce.current) sendPing('click', roundNonce.current);
-      const nonceList = [...noncesRef.current, roundNonce.current ?? ''];
-      noncesRef.current = nonceList;
-      setNonces(nonceList);
       const next = [...timesRef.current, ms];
       timesRef.current = next;
       setLastMs(ms);
@@ -462,7 +416,7 @@ export function ReactionGame({
           </>
         )}
 
-        {phase === 'done' && <Result times={times} mistakes={mistakes} runToken={runToken} runNumber={runNumber} nonces={nonces} onRetry={startGame} onRegistered={onRegistered} />}
+        {phase === 'done' && <Result times={times} mistakes={mistakes} runToken={runToken} runNumber={runNumber} onRetry={startGame} onRegistered={onRegistered} />}
       </div>
       </div>
     </div>
@@ -474,7 +428,6 @@ function Result({
   mistakes,
   runToken,
   runNumber,
-  nonces,
   onRetry,
   onRegistered,
 }: {
@@ -482,16 +435,14 @@ function Result({
   mistakes: number;
   runToken: string | null;
   runNumber: number | null;
-  nonces: string[];
   onRetry: () => void;
   onRegistered: (ranking: ReactionRankEntry[], memberId: string) => void;
 }) {
   const avg = average(times);
   const best = Math.min(...times);
   const tooSlow = times.some((t) => t > MAX_RECORD_MS);
-  // 의심 기록(평균 125ms 미만·편차 4ms 미만)이어도 등록 칸은 그대로 보여준다(2026-11-17 사용자 요청) —
-  // 닉네임을 입력하고 등록을 누르는 순간 서버가 거절하면서 그 닉네임을 운영자에게 알린다.
-  const rankable = !tooSlow;
+  const suspicious = tooSlow ? null : suspiciousReason(times);
+  const rankable = !tooSlow && !suspicious;
 
   const [formOpen, setFormOpen] = useState(false);
   const [nickname, setNickname] = useState('');
@@ -502,20 +453,9 @@ function Result({
   const [result, setResult] = useState<RegisterResult | null>(null);
 
   useEffect(() => {
-    let saved: string | null = null;
     try {
-      saved = window.localStorage.getItem(NICKNAME_KEY);
-      setNickname(saved ?? '');
+      setNickname(window.localStorage.getItem(NICKNAME_KEY) ?? '');
     } catch {}
-    // 판이 끝나면 등록 여부와 상관없이 결과를 서버에 알린다 — 1등보다 빠르거나 부정 규칙에 걸린 판이면
-    // 운영자에게 디스코드 알림이 간다(app/api/reaction/report). 실패해도 화면엔 영향 없다.
-    fetch('/api/reaction/report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ times, token: runToken, nickname: saved, tryNumber: runNumber, mistakes }),
-    }).catch(() => {});
-    // 이 결과 화면이 처음 뜰 때 한 번만.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const submit = async (event: React.FormEvent) => {
@@ -526,7 +466,7 @@ function Result({
       const response = await fetch('/api/reaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, code, times, token: runToken, comment, tryNumber: runNumber, nonces }),
+        body: JSON.stringify({ nickname, code, times, token: runToken, comment, tryNumber: runNumber }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -659,6 +599,7 @@ function Result({
         </div>
       )}
       {tooSlow && <p className="mt-3 text-xs text-subtext">2초 넘게 걸린 회차가 있어서 랭킹에는 못 올려요.</p>}
+      {suspicious && <p className="mt-3 text-xs text-[#FF6B70]">{suspicious}</p>}
       {result && (
         <button type="button" onClick={onRetry} className="mt-4 rounded-lg bg-white/[0.06] px-6 py-2.5 text-sm text-menu hover:text-foreground">
           다시 하기
