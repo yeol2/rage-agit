@@ -237,8 +237,12 @@ export async function pollScrim(
   // 씨앗은 1티어(슬롯1)가 아니라 2티어(슬롯2) 자리다. 슬롯1 에 있던 사람이
   // 안 쓰는 부계정(Ez_ClanMozip, 최근 매치 0건)을 갖고 있었고 아래 find 가
   // 하필 그걸 골라서, 폴링이 계속 빈손으로 돌아왔다.
+  //
+  // 그 사람의 계정은 하나만 고르지 않고 전부 넘긴다. 2026-11-19 엔 슬롯2 의 Ez_DDakBam 이
+  // 부계정(Ez_DDakBamm, 마지막 경기 11-12)도 등록돼 있었는데 find 가 그걸 골라서
+  // 크론이 밤새 매치를 못 잡았다. 본계정·부계정을 다 씨앗으로 쓰면 어느 쪽으로 뛰었든 잡힌다.
   const SEED_TIER_SLOT = 2;
-  let knownAccountId: string | null = null;
+  let knownAccountIds: string[] = [];
   if (rosterId) {
     const { data: entryRow } = await supabase
       .from('scrim_roster_entries')
@@ -252,7 +256,9 @@ export async function pollScrim(
     const members = entryRow?.members as unknown as
       | { member_pubg_accounts: { pubg_account_id: string | null }[] }
       | null;
-    knownAccountId = members?.member_pubg_accounts.find((a) => a.pubg_account_id)?.pubg_account_id ?? null;
+    knownAccountIds = (members?.member_pubg_accounts ?? [])
+      .map((a) => a.pubg_account_id)
+      .filter((id): id is string => Boolean(id));
   }
 
   const fetchedAt = await rosterFetchedAt(supabase, rosterId).catch(() => null);
@@ -265,7 +271,7 @@ export async function pollScrim(
     sinceHours,
     maxMatches: 50,
     playerRetries: 2,
-    knownAccountId,
+    knownAccountIds,
   });
   const pollingMs = Date.now() - pollingStartedAt;
   const persistStartedAt = Date.now();

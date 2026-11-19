@@ -118,6 +118,10 @@ export async function runPolling({
   // 캐치업 스크립트처럼 특정 세션에 묶이지 않은 호출) 아래 "후보 30명 중 가벼운
   // 순" 방식으로 되짚어 찾는다 — 이쪽은 누가 뛰었는지 미리 알 수 없을 때만 쓴다.
   knownAccountId = null,
+  // 위와 같지만 여러 계정. 씨앗 클랜원이 부계정까지 등록해 둔 경우 그 사람의 계정을
+  // 전부 넘긴다 — 어느 계정으로 뛰었는지 모르기 때문이다(2026-11-19 Ez_DDakBam 의
+  // 안 쓰는 부계정 Ez_DDakBamm 이 골라져 크론이 밤새 빈손이었다). Players 호출은 그대로 1번.
+  knownAccountIds = null,
 }) {
   const cutoff = new Date(Date.now() - sinceHours * 3600 * 1000);
 
@@ -135,9 +139,11 @@ export async function runPolling({
   const clanId = clans[0].id;
 
   let seeds;
-  if (knownAccountId) {
-    seeds = await fetchPlayers(apiKey, [knownAccountId], playerRetries, log);
-    log(`고정 씨앗 1명: ${seeds[0]?.attributes?.name ?? knownAccountId}`);
+  // Players API 는 한 번에 10명까지 받는다.
+  const fixedIds = (knownAccountIds?.length ? knownAccountIds : knownAccountId ? [knownAccountId] : []).slice(0, 10);
+  if (fixedIds.length > 0) {
+    seeds = await fetchPlayers(apiKey, fixedIds, playerRetries, log);
+    log(`고정 씨앗 ${seeds.length}명: ${seeds.map((p) => p.attributes?.name ?? p.id).join(', ')}`);
   } else {
     // --- 씨앗 후보: 최근 내전 참가 상위 30명 ---
     const windowStart = new Date(Date.now() - SEED_WINDOW_DAYS * 24 * 3600 * 1000).toISOString();
