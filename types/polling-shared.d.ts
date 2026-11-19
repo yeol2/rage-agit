@@ -9,6 +9,7 @@ declare module '@/supabase/functions/_shared/polling.mjs' {
     playerRetries?: number;
     log?: (message: string) => void;
     knownAccountId?: string | null;
+    knownAccountIds?: string[] | null;
   }): Promise<{
     seedsUsed: number;
     matchesExamined: number;
