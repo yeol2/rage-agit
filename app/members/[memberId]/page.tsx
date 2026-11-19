@@ -42,7 +42,10 @@ import { siteConfig } from '@/lib/siteConfig';
 // 다른 기록 화면들과 같은 기준이다(/members, /matches). 폴링·우승 확정이
 // revalidateRecordPages 로 즉시 지우지만, 크론 폴링처럼 그 라우트를 안 거치는
 // 경로도 있어서 시간 상한을 같이 둔다.
-export const revalidate = 300;
+// 시간 상한 5분 → 1시간(2026-11-19): Vercel 무료 CPU 한도(월 4시간)를 넘겨 사이트가 멈췄다. 이 무거운
+// 화면들을 5분마다 다시 계산한 게 큰 몫이었다. 내전 기록이 바뀌면 revalidateRecordPages 가 바로 지우므로
+// 평소엔 1시간이면 충분하다.
+export const revalidate = 3600;
 
 // 칸(점수 변동·맵·깐부·6각형) 하나하나를 리더보드 펼침 칸처럼 카드로 띄운다.
 // 예전엔 칸 사이에 가로선을 그었는데, 칸 안의 가로줄(그래프 눈금, 표 줄)과

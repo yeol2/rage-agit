@@ -122,6 +122,9 @@ export function Nav() {
                 key={item.label}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
+                // 내전(/team-builder)은 접속마다 새로 그리는 페이지라, 미리 불러오기(prefetch)를 켜두면 메뉴바가
+                // 보이는 모든 화면에서 서버를 깨운다 — 무료 CPU 한도를 넘긴 뒤 껐다(2026-11-19). 누를 때만 불러온다.
+                prefetch={item.href === '/team-builder' ? false : undefined}
                 // 👉 활성 메뉴 배경색은 여기(bg-white/10).
                 className={`${MENU_ITEM} ${active ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white'}`}
               >

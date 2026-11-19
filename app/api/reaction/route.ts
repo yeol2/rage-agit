@@ -10,8 +10,16 @@ import { checkRunToken } from '@/lib/reactionToken';
 // 같은 사람이 여러 번 올리면 더 빠른 평균일 때만 기록을 바꾼다(도전 횟수는 매번 센다).
 // 한 줄 평은 최고 기록과 함께 남는다 — 기록을 깨면 새 한 줄 평(빈칸이면 지움), 못 깨면 그대로.
 
+// GET 랭킹은 Vercel CDN 이 15초 동안 같은 응답을 돌려준다(s-maxage) — 보는 사람이 몇 명이든 서버는
+// 15초에 한 번만 계산한다. 그 뒤 60초까지는 옛 응답을 주면서 뒤에서 새로 받는다(stale-while-revalidate).
+// 무료 CPU 한도를 넘겨 사이트가 멈춘 뒤 줄인 것(2026-11-19). 내 등록 결과는 POST 응답으로 바로 보인다.
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
-  return NextResponse.json({ ranking: await fetchReactionRanking() });
+  return NextResponse.json(
+    { ranking: await fetchReactionRanking() },
+    { headers: { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=60' } },
+  );
 }
 
 export async function POST(request: Request) {

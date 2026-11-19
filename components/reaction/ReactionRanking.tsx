@@ -10,7 +10,8 @@ export function ReactionRanking({
   ranking,
   highlightMemberId,
 }: {
-  ranking: ReactionRankEntry[];
+  /** null = 아직 불러오는 중. */
+  ranking: ReactionRankEntry[] | null;
   highlightMemberId: string | null;
 }) {
   return (
@@ -26,7 +27,9 @@ export function ReactionRanking({
         5회 평균이 빠른 순 · 한 사람당 최고 기록 하나
       </p>
 
-      {ranking.length === 0 ? (
+      {ranking === null ? (
+        <p className="py-10 text-center text-sm text-menu">랭킹 불러오는 중…</p>
+      ) : ranking.length === 0 ? (
         <p className="py-10 text-center text-sm text-menu">아직 아무도 없어요. 1등 자리 비어있습니다.</p>
       ) : (
         <ol className="mt-2.5 space-y-1.5">

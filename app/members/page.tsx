@@ -11,7 +11,10 @@ export const metadata: Metadata = {
 };
 
 // 218명 명단이 자주 안 바뀌므로 매 요청마다 새로 읽을 이유가 없다.
-export const revalidate = 300;
+// 시간 상한 5분 → 1시간(2026-11-19): Vercel 무료 CPU 한도(월 4시간)를 넘겨 사이트가 멈췄다. 이 무거운
+// 화면들을 5분마다 다시 계산한 게 큰 몫이었다. 내전 기록이 바뀌면 revalidateRecordPages 가 바로 지우므로
+// 평소엔 1시간이면 충분하다.
+export const revalidate = 3600;
 
 export default async function MembersPage() {
   const members = await fetchAllMembers();

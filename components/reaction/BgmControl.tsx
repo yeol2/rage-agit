@@ -79,7 +79,8 @@ export function BgmControl() {
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <audio ref={audioRef} src="/reaction/bgm.mp3" loop preload="auto" />
+      {/* preload="none" — 페이지만 열고 안 듣는 사람까지 1.1MB 를 받지 않게. 처음 재생할 때 받는다(2026-11-19). */}
+      <audio ref={audioRef} src="/reaction/bgm.mp3" loop preload="none" />
       <button
         type="button"
         onClick={() => apply(muted ? lastAudible.current || DEFAULT_VOLUME : 0)}
