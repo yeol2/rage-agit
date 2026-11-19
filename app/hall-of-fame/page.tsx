@@ -13,7 +13,10 @@ export const metadata: Metadata = {
 
 // 다른 기록 화면과 같은 기준(5분). 우승 확정·폴링이 revalidateRecordPages 로
 // 바로 지우고, 그 경로를 안 거치는 갱신을 위해 시간 상한을 같이 둔다.
-export const revalidate = 300;
+// 시간 상한 5분 → 1시간(2026-11-19): Vercel 무료 CPU 한도(월 4시간)를 넘겨 사이트가 멈췄다. 이 무거운
+// 화면들을 5분마다 다시 계산한 게 큰 몫이었다. 내전 기록이 바뀌면 revalidateRecordPages 가 바로 지우므로
+// 평소엔 1시간이면 충분하다.
+export const revalidate = 3600;
 
 export default async function HallOfFamePage() {
   const boards = await fetchHallOfFame();

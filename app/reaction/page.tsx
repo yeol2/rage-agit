@@ -2,18 +2,18 @@ import type { Metadata } from 'next';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { ReactionPlayground } from '@/components/reaction/ReactionPlayground';
-import { fetchReactionRanking } from '@/lib/reactionData';
 import { siteConfig } from '@/lib/siteConfig';
 
 export const metadata: Metadata = {
   title: `${siteConfig.reaction.heading} | ${siteConfig.siteName}`,
 };
 
-// 다른 사람이 방금 올린 기록도 보이게 매번 새로 읽는다. 내 기록은 등록 응답으로 바로 갱신된다.
-export const dynamic = 'force-dynamic';
+// 예전엔 랭킹 때문에 접속마다 새로 그렸다(force-dynamic) — 무료 CPU 한도를 넘긴 원인 중 하나(2026-11-19).
+// 이제 랭킹은 브라우저가 따로 받고(ReactionPlayground), 이 페이지는 1시간에 한 번만 그린다.
+// 상금 배너는 마감(prize.endsAt)이 지나면 다음 번 그릴 때(최대 1시간 뒤) 사라진다.
+export const revalidate = 3600;
 
-export default async function ReactionPage() {
-  const ranking = await fetchReactionRanking();
+export default function ReactionPage() {
   const copy = siteConfig.reaction;
 
   return (
@@ -41,7 +41,7 @@ export default async function ReactionPage() {
       </section>
 
       <div className="mt-10">
-        <ReactionPlayground initialRanking={ranking} />
+        <ReactionPlayground />
       </div>
       </div>
       <Footer />
