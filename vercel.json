@@ -4,5 +4,13 @@
     "deploymentEnabled": {
       "main": true
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "rage-agit.vercel.app" }],
+      "destination": "https://rageclan.site/:path*",
+      "permanent": true
+    }
+  ]
 }
